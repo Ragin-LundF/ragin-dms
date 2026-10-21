@@ -3,6 +3,7 @@ package dms.application.fake.storage
 import dms.application.port.storage.CatalogRepository
 import dms.application.port.storage.DocumentStorage
 import dms.application.port.storage.LibraryScanner
+import dms.application.port.storage.ScanListener
 import dms.application.port.storage.TextStore
 import dms.application.port.storage.model.CatalogLoad
 import dms.application.port.storage.model.ExternalFile
@@ -172,9 +173,17 @@ class FakeFolders : DocumentStorage, LibraryScanner, CatalogRepository, TextStor
 
     // --- LibraryScanner
 
-    override suspend fun scan(folder: LibraryFolder, catalog: Catalog): StorageResult<FolderSnapshot> {
+    override suspend fun scan(
+        folder: LibraryFolder,
+        catalog: Catalog,
+        listener: ScanListener,
+    ): StorageResult<FolderSnapshot> {
         unreachableFailure(folder = folder)?.let { return it }
         val facts = filesOf(folderId = folder.id).mapValues { (_, content) -> factsOf(content = content) }
+        listener.counted(total = facts.size)
+        facts.entries.forEachIndexed { index, (path, fileFacts) ->
+            listener.fileDone(done = index + 1, path = path, facts = fileFacts, hashed = true)
+        }
         return StorageResult.Success(value = FolderSnapshot(folderId = folder.id, files = facts))
     }
 

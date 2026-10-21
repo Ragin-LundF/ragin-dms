@@ -47,6 +47,10 @@ class SettingsViewModel(
         }
     }
 
+    fun setAddNewFilesWhileScanning(enabled: Boolean) {
+        session.setAddNewFilesWhileScanning(enabled = enabled)
+    }
+
     fun addSyncFolder() {
         viewModelScope.launch {
             val location = platform.chooseFolder(title = "Choose a sync folder") ?: return@launch
@@ -102,6 +106,7 @@ class SettingsViewModel(
                 FolderRow(folder = folder, isPrimary = folder.role == FolderRole.PRIMARY, note = note)
             },
             busy = sessionState.busy,
+            addNewFilesWhileScanning = sessionState.preferences.addNewFilesWhileScanning,
         )
     }
 

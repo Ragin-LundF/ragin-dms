@@ -1,5 +1,6 @@
 package dms.ui
 
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -14,27 +15,41 @@ import dms.storage.platform.AppDataDirectory
 import dms.ui.model.Screen
 import dms.ui.platform.DesktopPlatformActions
 import dms.ui.session.LibrarySession
+import dms.ui.system.AppIcon
+import dms.ui.theme.LocalAppLogo
 
 fun main() {
     val container = AppContainer(appDataDirectory = AppDataDirectory.forApplication(name = "ragin-dms"))
     val platform = DesktopPlatformActions()
+    AppIcon.installInDock()
     application {
         val scope = rememberCoroutineScope()
         val session = remember { LibrarySession(services = container.services, scope = scope) }
         var screen by remember { mutableStateOf(value = Screen.DASHBOARD) }
+        var logVisible by remember { mutableStateOf(value = false) }
         Window(
             onCloseRequest = ::exitApplication,
             title = "ragin-dms",
+            icon = AppIcon.painter,
             state = rememberWindowState(size = DpSize(width = 1360.dp, height = 860.dp)),
         ) {
-            AppMenuBar(session = session, onScreenChange = { screen = it })
-            App(
-                services = container.services,
-                platform = platform,
+            AppMenuBar(
                 session = session,
-                screen = screen,
+                logVisible = logVisible,
                 onScreenChange = { screen = it },
+                onLogVisibleChange = { logVisible = it },
             )
+            CompositionLocalProvider(LocalAppLogo provides AppIcon.painter) {
+                App(
+                    services = container.services,
+                    platform = platform,
+                    session = session,
+                    screen = screen,
+                    onScreenChange = { screen = it },
+                    logVisible = logVisible,
+                    onLogVisibleChange = { logVisible = it },
+                )
+            }
         }
     }
 }

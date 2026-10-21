@@ -78,6 +78,11 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
                     busyReason = busyReason,
                 )
             }
+            ScanningCard(
+                addNewFiles = state.addNewFilesWhileScanning,
+                busyReason = busyReason,
+                onAddNewFilesChange = viewModel::setAddNewFilesWhileScanning,
+            )
         }
     }
     DialogHost(controller = viewModel.dialogs)

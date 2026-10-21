@@ -24,6 +24,7 @@ import dms.application.fake.system.FixedClock
 import dms.application.fake.system.SequentialIds
 import dms.application.folder.CreateFolder
 import dms.application.folder.MoveFolder
+import dms.application.library.AddScannedFiles
 import dms.application.library.BuildDashboard
 import dms.application.library.CatalogStore
 import dms.application.library.OpenLibrary
@@ -91,7 +92,8 @@ class TestLibrary {
         tasks = tasks,
         ids = ids,
     )
-    val scanLibrary: ScanLibrary = ScanLibrary(store = store, scanner = folders)
+    val addScannedFiles: AddScannedFiles = AddScannedFiles(store = store, activity = activity, clock = clock, ids = ids)
+    val scanLibrary: ScanLibrary = ScanLibrary(store = store, scanner = folders, addScannedFiles = addScannedFiles)
     val buildDashboard: BuildDashboard = BuildDashboard(
         store = store,
         tasks = tasks,

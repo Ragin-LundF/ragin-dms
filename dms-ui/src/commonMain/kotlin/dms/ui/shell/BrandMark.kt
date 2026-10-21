@@ -1,5 +1,6 @@
 package dms.ui.shell
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -19,6 +20,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import dms.ui.theme.AppColors
+import dms.ui.theme.LocalAppLogo
 import dms.ui.theme.Spacing
 
 /** The logo tile in the brand gradient and the app's name. */
@@ -28,19 +30,24 @@ fun BrandMark() {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(space = Spacing.medium),
     ) {
-        Box(
-            modifier = Modifier
-                .size(size = 40.dp)
-                .clip(shape = MaterialTheme.shapes.medium)
-                .background(brush = Brush.linearGradient(colors = AppColors.brandGradient)),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                imageVector = Icons.Rounded.Inventory2,
-                contentDescription = null,
-                tint = Color.White,
-                modifier = Modifier.size(size = 22.dp),
-            )
+        val logo = LocalAppLogo.current
+        if (logo != null) {
+            Image(painter = logo, contentDescription = "ragin-dms logo", modifier = Modifier.size(size = 44.dp))
+        } else {
+            Box(
+                modifier = Modifier
+                    .size(size = 40.dp)
+                    .clip(shape = MaterialTheme.shapes.medium)
+                    .background(brush = Brush.linearGradient(colors = AppColors.brandGradient)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.Inventory2,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(size = 22.dp),
+                )
+            }
         }
         Column {
             Text(text = "ragin-dms", style = MaterialTheme.typography.titleMedium)

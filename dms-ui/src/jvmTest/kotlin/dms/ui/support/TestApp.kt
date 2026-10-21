@@ -1,6 +1,7 @@
 package dms.ui.support
 
 import dms.application.library.model.LibraryCommand
+import dms.application.port.state.model.Preferences
 import dms.domain.library.FolderLocation
 import dms.storage.platform.SystemTrash
 import dms.ui.AppContainer
@@ -37,8 +38,12 @@ class TestApp(scope: CoroutineScope) {
 
     val session: LibrarySession = LibrarySession(services = services, scope = scope)
 
-    /** Configures the primary and, with [withSync], the sync folder, and opens the library. */
-    suspend fun configure(withSync: Boolean = true) {
+    /**
+     * Configures the primary and, with [withSync], the sync folder, and opens the library. New files
+     * are offered on the dashboard unless [addNewFiles] is set.
+     */
+    suspend fun configure(withSync: Boolean = true, addNewFiles: Boolean = false) {
+        services.library.settings.savePreferences(preferences = Preferences(addNewFilesWhileScanning = addNewFiles))
         services.library.configureLibrary(
             command = LibraryCommand.CreatePrimary(
                 displayName = "Primary",

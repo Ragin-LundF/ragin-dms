@@ -42,6 +42,11 @@ class ScanCache private constructor(
         return FileFacts(size = size, contentHash = contentHash)
     }
 
+    /** Saves what is known so far, in the middle of a scan. */
+    fun checkpoint() {
+        file.write(value = ScanCacheDto(entries = entries.toSortedMap()))
+    }
+
     /** Saves the cache, forgetting files that no longer exist. */
     fun save(present: Set<RelativePath>) {
         val keep = present.map { it.value }.toSet()

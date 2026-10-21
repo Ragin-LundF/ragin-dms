@@ -35,7 +35,7 @@ Feature packages: `ui.dashboard`, `ui.library`, `ui.document` (inspector), `ui.r
   - `components.layout`: `ScreenHeader`, `SearchField`, and `FileDropZone` (files dropped from the file manager).
   - `components.chart`: the dashboard charts (`ColumnChart`, `DonutChart`, `BarList`) with `ChartPoint`/`ChartSlice` in `chart.model`.
   - `components.dialog`: `DialogController`, `DialogHost` and the dialogs.
-- `ui.shell` holds the window frame: the navigation sidebar, the brand mark and the status footer.
+- `ui.shell` holds the window frame: the navigation sidebar, the brand mark, the status footer, the activity bar (progress and Cancel) and the log panel.
 - `ui.session` holds `LibrarySession`, the one owner of the open library: it runs one operation at a time (`perform`), keeps the last scan and the folder list, and maps outcomes to messages. View models start work through it, never in parallel to it.
 - `ui.service` holds the use case bundles (`AppServices`) that the composition root hands to the view models.
 - Confirmations and text input go through `DialogController` in `ui.components.dialog`; a view model asks, a `DialogHost` renders.
@@ -67,6 +67,13 @@ The dashboard is the home screen and the **only place where detected changes bec
 - **Inside the library**: a document is dragged with a pointer gesture onto a folder, a category, "Uncategorized" or a tag in the sidebar. `DocumentDrag` keeps the drag state and the registered drop targets; the drop goes to `LibraryViewModel.drop`, which runs the same use cases as the buttons. A drop that changes nothing does nothing.
 - Every drop target highlights while a document hovers over it and names what the drop will do.
 
+## Progress and the log
+
+- Long operations report progress through `LibrarySession.progress` (`OperationProgress`: step, done of total, current item), kept apart from `SessionState` so screens do not recompute on every file. Loops over many items use `LibrarySession.forEachWithProgress`.
+- Only operations that leave the library consistent wherever they stop are `cancellable` (a scan, adopting many files). Cancel is offered in the activity bar and the menu.
+- `SessionLog` keeps the last lines of what the app did in this session, for the log panel. It is not written to disk.
+- A scan with the preference "Add new files while scanning" catalogs new files of the primary in batches while it runs, so the library fills up live; files only the sync folders have are adopted right after the scan.
+
 ## Errors and feedback
 
 - Use case outcomes are data. Map every `sealed` outcome to UI state; a `when` over an outcome must be exhaustive, without `else`.
@@ -78,6 +85,7 @@ The dashboard is the home screen and the **only place where detected changes bec
 ## UI design system
 
 - Material 3, light and dark theme following the system setting. Icons come from `material-icons-extended`.
+- The logo's source is `dms-ui/packaging/icons/logo.svg`; the PNG, ICNS and ICO files next to it and `jvmMain/resources/app-icon.png` are rendered from it. `jvmMain` provides it to the UI through `LocalAppLogo`.
 - Charts follow fixed rules: a fixed colour order from `ChartColors` (never cycled), thin marks, a legend with counts, and labels only where they help. Status colours (`statusGood`, `statusWarning`, `error`) are reserved for states and never used as a chart colour; a state also carries an icon or a label, never colour alone.
 - Colours, typography, spacing and shapes are defined in `ui.theme`. Use the named theme values; do not use hardcoded `Color(0x...)` literals or ad-hoc `dp` values for spacing.
 - Short labels (tags, chips, file sizes, folder names) use `softWrap = false` and truncate with an ellipsis instead of wrapping inside the word.

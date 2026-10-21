@@ -8,8 +8,10 @@ import dms.domain.change.FileFacts
 import dms.domain.document.Document
 import dms.domain.document.DocumentId
 import dms.domain.library.RelativePath
+import dms.storage.support.RecordingListener
 import dms.storage.support.StorageResults
 import dms.storage.support.TestFolders
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.test.runTest
 import java.nio.file.Files
 import java.nio.file.Path
@@ -18,6 +20,7 @@ import java.time.Instant
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
 
 class FileSystemLibraryScannerTest {
@@ -144,6 +147,41 @@ class FileSystemLibraryScannerTest {
             val files = scan(catalog = empty)
 
             assertEquals(expected = setOf(TestFolders.path(raw = "caf\u00e9/menu.pdf")), actual = files.keys)
+        }
+    }
+
+    @Test
+    fun `the listener learns the total first and then every file`() {
+        runTest {
+            TestFolders.write(file = root.resolve("a.pdf"), content = "alpha")
+            TestFolders.write(file = root.resolve("letters/b.pdf"), content = "beta")
+            val first = RecordingListener()
+            val second = RecordingListener()
+
+            scanner.scan(folder = folder, catalog = empty, listener = first)
+            scanner.scan(folder = folder, catalog = empty, listener = second)
+
+            assertEquals(expected = listOf(2), actual = first.totals)
+            assertEquals(expected = listOf("1 a.pdf true", "2 letters/b.pdf true"), actual = first.files)
+            assertEquals(expected = listOf("1 a.pdf false", "2 letters/b.pdf false"), actual = second.files)
+        }
+    }
+
+    @Test
+    fun `a cancelled scan keeps the hashes it already computed`() {
+        runTest {
+            TestFolders.write(file = root.resolve("a.pdf"), content = "alpha")
+            TestFolders.write(file = root.resolve("b.pdf"), content = "beta")
+            val checkpointing = FileSystemLibraryScanner(cacheDirectory = temp.resolve("cache"), checkpointEvery = 1)
+            val cancelling = RecordingListener(onFile = { throw CancellationException("stopped") })
+            val after = RecordingListener()
+
+            assertFailsWith<CancellationException> {
+                checkpointing.scan(folder = folder, catalog = empty, listener = cancelling)
+            }
+            checkpointing.scan(folder = folder, catalog = empty, listener = after)
+
+            assertEquals(expected = listOf("1 a.pdf false", "2 b.pdf true"), actual = after.files)
         }
     }
 

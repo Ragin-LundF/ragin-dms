@@ -19,6 +19,8 @@ fun App(
     session: LibrarySession,
     screen: Screen,
     onScreenChange: (Screen) -> Unit,
+    logVisible: Boolean,
+    onLogVisibleChange: (Boolean) -> Unit,
 ) {
     val owner = remember { AppViewModelStoreOwner() }
     DisposableEffect(key1 = owner) {
@@ -35,6 +37,8 @@ fun App(
                 session = session,
                 screen = screen,
                 onScreenChange = onScreenChange,
+                logVisible = logVisible,
+                onLogVisibleChange = onLogVisibleChange,
             )
         }
     }

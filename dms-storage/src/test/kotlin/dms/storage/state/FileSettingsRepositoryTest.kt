@@ -1,5 +1,6 @@
 package dms.storage.state
 
+import dms.application.port.state.model.Preferences
 import dms.domain.library.FolderLocation
 import dms.domain.library.FolderRole
 import dms.domain.library.LibraryFolder
@@ -45,6 +46,24 @@ class FileSettingsRepositoryTest {
             FileSettingsRepository(path = path).saveLibraryFolders(folders = folders)
 
             assertEquals(expected = folders, actual = FileSettingsRepository(path = path).loadLibraryFolders())
+        }
+    }
+
+    @Test
+    fun `preferences default to adding new files and are kept apart from the folders`() {
+        runTest {
+            val repository = FileSettingsRepository(path = path)
+            val folders = LibraryFolders(
+                folders = listOf(folder(id = "primary", location = "/data/library", role = FolderRole.PRIMARY)),
+            )
+            assertEquals(expected = Preferences(), actual = repository.loadPreferences())
+
+            repository.savePreferences(preferences = Preferences(addNewFilesWhileScanning = false))
+            repository.saveLibraryFolders(folders = folders)
+
+            val reloaded = FileSettingsRepository(path = path)
+            assertEquals(expected = Preferences(addNewFilesWhileScanning = false), actual = reloaded.loadPreferences())
+            assertEquals(expected = folders, actual = reloaded.loadLibraryFolders())
         }
     }
 

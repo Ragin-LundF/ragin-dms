@@ -17,4 +17,5 @@ object Spacing {
     val inspectorWidth: Dp = Dp(value = 380f)
     val dialogWidth: Dp = Dp(value = 480f)
     val contentMaxWidth: Dp = Dp(value = 1480f)
+    val logHeight: Dp = Dp(value = 220f)
 }

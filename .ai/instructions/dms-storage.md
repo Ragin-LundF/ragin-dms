@@ -11,7 +11,7 @@ This module handles the user's real documents. A bug here loses data that may ex
 | `dms.storage` | `StorageAdapters`: builds every adapter for one app data directory. |
 | `dms.storage.fs` | `FileSystemDocumentStorage` (file operations in one folder, name collisions), `PathResolver` (the one `RelativePath` ↔ `Path` mapping, NFC lookup), `AtomicFiles`, `ContentHasher`, `StorageIo` (I/O on `Dispatchers.IO`, exceptions to `StorageResult.Failure`). |
 | `dms.storage.catalog` | `FileCatalogRepository`, `CatalogMapper`, `CatalogMigrations`, `CatalogFiles` (file name and conflict copies). DTOs in `dms.storage.catalog.dto`. |
-| `dms.storage.scan` | `FileSystemLibraryScanner`, `ScanCache` (incremental hashing, kept in the app data directory), `IgnoredEntries`, `CloudPlaceholders`. DTOs in `dms.storage.scan.dto`. |
+| `dms.storage.scan` | `FileSystemLibraryScanner`, `ScanCache` (incremental hashing, kept in the app data directory), `IgnoredEntries`, `CloudPlaceholders`. DTOs in `dms.storage.scan.dto`, models in `dms.storage.scan.model`. |
 | `dms.storage.text` | `FileTextStore` for `.dms-text/<documentId>.txt`. |
 | `dms.storage.state` | Local state in the app data directory: `FileOperationJournal`, `FileTaskStore`, `FileActivityLog`, `FileSettingsRepository`, with their mappers. DTOs in `dms.storage.state.dto`. |
 | `dms.storage.yaml` | `YamlMappers` (the one Jackson YAML configuration) and `YamlFile` (one atomically written YAML file). |
@@ -61,6 +61,8 @@ One folder is the **primary**, any number are **sync folders**. All are equal in
 - Folders are compared by the use cases (`SyncFromPrimary`, `MergeAllFolders`, `FileComparison`) on the `FolderSnapshot`s the scanner returns: by NFC relative path, then content hash, then size when a hash is missing.
 
 ## Scanning
+
+- A scan first lists the folder (cheap), then reads the files one by one and reports each to the `ScanListener`, so the UI can show "done of total". It checks for cancellation between two files and saves the `ScanCache` every 100 hashed files, so a cancelled first scan resumes where it stopped.
 
 - A library folder is just a path, but any sync client may manage it. Files can then be **placeholders** that are not stored locally, and reading one triggers a download. Scans compare path, size and modification time first and hash only new or changed files. The DMS never calls a cloud vendor's API.
   - macOS: placeholders may be dataless files or `.<name>.icloud` stubs; treat stubs as "present, not downloaded" under their real name.

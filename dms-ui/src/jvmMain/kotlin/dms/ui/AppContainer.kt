@@ -11,6 +11,7 @@ import dms.application.document.RestoreDocument
 import dms.application.document.TrashDocument
 import dms.application.folder.CreateFolder
 import dms.application.folder.MoveFolder
+import dms.application.library.AddScannedFiles
 import dms.application.library.BuildDashboard
 import dms.application.library.CatalogStore
 import dms.application.library.ConfigureLibrary
@@ -78,7 +79,11 @@ class AppContainer(appDataDirectory: Path, trash: SystemTrash = PlatformTrash())
             clock = clock,
             configureLibrary = ConfigureLibrary(settings = adapters.settings, ids = ids),
             openLibrary = openLibrary,
-            scanLibrary = ScanLibrary(store = store, scanner = adapters.scanner),
+            scanLibrary = ScanLibrary(
+                store = store,
+                scanner = adapters.scanner,
+                addScannedFiles = AddScannedFiles(store = store, activity = activity, clock = clock, ids = ids),
+            ),
             buildDashboard = BuildDashboard(
                 store = store,
                 tasks = adapters.tasks,

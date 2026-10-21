@@ -168,15 +168,11 @@ class DashboardViewModel(
         }
     }
 
-    /** Adopts every listed new file, one after the other. */
+    /** Adopts every listed new file, one after the other; can be stopped between two files. */
     fun adoptAll(changes: List<DetectedChange.NewFile>) {
-        session.perform(label = "Adopting ${changes.size} new files") {
-            val adopted = changes.count { change ->
-                val done = services.documents.adoptNewFile(change = change) is OperationOutcome.Done
-                if (done) {
-                    session.forget(change = change)
-                }
-                done
+        session.perform(label = "Adopting ${changes.size} new files", cancellable = true) {
+            val adopted = session.forEachWithProgress(step = "Adopting", items = changes, name = { it.path.value }) {
+                resolved(change = it, outcome = services.documents.adoptNewFile(change = it))
             }
             session.report(message = countMessage(verb = "Adopted", done = adopted, total = changes.size))
         }
@@ -185,15 +181,20 @@ class DashboardViewModel(
     /** Restores every listed missing file from a folder that still has it. */
     fun restoreAll(changes: List<DetectedChange.MissingFile>) {
         session.perform(label = "Restoring ${changes.size} files") {
-            val restored = changes.count { change ->
-                val done = services.documents.restoreDocument(change = change) is OperationOutcome.Done
-                if (done) {
-                    session.forget(change = change)
-                }
-                done
+            val restored = session.forEachWithProgress(step = "Restoring", items = changes, name = { it.path.value }) {
+                resolved(change = it, outcome = services.documents.restoreDocument(change = it))
             }
             session.report(message = countMessage(verb = "Restored", done = restored, total = changes.size))
         }
+    }
+
+    /** Forgets [change] when [outcome] resolved it; returns whether it did. */
+    private fun resolved(change: DetectedChange, outcome: OperationOutcome): Boolean {
+        val done = outcome is OperationOutcome.Done
+        if (done) {
+            session.forget(change = change)
+        }
+        return done
     }
 
     private fun act(label: String, resolves: DetectedChange, done: String, action: suspend () -> OperationOutcome) {

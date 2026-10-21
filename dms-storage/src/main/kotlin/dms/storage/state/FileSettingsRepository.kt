@@ -1,6 +1,7 @@
 package dms.storage.state
 
 import dms.application.port.state.SettingsRepository
+import dms.application.port.state.model.Preferences
 import dms.domain.library.FolderLocation
 import dms.domain.library.FolderRole
 import dms.domain.library.LibraryFolder
@@ -30,7 +31,22 @@ class FileSettingsRepository(path: Path) : SettingsRepository {
 
     override suspend fun saveLibraryFolders(folders: LibraryFolders) {
         withContext(context = Dispatchers.IO) {
-            file.write(value = SettingsDto(folders = folders.folders.map { toDto(folder = it) }))
+            val current = file.read() ?: SettingsDto()
+            file.write(value = current.copy(folders = folders.folders.map { toDto(folder = it) }))
+        }
+    }
+
+    override suspend fun loadPreferences(): Preferences {
+        return withContext(context = Dispatchers.IO) {
+            val settings = file.read() ?: SettingsDto()
+            Preferences(addNewFilesWhileScanning = settings.addNewFilesWhileScanning)
+        }
+    }
+
+    override suspend fun savePreferences(preferences: Preferences) {
+        withContext(context = Dispatchers.IO) {
+            val current = file.read() ?: SettingsDto()
+            file.write(value = current.copy(addNewFilesWhileScanning = preferences.addNewFilesWhileScanning))
         }
     }
 

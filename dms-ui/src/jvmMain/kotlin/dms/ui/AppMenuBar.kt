@@ -13,7 +13,12 @@ import dms.ui.session.model.LibraryStatus
 
 /** The native menu bar with the main actions and their shortcuts (⌘ on macOS, Ctrl elsewhere). */
 @Composable
-fun FrameWindowScope.AppMenuBar(session: LibrarySession, onScreenChange: (Screen) -> Unit) {
+fun FrameWindowScope.AppMenuBar(
+    session: LibrarySession,
+    logVisible: Boolean,
+    onScreenChange: (Screen) -> Unit,
+    onLogVisibleChange: (Boolean) -> Unit,
+) {
     val state by session.state.collectAsState()
     val idle = state.busy == null && state.status is LibraryStatus.Open
     MenuBar {
@@ -27,6 +32,13 @@ fun FrameWindowScope.AppMenuBar(session: LibrarySession, onScreenChange: (Screen
             )
             Item(text = "Merge all folders", enabled = idle, onClick = session::mergeAllFolders)
             Item(text = "Retry failed operations", enabled = idle, onClick = session::retryFailedOperations)
+            Separator()
+            Item(
+                text = "Cancel ${state.busy.orEmpty()}".trim(),
+                enabled = state.cancellable,
+                shortcut = HostOs.shortcut(key = Key.Period),
+                onClick = session::cancel,
+            )
         }
         Menu(text = "View") {
             Item(
@@ -43,6 +55,13 @@ fun FrameWindowScope.AppMenuBar(session: LibrarySession, onScreenChange: (Screen
                 text = Screen.SETTINGS.label,
                 shortcut = HostOs.shortcut(key = Key.Comma),
                 onClick = { onScreenChange(Screen.SETTINGS) },
+            )
+            Separator()
+            CheckboxItem(
+                text = "Show log",
+                checked = logVisible,
+                shortcut = HostOs.shortcut(key = Key.L),
+                onCheckedChange = onLogVisibleChange,
             )
         }
     }

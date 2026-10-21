@@ -12,16 +12,20 @@ compose.desktop {
             packageName = "ragin-dms"
             packageVersion = package_version
 
+            // The logo; its source is packaging/icons/logo.svg in the UI module.
             windows {
+                iconFile.set(project.file("packaging/icons/icon.ico"))
                 shortcut = true
                 menu = true
             }
 
             macOS {
+                iconFile.set(project.file("packaging/icons/icon.icns"))
                 bundleID = "io.github.ragin-lundf.dms"
             }
 
             linux {
+                iconFile.set(project.file("packaging/icons/icon.png"))
                 packageName = "ragin-dms"
             }
         }

@@ -1,11 +1,12 @@
 package dms.ui
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
@@ -16,18 +17,15 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.lifecycle.viewmodel.compose.viewModel
 import dms.ui.model.Screen
 import dms.ui.service.AppServices
 import dms.ui.session.LibrarySession
-import dms.ui.session.model.LibraryStatus
-import dms.ui.settings.SettingsScreen
-import dms.ui.settings.SettingsViewModel
+import dms.ui.shell.ActivityBar
+import dms.ui.shell.LogPanel
 import dms.ui.shell.NavigationSidebar
 
-/** The navigation on the left, the messages, and the screen for the library's status. */
+/** The navigation on the left, the screen, the log and the activity bar below it, and the messages. */
 @Composable
 fun AppContent(
     services: AppServices,
@@ -35,8 +33,11 @@ fun AppContent(
     session: LibrarySession,
     screen: Screen,
     onScreenChange: (Screen) -> Unit,
+    logVisible: Boolean,
+    onLogVisibleChange: (Boolean) -> Unit,
 ) {
     val sessionState by session.state.collectAsState()
+    val progress by session.progress.collectAsState()
     val snackbar = remember { SnackbarHostState() }
     LaunchedEffect(key1 = sessionState.message) {
         val message = sessionState.message ?: return@LaunchedEffect
@@ -53,38 +54,29 @@ fun AppContent(
     ) { padding ->
         Row(modifier = Modifier.fillMaxSize().padding(paddingValues = padding)) {
             NavigationSidebar(screen = screen, sessionState = sessionState, onScreenChange = onScreenChange)
-            Box(modifier = Modifier.weight(weight = 1f).fillMaxHeight()) {
-                val settings = viewModel {
-                    SettingsViewModel(services = services, session = session, platform = platform)
-                }
-                when (val status = sessionState.status) {
-                    LibraryStatus.Loading -> Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        CircularProgressIndicator()
-                    }
-
-                    LibraryStatus.NotConfigured -> SettingsScreen(viewModel = settings)
-                    is LibraryStatus.PrimaryFailed, is LibraryStatus.Failed -> if (screen == Screen.SETTINGS) {
-                        SettingsScreen(viewModel = settings)
-                    } else {
-                        LibraryProblem(
-                            status = status,
-                            onRetry = session::open,
-                            onOpenSettings = { onScreenChange(Screen.SETTINGS) },
-                        )
-                    }
-
-                    is LibraryStatus.Open -> OpenLibraryContent(
+            Column(modifier = Modifier.weight(weight = 1f).fillMaxHeight()) {
+                Box(modifier = Modifier.weight(weight = 1f).fillMaxWidth()) {
+                    ScreenContent(
                         services = services,
                         platform = platform,
                         session = session,
+                        status = sessionState.status,
                         screen = screen,
-                        settings = settings,
                         onScreenChange = onScreenChange,
                     )
                 }
+                if (logVisible) {
+                    val entries by session.log.entries.collectAsState()
+                    LogPanel(entries = entries, onClear = session.log::clear)
+                }
+                ActivityBar(
+                    busy = sessionState.busy,
+                    progress = progress,
+                    cancellable = sessionState.cancellable,
+                    logVisible = logVisible,
+                    onCancel = session::cancel,
+                    onToggleLog = { onLogVisibleChange(!logVisible) },
+                )
             }
         }
     }
