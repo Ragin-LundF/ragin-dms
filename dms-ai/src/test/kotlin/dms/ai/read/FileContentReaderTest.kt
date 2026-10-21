@@ -1,5 +1,6 @@
 package dms.ai.read
 
+import dms.ai.support.PdfTests
 import dms.application.port.ai.model.DocumentContent
 import dms.application.port.state.model.AiSettings
 import dms.domain.document.ContentHash
@@ -52,7 +53,7 @@ class FileContentReaderTest {
 
     @Test
     fun `a PDF with a text layer is read as text`() {
-        runTest {
+        runTest(timeout = PdfTests.TIMEOUT) {
             writePdf(name = "a.pdf", text = sampleText)
 
             val content = reader.read(folder = folder, document = document(name = "a.pdf"))
@@ -63,7 +64,7 @@ class FileContentReaderTest {
 
     @Test
     fun `the text for search is the whole text layer, and nothing for a scan or an image`() {
-        runTest {
+        runTest(timeout = PdfTests.TIMEOUT) {
             writePdf(name = "a.pdf", text = sampleText)
             writePdf(name = "scan.pdf", text = null)
 
@@ -79,7 +80,7 @@ class FileContentReaderTest {
 
     @Test
     fun `a PDF without text, or with vision preferred, is sent as page images`() {
-        runTest {
+        runTest(timeout = PdfTests.TIMEOUT) {
             writePdf(name = "scan.pdf", text = null)
             writePdf(name = "text.pdf", text = sampleText)
             val scan = reader.read(folder = folder, document = document(name = "scan.pdf"))
@@ -94,7 +95,7 @@ class FileContentReaderTest {
 
     @Test
     fun `an image is downscaled for the model`() {
-        runTest {
+        runTest(timeout = PdfTests.TIMEOUT) {
             val photo = BufferedImage(4000, 2000, BufferedImage.TYPE_INT_ARGB)
             ImageIO.write(photo, "png", root.resolve("photo.png").toFile())
 
@@ -109,7 +110,7 @@ class FileContentReaderTest {
 
     @Test
     fun `a Word file is read as text`() {
-        runTest {
+        runTest(timeout = PdfTests.TIMEOUT) {
             XWPFDocument().use { word ->
                 word.createParagraph().createRun().setText("Synthetic contract text")
                 Files.newOutputStream(root.resolve("contract.docx")).use { word.write(it) }
@@ -124,7 +125,7 @@ class FileContentReaderTest {
 
     @Test
     fun `a missing file or another kind is not readable`() {
-        runTest {
+        runTest(timeout = PdfTests.TIMEOUT) {
             Files.writeString(root.resolve("song.mp3"), "x")
 
             val missing = reader.read(folder = folder, document = document(name = "gone.pdf"))

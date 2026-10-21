@@ -1,5 +1,6 @@
 package dms.ai.read
 
+import dms.ai.support.PdfTests
 import dms.domain.library.FolderLocation
 import dms.domain.library.FolderRole
 import dms.domain.library.LibraryFolder
@@ -39,7 +40,7 @@ class FilePreviewerTest {
 
     @Test
     fun `a PDF shows its first page, scaled down`() {
-        runTest {
+        runTest(timeout = PdfTests.TIMEOUT) {
             PDDocument().use { pdf ->
                 pdf.addPage(PDPage())
                 pdf.save(root.resolve("a.pdf").toFile())
@@ -54,7 +55,7 @@ class FilePreviewerTest {
 
     @Test
     fun `an image is scaled down to the thumbnail size`() {
-        runTest {
+        runTest(timeout = PdfTests.TIMEOUT) {
             val photo = BufferedImage(800, 400, BufferedImage.TYPE_INT_RGB)
             ImageIO.write(photo, "png", root.resolve("photo.png").toFile())
             val path = RelativePath.of(raw = "photo.png")
@@ -69,7 +70,7 @@ class FilePreviewerTest {
 
     @Test
     fun `office files, missing files and broken files have no thumbnail`() {
-        runTest {
+        runTest(timeout = PdfTests.TIMEOUT) {
             XWPFDocument().use { word ->
                 Files.newOutputStream(root.resolve("letter.docx")).use { word.write(it) }
             }
