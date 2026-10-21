@@ -1,4 +1,4 @@
-package dms.ui.components
+package dms.ui.components.dialog
 
 import dms.ui.components.model.ConfirmationRequest
 import dms.ui.components.model.TextInputRequest

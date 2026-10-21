@@ -1,43 +1,74 @@
 package dms.ui.library.sidebar
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import dms.ui.components.surface.CountPill
 import dms.ui.theme.Spacing
 
-/** One selectable line of the sidebar, indented by [depth], with an optional count. */
+/** One selectable line of the sidebar, indented by [depth]; it lights up while a document hovers over it. */
 @Composable
-fun SidebarItem(label: String, count: Int?, depth: Int, selected: Boolean, onClick: () -> Unit) {
-    val background = if (selected) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent
+fun SidebarItem(
+    label: String,
+    icon: ImageVector,
+    count: Int?,
+    depth: Int,
+    selected: Boolean,
+    dropHovered: Boolean,
+    onClick: () -> Unit,
+) {
+    val colors = MaterialTheme.colorScheme
+    val shape = MaterialTheme.shapes.small
+    val background = when {
+        dropHovered -> colors.primary.copy(alpha = 0.16f)
+        selected -> colors.primaryContainer
+        else -> Color.Transparent
+    }
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(color = background, shape = MaterialTheme.shapes.small)
+            .clip(shape = shape)
+            .background(color = background)
+            .border(width = 2.dp, color = if (dropHovered) colors.primary else Color.Transparent, shape = shape)
             .clickable(onClick = onClick)
-            .padding(
-                start = Spacing.small + Spacing.medium * depth,
-                end = Spacing.small,
-                top = Spacing.xsmall,
-                bottom = Spacing.xsmall,
-            ),
+            .padding(start = Spacing.small + Spacing.large * depth, end = Spacing.small)
+            .padding(vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(space = Spacing.small),
     ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = if (selected || dropHovered) colors.primary else colors.onSurfaceVariant,
+            modifier = Modifier.size(size = Spacing.icon),
+        )
         Text(
             text = label,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+            color = if (selected) colors.onPrimaryContainer else colors.onSurface,
             maxLines = 1,
             softWrap = false,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(weight = 1f),
         )
-        Spacer(modifier = Modifier.padding(start = Spacing.small))
-        count?.let { Text(text = it.toString(), style = MaterialTheme.typography.bodySmall) }
+        count?.let { CountPill(count = it, selected = selected) }
     }
 }

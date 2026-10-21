@@ -6,6 +6,8 @@ compose = "1.12.2"
 # Material 3 for Compose Multiplatform is versioned separately; 1.9.0 is its latest stable release.
 compose-material3 = "1.9.0"
 compose-lifecycle = "2.11.0"
+# The icon set is no longer released with Compose; 1.7.3 is its last version and works with newer Compose.
+compose-material-icons = "1.7.3"
 jackson3 = "3.2.4"
 ktor = "3.6.0"
 pdfbox = "3.0.8"
@@ -27,6 +29,7 @@ compose-ui = { module = "org.jetbrains.compose.ui:ui", version.ref = "compose" }
 compose-ui-test = { module = "org.jetbrains.compose.ui:ui-test", version.ref = "compose" }
 compose-components-resources = { module = "org.jetbrains.compose.components:components-resources", version.ref = "compose" }
 compose-material3 = { module = "org.jetbrains.compose.material3:material3", version.ref = "compose-material3" }
+compose-material-icons-extended = { module = "org.jetbrains.compose.material:material-icons-extended", version.ref = "compose-material-icons" }
 compose-lifecycle-viewmodel = { module = "org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "compose-lifecycle" }
 # --- Jackson 3 (catalog file)
 jackson-databind = { module = "tools.jackson.core:jackson-databind", version.ref = "jackson3" }
@@ -64,6 +67,7 @@ compose-common = [
     "compose-ui",
     "compose-components-resources",
     "compose-material3",
+    "compose-material-icons-extended",
     "compose-lifecycle-viewmodel",
 ]
 

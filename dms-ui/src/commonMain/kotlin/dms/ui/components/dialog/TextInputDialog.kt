@@ -1,4 +1,4 @@
-package dms.ui.components
+package dms.ui.components.dialog
 
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.OutlinedTextField

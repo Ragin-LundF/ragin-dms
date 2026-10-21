@@ -5,9 +5,16 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.LocalOffer
+import androidx.compose.material3.Icon
 import androidx.compose.material3.InputChip
+import androidx.compose.material3.InputChipDefaults
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Text
@@ -45,10 +52,17 @@ fun TagEditor(
         FlowRow(horizontalArrangement = Arrangement.spacedBy(space = Spacing.xsmall)) {
             tags.forEach { tag ->
                 InputChip(
-                    selected = false,
+                    selected = true,
                     onClick = { onRemove(tag) },
                     enabled = enabled,
-                    label = { Text(text = "${tag.value}  ×", maxLines = 1, softWrap = false) },
+                    label = { Text(text = tag.value, maxLines = 1, softWrap = false) },
+                    trailingIcon = {
+                        Icon(
+                            imageVector = Icons.Rounded.Close,
+                            contentDescription = "Remove ${tag.value}",
+                            modifier = Modifier.size(size = InputChipDefaults.IconSize),
+                        )
+                    },
                 )
             }
         }
@@ -56,6 +70,7 @@ fun TagEditor(
             value = text,
             onValueChange = { text = it },
             label = { Text(text = "Add tag") },
+            leadingIcon = { Icon(imageVector = Icons.Rounded.LocalOffer, contentDescription = null) },
             singleLine = true,
             enabled = enabled,
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
@@ -64,7 +79,17 @@ fun TagEditor(
         )
         FlowRow(horizontalArrangement = Arrangement.spacedBy(space = Spacing.xsmall)) {
             suggestions.forEach { tag ->
-                SuggestionChip(onClick = { add(tag.value) }, label = { Text(text = tag.value, softWrap = false) })
+                SuggestionChip(
+                    onClick = { add(tag.value) },
+                    label = { Text(text = tag.value, softWrap = false) },
+                    icon = {
+                        Icon(
+                            imageVector = Icons.Rounded.Add,
+                            contentDescription = null,
+                            modifier = Modifier.size(size = InputChipDefaults.IconSize),
+                        )
+                    },
+                )
             }
         }
     }

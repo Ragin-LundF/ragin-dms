@@ -1,15 +1,19 @@
 package dms.ui.dashboard.task
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.Restore
 import dms.application.resolution.model.MoveDecision
 import dms.domain.task.OpenTask
-import dms.ui.components.DialogController
 import dms.ui.components.model.ActionButton
+import dms.ui.components.model.ButtonStyle
 
 /** The buttons of every kind of task: exactly the actions its use cases support. */
 object TaskActions {
 
     fun buttonsFor(task: OpenTask, context: TaskContext, handler: TaskHandler): List<ActionButton> {
-        val dismiss = ActionButton(label = "Dismiss") { handler.dismiss(key = task.key) }
+        val dismiss = ActionButton(label = "Dismiss", style = ButtonStyle.TEXT) { handler.dismiss(key = task.key) }
         return when (task) {
             is OpenTask.ReviewSuggestion -> listOf(
                 ActionButton(label = "Reject") { handler.reject(documentId = task.suggestion.documentId) },
@@ -19,6 +23,8 @@ object TaskActions {
             is OpenTask.AdoptNewFile -> listOf(
                 ActionButton(
                     label = "Adopt",
+                    icon = Icons.Rounded.Check,
+                    style = ButtonStyle.TONAL,
                     disabledReason = "The file was not read yet; scan again".takeIf { task.change.contentHash == null },
                 ) { handler.adopt(change = task.change) },
                 dismiss,
@@ -27,6 +33,8 @@ object TaskActions {
             is OpenTask.RestoreOrDelete -> listOf(
                 ActionButton(
                     label = "Restore",
+                    icon = Icons.Rounded.Restore,
+                    style = ButtonStyle.TONAL,
                     disabledReason = "No reachable folder still has this file"
                         .takeIf { task.change.presentIn.isEmpty() },
                 ) { handler.restore(change = task.change) },
@@ -38,7 +46,7 @@ object TaskActions {
                 dismiss
 
             is OpenTask.ConfirmMove -> listOf(
-                ActionButton(label = "Apply move") {
+                ActionButton(label = "Apply move", icon = Icons.Rounded.Check, style = ButtonStyle.TONAL) {
                     handler.resolveMove(change = task.change, decision = MoveDecision.APPLY)
                 },
                 ActionButton(label = "Undo move") {
@@ -51,7 +59,12 @@ object TaskActions {
                 dismiss
 
             is OpenTask.ReviewCatalogMerge -> listOf(ActionButton(label = "OK") { handler.dismiss(key = task.key) })
-            is OpenTask.RetryFailedOperations -> listOf(ActionButton(label = "Retry") { handler.retry() }, dismiss)
+            is OpenTask.RetryFailedOperations -> listOf(
+                ActionButton(label = "Retry", icon = Icons.Rounded.Refresh, style = ButtonStyle.TONAL) {
+                    handler.retry()
+                },
+                dismiss,
+            )
         }
     }
 

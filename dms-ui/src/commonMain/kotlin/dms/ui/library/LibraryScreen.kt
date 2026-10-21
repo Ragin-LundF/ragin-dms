@@ -1,60 +1,96 @@
 package dms.ui.library
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import dms.ui.components.DialogHost
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.unit.round
+import dms.ui.PlatformActions
+import dms.ui.components.dialog.DialogHost
 import dms.ui.document.InspectorPanel
 import dms.ui.document.InspectorViewModel
+import dms.ui.library.documents.DocumentArea
+import dms.ui.library.drag.DocumentDrag
+import dms.ui.library.drag.DragPreview
+import dms.ui.library.drag.DropTexts
 import dms.ui.library.sidebar.LibrarySidebar
 import dms.ui.theme.Spacing
 
-/** The library: sidebar, document list and inspector. */
+/**
+ * The library: sidebar, documents and inspector. Documents can be dragged onto a folder, category
+ * or tag of the sidebar; files dragged in from the file manager go to the selected folder.
+ */
 @Composable
-fun LibraryScreen(viewModel: LibraryViewModel, inspector: InspectorViewModel) {
+fun LibraryScreen(viewModel: LibraryViewModel, inspector: InspectorViewModel, platform: PlatformActions) {
     val state by viewModel.state.collectAsState()
     val busyReason = state.busy?.let { "Wait until \"$it\" finishes" }
-    Column(modifier = Modifier.fillMaxSize().padding(all = Spacing.large)) {
-        LibraryToolbar(
-            query = state.query,
-            busyReason = busyReason,
-            onSearch = viewModel::search,
-            onAddFiles = { viewModel.addFiles() },
-            onNewFolder = viewModel::newFolder,
-        )
-        HorizontalDivider()
-        Row(modifier = Modifier.weight(weight = 1f).fillMaxWidth()) {
+    val drag = remember(viewModel) { DocumentDrag(onDrop = viewModel::drop) }
+    var origin by remember { mutableStateOf(value = Offset.Zero) }
+    Box(modifier = Modifier.fillMaxSize().onGloballyPositioned { origin = it.positionInRoot() }) {
+        Row(modifier = Modifier.fillMaxSize()) {
             LibrarySidebar(
                 state = state,
                 busyReason = busyReason,
+                drag = drag,
                 viewModel = viewModel,
                 modifier = Modifier.width(width = Spacing.sidebarWidth).fillMaxHeight(),
             )
             VerticalDivider()
-            DocumentList(
-                rows = state.documents,
-                inspected = state.inspected?.id,
-                onInspect = viewModel::inspect,
-                modifier = Modifier.weight(weight = 1f).fillMaxHeight(),
-            )
-            VerticalDivider()
-            InspectorPanel(
-                document = state.inspected,
-                categories = state.categories,
-                allTags = state.tags,
-                busyReason = busyReason,
-                viewModel = inspector,
-                modifier = Modifier.width(width = Spacing.inspectorWidth).fillMaxHeight(),
+            Column(
+                modifier = Modifier.weight(weight = 1f).fillMaxHeight().padding(all = Spacing.xlarge),
+                verticalArrangement = Arrangement.spacedBy(space = Spacing.large),
+            ) {
+                LibraryToolbar(
+                    state = state,
+                    busyReason = busyReason,
+                    onSearch = viewModel::search,
+                    onLayout = viewModel::setLayout,
+                    onAddFiles = { viewModel.addFiles() },
+                    onNewFolder = viewModel::newFolder,
+                )
+                DocumentArea(
+                    state = state,
+                    drag = drag,
+                    platform = platform,
+                    viewModel = viewModel,
+                    modifier = Modifier.weight(weight = 1f).fillMaxWidth(),
+                )
+            }
+            state.inspected?.let { document ->
+                VerticalDivider()
+                InspectorPanel(
+                    document = document,
+                    categories = state.categories,
+                    allTags = state.tags,
+                    busyReason = busyReason,
+                    viewModel = inspector,
+                    onClose = { viewModel.inspect(documentId = null) },
+                    modifier = Modifier.width(width = Spacing.inspectorWidth).fillMaxHeight(),
+                )
+            }
+        }
+        drag.dragged?.let { document ->
+            DragPreview(
+                document = document,
+                action = drag.hovered?.let { DropTexts.action(target = it, categories = state.categories) },
+                modifier = Modifier.offset { (drag.pointer - origin + Offset(x = 16f, y = 12f)).round() },
             )
         }
     }

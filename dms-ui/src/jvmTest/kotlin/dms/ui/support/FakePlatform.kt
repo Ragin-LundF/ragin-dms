@@ -1,5 +1,6 @@
 package dms.ui.support
 
+import androidx.compose.ui.draganddrop.DragAndDropEvent
 import dms.domain.library.FolderLocation
 import dms.domain.library.RelativePath
 import dms.ui.PlatformActions
@@ -34,5 +35,13 @@ class FakePlatform : PlatformActions {
     override fun openFile(location: String): Boolean {
         shown += location
         return true
+    }
+
+    override fun carriesFiles(event: DragAndDropEvent): Boolean {
+        return false
+    }
+
+    override fun droppedFiles(event: DragAndDropEvent): List<String> {
+        return emptyList()
     }
 }

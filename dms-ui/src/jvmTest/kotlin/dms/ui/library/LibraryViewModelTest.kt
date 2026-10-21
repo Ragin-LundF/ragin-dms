@@ -1,8 +1,10 @@
 package dms.ui.library
 
+import dms.domain.library.RelativePath
 import dms.domain.taxonomy.TagName
 import dms.ui.document.InspectorViewModel
 import dms.ui.document.model.MetadataDraft
+import dms.ui.library.drag.model.DropTarget
 import dms.ui.library.model.LibrarySelection
 import dms.ui.library.model.LibraryUiState
 import dms.ui.support.TestApp
@@ -126,6 +128,54 @@ class LibraryViewModelTest {
 
             library.search(query = "nothing like it")
             assertEquals(expected = 0, actual = library.state.value.documents.size)
+        }
+    }
+
+    @Test
+    fun `dropping a document on a folder moves it in every library folder`() {
+        UiTest.run { app ->
+            val library = libraryWithOneFile(app = app)
+
+            library.drop(
+                document = documentOf(state = library.state.value),
+                target = DropTarget.Folder(path = RelativePath.ROOT),
+            )
+            app.idle()
+
+            assertTrue(actual = Files.exists(app.primary.resolve("scan-1.pdf")))
+            assertTrue(actual = Files.exists(app.sync.resolve("scan-1.pdf")))
+            assertFalse(actual = Files.exists(app.primary.resolve("letters/scan-1.pdf")))
+        }
+    }
+
+    @Test
+    fun `dropping a document on a category or a tag files it there`() {
+        UiTest.run { app ->
+            val library = libraryWithOneFile(app = app)
+            library.newCategory()
+            library.dialogs.submit(text = "Invoices")
+            app.idle()
+            val category = library.state.first { it.categories.isNotEmpty() }.categories.single().category
+
+            library.drop(
+                document = documentOf(state = library.state.value),
+                target = DropTarget.Category(categoryId = category.id),
+            )
+            app.idle()
+            library.drop(
+                document = documentOf(state = library.state.value),
+                target = DropTarget.Tag(tag = TagName.of(raw = "tax")),
+            )
+            app.idle()
+
+            val filed = documentOf(state = library.state.first { documentOf(state = it).tags.isNotEmpty() })
+            assertEquals(expected = category.id, actual = filed.categoryId)
+            assertEquals(expected = setOf(TagName.of(raw = "tax")), actual = filed.tags)
+
+            library.drop(document = filed, target = DropTarget.Uncategorized)
+            app.idle()
+            val unfiled = library.state.first { documentOf(state = it).categoryId == null }
+            assertEquals(expected = 1, actual = unfiled.uncategorizedCount)
         }
     }
 

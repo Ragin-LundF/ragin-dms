@@ -1,5 +1,6 @@
 package dms.ui
 
+import androidx.compose.ui.draganddrop.DragAndDropEvent
 import dms.domain.library.FolderLocation
 import dms.domain.library.RelativePath
 
@@ -23,4 +24,10 @@ interface PlatformActions {
 
     /** Opens a file in its default application; returns `false` if that failed. */
     fun openFile(location: String): Boolean
+
+    /** Whether something dragged in from outside the app carries files. */
+    fun carriesFiles(event: DragAndDropEvent): Boolean
+
+    /** The absolute paths of the regular files dropped with [event]; folders are left out. */
+    fun droppedFiles(event: DragAndDropEvent): List<String>
 }

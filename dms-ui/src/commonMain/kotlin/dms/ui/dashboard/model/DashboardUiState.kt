@@ -1,6 +1,7 @@
 package dms.ui.dashboard.model
 
 import dms.application.port.state.model.ActivityEntry
+import dms.ui.dashboard.stats.model.LibraryStats
 import java.time.Instant
 
 /** Everything the dashboard shows; derived from the session and the last dashboard build. */
@@ -13,4 +14,10 @@ data class DashboardUiState(
     val activity: List<ActivityEntry> = emptyList(),
     val lastScanAt: Instant? = null,
     val busy: String? = null,
-)
+    val stats: LibraryStats = LibraryStats(),
+) {
+    val openTaskCount: Int
+        get() {
+            return groups.sumOf { it.rows.size }
+        }
+}

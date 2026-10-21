@@ -9,7 +9,7 @@ import dms.domain.library.RelativePath
 import dms.domain.taxonomy.CategoryId
 import dms.domain.taxonomy.TagName
 import dms.ui.PlatformActions
-import dms.ui.components.DialogController
+import dms.ui.components.dialog.DialogController
 import dms.ui.components.model.ConfirmationRequest
 import dms.ui.components.model.TextInputRequest
 import dms.ui.document.model.MetadataDraft

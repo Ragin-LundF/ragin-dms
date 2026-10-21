@@ -1,4 +1,4 @@
-package dms.ui.components
+package dms.ui.components.dialog
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState

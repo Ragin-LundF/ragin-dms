@@ -1,18 +1,16 @@
 package dms.ui
 
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.NavigationRail
-import androidx.compose.material3.NavigationRailItem
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -27,8 +25,9 @@ import dms.ui.session.LibrarySession
 import dms.ui.session.model.LibraryStatus
 import dms.ui.settings.SettingsScreen
 import dms.ui.settings.SettingsViewModel
+import dms.ui.shell.NavigationSidebar
 
-/** The navigation rail, the busy line, the messages, and the screen for the library's status. */
+/** The navigation on the left, the messages, and the screen for the library's status. */
 @Composable
 fun AppContent(
     services: AppServices,
@@ -48,20 +47,13 @@ fun AppContent(
         )
         session.clearMessage()
     }
-    Scaffold(snackbarHost = { SnackbarHost(hostState = snackbar) }) { padding ->
+    Scaffold(
+        snackbarHost = { SnackbarHost(hostState = snackbar) },
+        containerColor = MaterialTheme.colorScheme.background,
+    ) { padding ->
         Row(modifier = Modifier.fillMaxSize().padding(paddingValues = padding)) {
-            NavigationRail {
-                Screen.entries.forEach { entry ->
-                    NavigationRailItem(
-                        selected = entry == screen,
-                        onClick = { onScreenChange(entry) },
-                        icon = { Text(text = entry.symbol) },
-                        label = { Text(text = entry.label) },
-                    )
-                }
-            }
-            Column(modifier = Modifier.fillMaxSize()) {
-                BusyLine(busy = sessionState.busy)
+            NavigationSidebar(screen = screen, sessionState = sessionState, onScreenChange = onScreenChange)
+            Box(modifier = Modifier.weight(weight = 1f).fillMaxHeight()) {
                 val settings = viewModel {
                     SettingsViewModel(services = services, session = session, platform = platform)
                 }
@@ -90,6 +82,7 @@ fun AppContent(
                         session = session,
                         screen = screen,
                         settings = settings,
+                        onScreenChange = onScreenChange,
                     )
                 }
             }

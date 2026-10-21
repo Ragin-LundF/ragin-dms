@@ -7,7 +7,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.CreateNewFolder
+import androidx.compose.material.icons.rounded.Storage
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -15,9 +17,13 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import dms.ui.components.DialogHost
-import dms.ui.components.ReasonTooltip
-import dms.ui.components.SectionHeader
+import dms.ui.components.ActionButtons
+import dms.ui.components.dialog.DialogHost
+import dms.ui.components.layout.ScreenHeader
+import dms.ui.components.model.ActionButton
+import dms.ui.components.model.ButtonStyle
+import dms.ui.components.surface.AppCard
+import dms.ui.components.surface.CardTitle
 import dms.ui.theme.Spacing
 
 /** The library folders of this device: one primary and any number of sync folders. */
@@ -28,36 +34,49 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(all = Spacing.xlarge)
-            .verticalScroll(state = rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(space = Spacing.medium),
+            .verticalScroll(state = rememberScrollState())
+            .padding(all = Spacing.xxlarge),
+        verticalArrangement = Arrangement.spacedBy(space = Spacing.xlarge),
     ) {
-        Text(text = "Settings", style = MaterialTheme.typography.headlineSmall)
-        SectionHeader(title = "Library folders")
+        ScreenHeader(title = "Settings", subtitle = "Where your library lives on this device")
         if (!state.configured) {
-            Text(
-                text = "Choose the folder that holds your documents. It becomes the primary folder: every change " +
-                    "is written there first, then to every sync folder. Your files stay readable files on disk.",
-                modifier = Modifier.widthIn(max = 640.dp),
-            )
-            ReasonTooltip(reason = busyReason) {
-                Button(onClick = viewModel::choosePrimaryFolder, enabled = busyReason == null) {
-                    Text(text = "Choose primary folder…")
-                }
-            }
+            WelcomeCard(busyReason = busyReason, onChoose = viewModel::choosePrimaryFolder)
         } else {
-            state.rows.forEach { row ->
-                FolderSettingsRow(
-                    row = row,
-                    busyReason = busyReason,
-                    onMakePrimary = { viewModel.makePrimary(folder = row.folder) },
-                    onRemove = { viewModel.removeSyncFolder(folder = row.folder) },
+            AppCard(modifier = Modifier.widthIn(max = 920.dp)) {
+                CardTitle(
+                    title = "Library folders",
+                    icon = Icons.Rounded.Storage,
+                    tint = MaterialTheme.colorScheme.secondary,
+                    subtitle = "Every change is written to the primary first, then to each sync folder",
                 )
-            }
-            ReasonTooltip(reason = busyReason) {
-                Button(onClick = viewModel::addSyncFolder, enabled = busyReason == null) {
-                    Text(text = "Add sync folder…")
+                Column(verticalArrangement = Arrangement.spacedBy(space = Spacing.small)) {
+                    state.rows.forEach { row ->
+                        FolderSettingsRow(
+                            row = row,
+                            busyReason = busyReason,
+                            onMakePrimary = { viewModel.makePrimary(folder = row.folder) },
+                            onRemove = { viewModel.removeSyncFolder(folder = row.folder) },
+                        )
+                    }
                 }
+                Text(
+                    text = "A sync folder can be any folder, such as one a cloud service keeps in sync.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(vertical = Spacing.medium),
+                )
+                ActionButtons(
+                    buttons = listOf(
+                        ActionButton(
+                            label = "Add sync folder…",
+                            icon = Icons.Rounded.CreateNewFolder,
+                            style = ButtonStyle.TONAL,
+                            onClick = viewModel::addSyncFolder,
+                        ),
+                    ),
+                    enabled = busyReason == null,
+                    busyReason = busyReason,
+                )
             }
         }
     }

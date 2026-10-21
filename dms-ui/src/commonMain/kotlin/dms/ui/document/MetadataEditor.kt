@@ -2,8 +2,14 @@ package dms.ui.document
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -25,7 +31,7 @@ fun MetadataEditor(document: Document, enabled: Boolean, onSave: (MetadataDraft)
         correspondent = document.metadata.correspondent.orEmpty(),
     )
     var draft by remember(key1 = document.id, key2 = saved) { mutableStateOf(value = saved) }
-    Column(verticalArrangement = Arrangement.spacedBy(space = Spacing.xsmall)) {
+    Column(verticalArrangement = Arrangement.spacedBy(space = Spacing.small)) {
         OutlinedTextField(
             value = draft.title,
             onValueChange = { draft = draft.copy(title = it) },
@@ -48,6 +54,12 @@ fun MetadataEditor(document: Document, enabled: Boolean, onSave: (MetadataDraft)
             modifier = Modifier.fillMaxWidth(),
         )
         Button(onClick = { onSave(draft) }, enabled = enabled && draft != saved) {
+            Icon(
+                imageVector = Icons.Rounded.Check,
+                contentDescription = null,
+                modifier = Modifier.size(size = Spacing.icon),
+            )
+            Spacer(modifier = Modifier.width(width = Spacing.small))
             Text(text = "Save details")
         }
     }

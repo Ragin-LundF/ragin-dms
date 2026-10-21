@@ -7,7 +7,7 @@ import dms.domain.library.FolderLocation
 import dms.domain.library.FolderRole
 import dms.domain.library.LibraryFolder
 import dms.ui.PlatformActions
-import dms.ui.components.DialogController
+import dms.ui.components.dialog.DialogController
 import dms.ui.components.model.ConfirmationRequest
 import dms.ui.service.AppServices
 import dms.ui.session.LibrarySession

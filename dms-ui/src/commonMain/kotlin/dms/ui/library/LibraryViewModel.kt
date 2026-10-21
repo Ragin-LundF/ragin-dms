@@ -12,9 +12,11 @@ import dms.domain.library.RelativePath
 import dms.domain.taxonomy.Category
 import dms.domain.taxonomy.TagName
 import dms.ui.PlatformActions
-import dms.ui.components.DialogController
+import dms.ui.components.dialog.DialogController
 import dms.ui.components.model.ConfirmationRequest
 import dms.ui.components.model.TextInputRequest
+import dms.ui.library.drag.model.DropTarget
+import dms.ui.library.model.DocumentLayout
 import dms.ui.library.model.DocumentRow
 import dms.ui.library.model.LibrarySelection
 import dms.ui.library.model.LibraryUiState
@@ -34,7 +36,10 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.Locale
 
-/** The library: folders, categories and tags in the sidebar, the documents they select, and adding files. */
+/**
+ * The library: folders, categories and tags in the sidebar, the documents they select, adding files,
+ * and dropping documents onto a folder, a category or a tag.
+ */
 class LibraryViewModel(
     private val services: AppServices,
     private val session: LibrarySession,
@@ -65,18 +70,37 @@ class LibraryViewModel(
         view.update { it.copy(inspected = documentId) }
     }
 
-    /** Asks for files and copies them into the selected folder of every library folder. */
-    fun addFiles() {
-        viewModelScope.launch {
-            val files = platform.chooseFiles(title = "Add files to the library")
-            if (files.isNotEmpty()) {
-                addFiles(locations = files)
-            }
+    fun setLayout(layout: DocumentLayout) {
+        view.update { it.copy(layout = layout) }
+    }
+
+    /** Shows the documents of [selection] that match [query], as the dashboard asks. */
+    fun show(selection: LibrarySelection, query: String) {
+        view.update { it.copy(selection = selection, query = query, inspected = null) }
+    }
+
+    /** Shows every document with [documentId] open in the inspector. */
+    fun reveal(documentId: DocumentId) {
+        view.update {
+            it.copy(selection = LibrarySelection.Folder(path = RelativePath.ROOT), query = "", inspected = documentId)
         }
     }
 
-    fun addFiles(locations: List<String>) {
-        val target = selectedFolder()
+    /** Asks for files and copies them into the selected folder of every library folder. */
+    fun addFiles() {
+        chooseAndAdd(target = selectedFolder())
+    }
+
+    /** Asks for files and copies them into the top level of every library folder. */
+    fun addFilesToTopLevel() {
+        chooseAndAdd(target = RelativePath.ROOT)
+    }
+
+    fun addFiles(locations: List<String>, target: RelativePath = selectedFolder()) {
+        if (locations.isEmpty()) {
+            session.report(message = UiMessage(text = "Only files can be added, not folders", isError = true))
+            return
+        }
         session.perform(label = "Adding ${locations.size} file(s)") {
             val added = services.documents.addDocuments(
                 files = locations.map { ExternalFile(location = it) },
@@ -92,6 +116,39 @@ class LibraryViewModel(
                 problem,
             ).joinToString(separator = "; ")
             session.report(message = UiMessage(text = text, isError = done < locations.size))
+        }
+    }
+
+    /** Files [document] where it was dropped: moves it into a folder, or gives it a category or a tag. */
+    fun drop(document: Document, target: DropTarget) {
+        val name = document.path.fileName
+        when (target) {
+            is DropTarget.Folder -> if ((document.path.parent ?: RelativePath.ROOT) != target.path) {
+                val where = target.path.value.ifEmpty { "the top level" }
+                session.perform(label = "Moving $name") {
+                    val outcome = services.documents.moveDocument(
+                        documentId = document.id,
+                        newPath = target.path.resolve(name = name),
+                    )
+                    session.report(message = OutcomeMessages.of(outcome = outcome, done = "Moved $name to $where"))
+                }
+            }
+
+            is DropTarget.Category -> if (document.categoryId != target.categoryId) {
+                val category = services.library.catalog.value?.categories?.get(target.categoryId)?.name
+                val edit = CatalogEdit.AssignCategory(documentId = document.id, categoryId = target.categoryId)
+                edit(edit = edit, done = "Filed $name under $category")
+            }
+
+            DropTarget.Uncategorized -> if (document.categoryId != null) {
+                val edit = CatalogEdit.AssignCategory(documentId = document.id, categoryId = null)
+                edit(edit = edit, done = "Removed the category of $name")
+            }
+
+            is DropTarget.Tag -> if (target.tag !in document.tags) {
+                val edit = CatalogEdit.AddTags(documentId = document.id, tags = setOf(target.tag))
+                edit(edit = edit, done = "Tagged $name with ${target.tag.value}")
+            }
         }
     }
 
@@ -182,11 +239,21 @@ class LibraryViewModel(
         }
     }
 
-    private fun edit(edit: CatalogEdit) {
+    /** Saves [edit]; reports errors always, and success only when [done] says what happened. */
+    private fun edit(edit: CatalogEdit, done: String? = null) {
         session.perform(label = "Saving the catalog") {
             val outcome = services.documents.editCatalog(edit = edit)
-            if (outcome !is OperationOutcome.Done) {
-                session.report(message = OutcomeMessages.of(outcome = outcome, done = ""))
+            if (outcome !is OperationOutcome.Done || done != null) {
+                session.report(message = OutcomeMessages.of(outcome = outcome, done = done.orEmpty()))
+            }
+        }
+    }
+
+    private fun chooseAndAdd(target: RelativePath) {
+        viewModelScope.launch {
+            val files = platform.chooseFiles(title = "Add files to the library")
+            if (files.isNotEmpty()) {
+                addFiles(locations = files, target = target)
             }
         }
     }
@@ -230,10 +297,12 @@ class LibraryViewModel(
             .sortedBy { it.path.value.lowercase(Locale.ROOT) }
         return LibraryUiState(
             isOpen = true,
+            title = titleOf(selection = view.selection, catalog = catalog),
             folders = LibraryTrees.folders(documents = documents, createdFolders = view.createdFolders),
             categories = LibraryTrees.categories(categories = catalog.categories.values, documents = documents),
             uncategorizedCount = documents.count { it.categoryId == null },
             tags = catalog.tags.sorted(),
+            tagCounts = documents.flatMap { it.tags }.groupingBy { it }.eachCount(),
             selection = view.selection,
             query = view.query,
             documents = visible.map { document ->
@@ -244,7 +313,17 @@ class LibraryViewModel(
             },
             inspected = view.inspected?.let { catalog.documents[it] },
             busy = sessionState.busy,
+            layout = view.layout,
         )
+    }
+
+    private fun titleOf(selection: LibrarySelection, catalog: Catalog): String {
+        return when (selection) {
+            is LibrarySelection.Folder -> if (selection.path.isRoot) "All documents" else selection.path.fileName
+            is LibrarySelection.Category -> catalog.categories[selection.categoryId]?.name ?: "Category"
+            LibrarySelection.Uncategorized -> "Uncategorized"
+            is LibrarySelection.Tag -> "#${selection.tag.value}"
+        }
     }
 
     private fun matches(document: Document, selection: LibrarySelection): Boolean {

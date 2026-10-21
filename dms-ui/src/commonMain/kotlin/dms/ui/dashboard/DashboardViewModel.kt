@@ -12,7 +12,7 @@ import dms.domain.library.FolderRole
 import dms.domain.library.LibraryFolderId
 import dms.domain.task.OpenTask
 import dms.domain.task.TaskKey
-import dms.ui.components.DialogController
+import dms.ui.components.dialog.DialogController
 import dms.ui.components.model.ActionButton
 import dms.ui.components.model.ConfirmationRequest
 import dms.ui.dashboard.model.DashboardUiState
@@ -21,6 +21,7 @@ import dms.ui.dashboard.model.FolderStatus
 import dms.ui.dashboard.model.TaskGroup
 import dms.ui.dashboard.model.TaskGroupState
 import dms.ui.dashboard.model.TaskRowState
+import dms.ui.dashboard.stats.LibraryStatistics
 import dms.ui.dashboard.task.TaskActions
 import dms.ui.dashboard.task.TaskContext
 import dms.ui.dashboard.task.TaskGroups
@@ -41,6 +42,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.time.ZoneId
 
 /**
  * The home screen: the open tasks with their actions, the folders and the recent activity. Every
@@ -227,6 +229,11 @@ class DashboardViewModel(
             activity = dashboard?.recentActivity.orEmpty(),
             lastScanAt = sessionState.lastScanAt,
             busy = sessionState.busy,
+            stats = LibraryStatistics.of(
+                catalog = services.library.catalog.value,
+                now = services.library.clock.now(),
+                zone = ZoneId.systemDefault(),
+            ),
         )
     }
 

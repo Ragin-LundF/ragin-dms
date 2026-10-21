@@ -12,4 +12,5 @@ data class LibraryViewState(
     val query: String = "",
     val inspected: DocumentId? = null,
     val createdFolders: Set<RelativePath> = emptySet(),
+    val layout: DocumentLayout = DocumentLayout.LIST,
 )

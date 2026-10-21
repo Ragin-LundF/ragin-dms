@@ -1,5 +1,8 @@
 package dms.ui.platform
 
+import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.draganddrop.DragAndDropEvent
+import androidx.compose.ui.draganddrop.awtTransferable
 import dms.domain.library.FolderLocation
 import dms.domain.library.RelativePath
 import dms.ui.PlatformActions
@@ -9,6 +12,9 @@ import kotlinx.coroutines.withContext
 import java.awt.Desktop
 import java.awt.FileDialog
 import java.awt.Frame
+import java.awt.datatransfer.DataFlavor
+import java.io.File
+import java.nio.file.Files
 import java.nio.file.Path
 import javax.swing.JFileChooser
 
@@ -55,6 +61,25 @@ class DesktopPlatformActions : PlatformActions {
             return start(command = listOf("xdg-open", location))
         }
         return runCatching { Desktop.getDesktop().open(Path.of(location).toFile()) }.isSuccess
+    }
+
+    @OptIn(ExperimentalComposeUiApi::class)
+    override fun carriesFiles(event: DragAndDropEvent): Boolean {
+        return event.awtTransferable.isDataFlavorSupported(DataFlavor.javaFileListFlavor)
+    }
+
+    @OptIn(ExperimentalComposeUiApi::class)
+    override fun droppedFiles(event: DragAndDropEvent): List<String> {
+        if (!carriesFiles(event = event)) {
+            return emptyList()
+        }
+        val dropped = runCatching { event.awtTransferable.getTransferData(DataFlavor.javaFileListFlavor) }.getOrNull()
+        // AWT hands over java.io.File; convert to paths right away.
+        return (dropped as? List<*>).orEmpty()
+            .filterIsInstance<File>()
+            .map { it.toPath() }
+            .filter { Files.isRegularFile(it) }
+            .map { it.toString() }
     }
 
     /** macOS shows folders in its native dialog only with this property set. */

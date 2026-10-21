@@ -1,4 +1,4 @@
-package dms.ui.components
+package dms.ui.components.dialog
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.heightIn

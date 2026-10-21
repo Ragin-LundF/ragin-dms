@@ -19,7 +19,7 @@ object ActivityTexts {
         return "${time(instant = entry.at)}  ${verb(kind = entry.kind)}  ${entry.subject}"
     }
 
-    private fun verb(kind: ActivityKind): String {
+    fun verb(kind: ActivityKind): String {
         return when (kind) {
             ActivityKind.DOCUMENT_ADDED -> "Added"
             ActivityKind.DOCUMENT_MOVED -> "Moved"

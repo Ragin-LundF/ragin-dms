@@ -1,18 +1,18 @@
 package dms.ui
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.material3.Button
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Text
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.CloudOff
+import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
+import dms.ui.components.StyledButton
+import dms.ui.components.model.ActionButton
+import dms.ui.components.model.ButtonStyle
+import dms.ui.components.surface.EmptyState
 import dms.ui.session.OutcomeMessages
 import dms.ui.session.model.LibraryStatus
 import dms.ui.theme.Spacing
@@ -28,15 +28,26 @@ fun LibraryProblem(status: LibraryStatus, onRetry: () -> Unit, onOpenSettings: (
         is LibraryStatus.Failed -> "The library could not be opened: ${status.detail ?: "unknown error"}"
         else -> "The library is not open."
     }
-    Column(
-        modifier = Modifier.fillMaxSize().padding(all = Spacing.xlarge),
-        verticalArrangement = Arrangement.spacedBy(space = Spacing.medium),
+    EmptyState(
+        icon = Icons.Rounded.CloudOff,
+        title = "The library is not open",
+        message = text,
+        modifier = Modifier.fillMaxSize(),
     ) {
-        Text(text = "The library is not open", style = MaterialTheme.typography.headlineSmall)
-        Text(text = text, modifier = Modifier.widthIn(max = 640.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(space = Spacing.small)) {
-            Button(onClick = onRetry) { Text(text = "Try again") }
-            OutlinedButton(onClick = onOpenSettings) { Text(text = "Settings") }
+            StyledButton(
+                button = ActionButton(
+                    label = "Try again",
+                    icon = Icons.Rounded.Refresh,
+                    style = ButtonStyle.FILLED,
+                    onClick = onRetry,
+                ),
+                enabled = true,
+            )
+            StyledButton(
+                button = ActionButton(label = "Settings", icon = Icons.Rounded.Settings, onClick = onOpenSettings),
+                enabled = true,
+            )
         }
     }
 }
