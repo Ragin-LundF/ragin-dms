@@ -12,15 +12,15 @@ import dms.ui.components.surface.AppCard
 import dms.ui.components.surface.CardTitle
 import dms.ui.theme.ChartColors
 
-/** How many documents each year holds. */
+/** How many documents each year holds; a click on a year opens its documents in the library. */
 @Composable
-fun YearChartCard(points: List<ChartPoint>, modifier: Modifier = Modifier) {
+fun YearChartCard(points: List<ChartPoint>, onOpenYear: (String) -> Unit, modifier: Modifier = Modifier) {
     AppCard(modifier = modifier) {
         CardTitle(
             title = "Documents by year",
             icon = Icons.Rounded.BarChart,
             tint = ChartColors.slot(index = 0),
-            subtitle = "By document date, or by when they were added",
+            subtitle = "By document date, or by when they were added. Click a year to open it",
         )
         if (points.isEmpty()) {
             Text(
@@ -29,7 +29,7 @@ fun YearChartCard(points: List<ChartPoint>, modifier: Modifier = Modifier) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         } else {
-            ColumnChart(points = points, color = ChartColors.slot(index = 0))
+            ColumnChart(points = points, color = ChartColors.slot(index = 0), onClick = { onOpenYear(it.id) })
         }
     }
 }

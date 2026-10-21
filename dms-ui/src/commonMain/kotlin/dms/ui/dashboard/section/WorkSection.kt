@@ -17,7 +17,12 @@ import dms.ui.theme.Spacing
 
 /** What needs the user: the open tasks, next to the state of the folders and what happened lately. */
 @Composable
-fun WorkSection(state: DashboardUiState, busyReason: String?, onFilter: (TaskGroup?) -> Unit) {
+fun WorkSection(
+    state: DashboardUiState,
+    busyReason: String?,
+    onFilter: (TaskGroup?) -> Unit,
+    onFullView: () -> Unit,
+) {
     Row(
         modifier = Modifier.fillMaxWidth().height(height = 560.dp),
         horizontalArrangement = Arrangement.spacedBy(space = Spacing.large),
@@ -27,6 +32,8 @@ fun WorkSection(state: DashboardUiState, busyReason: String?, onFilter: (TaskGro
             filter = state.filter,
             busyReason = busyReason,
             onFilter = onFilter,
+            full = false,
+            onFullView = onFullView,
             modifier = Modifier.weight(weight = 2f),
         )
         Column(

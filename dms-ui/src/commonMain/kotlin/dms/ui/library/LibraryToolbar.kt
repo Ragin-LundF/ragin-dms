@@ -21,13 +21,18 @@ import dms.ui.components.model.ActionButton
 import dms.ui.components.model.ButtonStyle
 import dms.ui.library.model.DocumentLayout
 import dms.ui.library.model.LibraryUiState
+import dms.ui.library.model.YearFilter
 
-/** The selection's title and size, the filter, the list or grid switch, and adding to the selected folder. */
+/**
+ * The selection's title and size, the text and year filters, the list or grid switch, and adding to
+ * the selected folder.
+ */
 @Composable
 fun LibraryToolbar(
     state: LibraryUiState,
     busyReason: String?,
     onSearch: (String) -> Unit,
+    onYear: (YearFilter?) -> Unit,
     onLayout: (DocumentLayout) -> Unit,
     onAddFiles: () -> Unit,
     onNewFolder: () -> Unit,
@@ -43,6 +48,7 @@ fun LibraryToolbar(
             placeholder = "Filter by name, title, correspondent or tag",
             modifier = Modifier.width(width = 360.dp),
         )
+        YearMenu(years = state.years, selected = state.year, onSelect = onYear)
         Surface(shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surfaceContainer) {
             Row {
                 IconToggleButton(

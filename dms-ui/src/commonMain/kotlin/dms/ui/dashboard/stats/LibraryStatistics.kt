@@ -7,6 +7,7 @@ import dms.ui.components.chart.model.ChartPoint
 import dms.ui.dashboard.stats.model.KindCount
 import dms.ui.dashboard.stats.model.LibraryStats
 import dms.ui.dashboard.stats.model.RecentDocument
+import dms.ui.library.LibraryFilter
 import java.time.Duration
 import java.time.Instant
 import java.time.ZoneId
@@ -69,14 +70,15 @@ object LibraryStatistics {
         if (documents.isEmpty()) {
             return emptyList()
         }
-        val perYear = documents.groupingBy { it.metadata.documentDate?.year ?: it.addedAt.atZone(zone).year }
+        val perYear = documents.groupingBy { LibraryFilter.yearOf(document = it, zone = zone) }
             .eachCount()
         val oldest = perYear.keys.min().coerceAtMost(maximumValue = thisYear)
         val first = maxOf(oldest, thisYear - YEARS + 1)
         return (first..thisYear).map { year ->
             val folded = year == first && oldest < first
             val count = if (folded) perYear.filterKeys { it <= year }.values.sum() else perYear[year] ?: 0
-            ChartPoint(id = year.toString(), label = if (folded) "≤$year" else year.toString(), value = count)
+            val label = if (folded) "≤$year" else year.toString()
+            ChartPoint(id = label, label = label, value = count)
         }
     }
 

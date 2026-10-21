@@ -7,8 +7,8 @@ import java.time.Instant
 
 /**
  * The state every screen shares. [busy] names the operation that is running; only one runs at a
- * time, and [cancellable] tells whether the user may stop it. [revision] counts finished operations,
- * so screens know when to reload what they show.
+ * time, and [cancellable] tells whether the user may stop it. [revision] counts finished operations
+ * and the changes a running operation reports, so screens know when to reload what they show.
  */
 data class SessionState(
     val status: LibraryStatus = LibraryStatus.Loading,

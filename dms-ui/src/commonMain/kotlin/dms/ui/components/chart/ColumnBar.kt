@@ -1,6 +1,7 @@
 package dms.ui.components.chart
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.hoverable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
@@ -18,6 +19,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.unit.dp
 import dms.ui.components.chart.model.ChartPoint
 
@@ -29,12 +32,22 @@ fun ColumnBar(
     color: Color,
     alwaysLabelled: Boolean,
     modifier: Modifier,
+    onClick: (() -> Unit)? = null,
 ) {
     val interaction = remember { MutableInteractionSource() }
     val hovered by interaction.collectIsHoveredAsState()
     val grown = growIn(target = fraction)
     Column(
-        modifier = modifier.hoverable(interactionSource = interaction),
+        modifier = modifier
+            .hoverable(interactionSource = interaction)
+            .then(
+                other = if (onClick != null) {
+                    Modifier.clickable(interactionSource = interaction, indication = null, onClick = onClick)
+                        .pointerHoverIcon(icon = PointerIcon.Hand)
+                } else {
+                    Modifier
+                },
+            ),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Bottom,
     ) {

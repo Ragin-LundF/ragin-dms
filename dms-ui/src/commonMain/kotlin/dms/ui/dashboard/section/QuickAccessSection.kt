@@ -19,6 +19,7 @@ import dms.ui.theme.Spacing
 fun QuickAccessSection(
     stats: LibraryStats,
     onOpenDocument: (DocumentId) -> Unit,
+    onOpenRecent: () -> Unit,
     onOpenCategory: (String) -> Unit,
     onOpenUncategorized: () -> Unit,
     onOpenTag: (String) -> Unit,
@@ -31,6 +32,7 @@ fun QuickAccessSection(
         RecentDocumentsCard(
             documents = stats.recent,
             onOpen = onOpenDocument,
+            onShowAll = onOpenRecent,
             modifier = card.weight(weight = 1.2f),
         )
         CategoryCard(

@@ -21,6 +21,8 @@ import dms.ui.library.model.DocumentRow
 import dms.ui.library.model.LibrarySelection
 import dms.ui.library.model.LibraryUiState
 import dms.ui.library.model.LibraryViewState
+import dms.ui.library.model.YearFilter
+import dms.ui.library.sidebar.model.ToggleTarget
 import dms.ui.service.AppServices
 import dms.ui.session.LibrarySession
 import dms.ui.session.NameInput
@@ -34,7 +36,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.util.Locale
+import java.time.ZoneId
 
 /**
  * The library: folders, categories and tags in the sidebar, the documents they select, adding files,
@@ -59,7 +61,26 @@ class LibraryViewModel(
     }.stateIn(scope = viewModelScope, started = SharingStarted.Eagerly, initialValue = LibraryUiState())
 
     fun select(selection: LibrarySelection) {
-        view.update { it.copy(selection = selection) }
+        view.update { it.copy(selection = selection).unfolding(selection = selection) }
+    }
+
+    /** Folds or unfolds a folder, a category or a whole section of the sidebar. */
+    fun toggle(target: ToggleTarget) {
+        view.update { state ->
+            when (target) {
+                is ToggleTarget.Folder -> state.copy(expandedFolders = state.expandedFolders.flip(target.path))
+                is ToggleTarget.Category -> state.copy(
+                    expandedCategories = state.expandedCategories.flip(target.categoryId),
+                )
+
+                is ToggleTarget.Group -> state.copy(collapsedGroups = state.collapsedGroups.flip(target.group))
+            }
+        }
+    }
+
+    /** Shows only documents of [year]; `null` shows every year. */
+    fun filterYear(year: YearFilter?) {
+        view.update { it.copy(year = year) }
     }
 
     fun search(query: String) {
@@ -74,15 +95,23 @@ class LibraryViewModel(
         view.update { it.copy(layout = layout) }
     }
 
-    /** Shows the documents of [selection] that match [query], as the dashboard asks. */
-    fun show(selection: LibrarySelection, query: String) {
-        view.update { it.copy(selection = selection, query = query, inspected = null) }
+    /** Shows the documents of [selection] that match [query] and [year], as the dashboard asks. */
+    fun show(selection: LibrarySelection, query: String, year: YearFilter? = null) {
+        view.update {
+            it.copy(selection = selection, query = query, year = year, inspected = null)
+                .unfolding(selection = selection)
+        }
     }
 
     /** Shows every document with [documentId] open in the inspector. */
     fun reveal(documentId: DocumentId) {
         view.update {
-            it.copy(selection = LibrarySelection.Folder(path = RelativePath.ROOT), query = "", inspected = documentId)
+            it.copy(
+                selection = LibrarySelection.Folder(path = RelativePath.ROOT),
+                query = "",
+                year = null,
+                inspected = documentId,
+            )
         }
     }
 
@@ -291,15 +320,26 @@ class LibraryViewModel(
             return LibraryUiState(busy = sessionState.busy)
         }
         val documents = catalog.documents.values
-        val query = view.query.trim().lowercase(Locale.ROOT)
-        val visible = documents
-            .filter { matches(document = it, selection = view.selection) && matches(document = it, query = query) }
-            .sortedBy { it.path.value.lowercase(Locale.ROOT) }
+        val zone = ZoneId.systemDefault()
+        val visible = LibraryFilter.documents(
+            catalog = catalog,
+            view = view,
+            now = services.library.clock.now(),
+            zone = zone,
+        )
         return LibraryUiState(
             isOpen = true,
-            title = titleOf(selection = view.selection, catalog = catalog),
-            folders = LibraryTrees.folders(documents = documents, createdFolders = view.createdFolders),
-            categories = LibraryTrees.categories(categories = catalog.categories.values, documents = documents),
+            title = LibraryFilter.titleOf(selection = view.selection, catalog = catalog),
+            folders = LibraryTrees.folders(
+                documents = documents,
+                createdFolders = view.createdFolders,
+                expanded = view.expandedFolders,
+            ),
+            categories = LibraryTrees.categories(
+                categories = catalog.categories.values,
+                documents = documents,
+                expanded = view.expandedCategories,
+            ),
             uncategorizedCount = documents.count { it.categoryId == null },
             tags = catalog.tags.sorted(),
             tagCounts = documents.flatMap { it.tags }.groupingBy { it }.eachCount(),
@@ -314,36 +354,33 @@ class LibraryViewModel(
             inspected = view.inspected?.let { catalog.documents[it] },
             busy = sessionState.busy,
             layout = view.layout,
+            years = LibraryFilter.years(documents = documents, zone = zone),
+            year = view.year,
+            collapsedGroups = view.collapsedGroups,
         )
     }
 
-    private fun titleOf(selection: LibrarySelection, catalog: Catalog): String {
-        return when (selection) {
-            is LibrarySelection.Folder -> if (selection.path.isRoot) "All documents" else selection.path.fileName
-            is LibrarySelection.Category -> catalog.categories[selection.categoryId]?.name ?: "Category"
-            LibrarySelection.Uncategorized -> "Uncategorized"
-            is LibrarySelection.Tag -> "#${selection.tag.value}"
-        }
+    private fun <T> Set<T>.flip(item: T): Set<T> {
+        return if (item in this) this - item else this + item
     }
 
-    private fun matches(document: Document, selection: LibrarySelection): Boolean {
+    /** The view with the folders and categories above [selection] unfolded, so the selection shows. */
+    private fun LibraryViewState.unfolding(selection: LibrarySelection): LibraryViewState {
         return when (selection) {
-            is LibrarySelection.Folder -> document.path.isInside(folder = selection.path)
-            is LibrarySelection.Category -> document.categoryId == selection.categoryId
-            LibrarySelection.Uncategorized -> document.categoryId == null
-            is LibrarySelection.Tag -> selection.tag in document.tags
-        }
-    }
+            is LibrarySelection.Folder -> copy(
+                expandedFolders = expandedFolders + generateSequence(seed = selection.path.parent) { it.parent }
+                    .filterNot { it.isRoot },
+            )
 
-    private fun matches(document: Document, query: String): Boolean {
-        if (query.isEmpty()) {
-            return true
+            is LibrarySelection.Category -> {
+                val categories = services.library.catalog.value?.categories.orEmpty()
+                val parents = generateSequence(seed = categories[selection.categoryId]?.parentId) { id ->
+                    categories[id]?.parentId
+                }.take(n = categories.size)
+                copy(expandedCategories = expandedCategories + parents)
+            }
+
+            else -> this
         }
-        val fields = listOfNotNull(
-            document.path.value,
-            document.metadata.title,
-            document.metadata.correspondent,
-        ) + document.tags.map { it.value }
-        return fields.any { it.lowercase(Locale.ROOT).contains(other = query) }
     }
 }

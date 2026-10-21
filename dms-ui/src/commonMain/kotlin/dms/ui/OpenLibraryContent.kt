@@ -8,6 +8,7 @@ import dms.ui.dashboard.DashboardViewModel
 import dms.ui.document.InspectorViewModel
 import dms.ui.library.LibraryScreen
 import dms.ui.library.LibraryViewModel
+import dms.ui.library.model.LibrarySelection
 import dms.ui.model.Screen
 import dms.ui.service.AppServices
 import dms.ui.session.LibrarySession
@@ -33,6 +34,10 @@ fun OpenLibraryContent(
             onChooseFiles = library::addFilesToTopLevel,
             onOpen = { selection, query ->
                 library.show(selection = selection, query = query)
+                onScreenChange(Screen.LIBRARY)
+            },
+            onOpenYear = { year ->
+                library.show(selection = LibrarySelection.Folder(path = RelativePath.ROOT), query = "", year = year)
                 onScreenChange(Screen.LIBRARY)
             },
             onOpenDocument = { documentId ->

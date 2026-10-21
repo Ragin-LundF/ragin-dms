@@ -1,5 +1,7 @@
 package dms.ui.library.sidebar
 
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -15,20 +17,31 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import dms.ui.components.FoldToggle
 import dms.ui.components.ReasonTooltip
 import dms.ui.theme.Spacing
 
-/** The heading of a sidebar section, with an optional "+" that adds an entry. */
+/** The heading of a sidebar section: a boxed +/- folds the section, an optional "+" adds an entry. */
 @Composable
-fun SidebarSection(title: String, addLabel: String? = null, busyReason: String? = null, onAdd: () -> Unit = {}) {
+fun SidebarSection(
+    title: String,
+    expanded: Boolean,
+    onToggle: () -> Unit,
+    addLabel: String? = null,
+    busyReason: String? = null,
+    onAdd: () -> Unit = {},
+) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(start = Spacing.small, top = Spacing.large),
         verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(space = Spacing.small),
     ) {
+        FoldToggle(expanded = expanded, onToggle = onToggle)
         Text(
             text = title.uppercase(),
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.clickable(onClick = onToggle),
         )
         Spacer(modifier = Modifier.weight(weight = 1f))
         if (addLabel != null) {

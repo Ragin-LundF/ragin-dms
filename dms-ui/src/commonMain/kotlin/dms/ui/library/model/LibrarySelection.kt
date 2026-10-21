@@ -15,4 +15,7 @@ sealed interface LibrarySelection {
     data object Uncategorized : LibrarySelection
 
     data class Tag(val tag: TagName) : LibrarySelection
+
+    /** The documents added lately, newest first. */
+    data object Recent : LibrarySelection
 }

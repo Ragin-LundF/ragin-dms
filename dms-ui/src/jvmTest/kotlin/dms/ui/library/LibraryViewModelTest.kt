@@ -7,6 +7,9 @@ import dms.ui.document.model.MetadataDraft
 import dms.ui.library.drag.model.DropTarget
 import dms.ui.library.model.LibrarySelection
 import dms.ui.library.model.LibraryUiState
+import dms.ui.library.model.YearFilter
+import dms.ui.library.sidebar.model.SidebarGroup
+import dms.ui.library.sidebar.model.ToggleTarget
 import dms.ui.support.TestApp
 import dms.ui.support.UiTest
 import kotlinx.coroutines.flow.first
@@ -128,6 +131,42 @@ class LibraryViewModelTest {
 
             library.search(query = "nothing like it")
             assertEquals(expected = 0, actual = library.state.value.documents.size)
+        }
+    }
+
+    @Test
+    fun `the year filter uses the document date`() {
+        UiTest.run { app ->
+            val library = libraryWithOneFile(app = app)
+            val inspector = InspectorViewModel(services = app.services, session = app.session, platform = app.platform)
+            inspector.saveMetadata(
+                document = documentOf(state = library.state.value),
+                draft = MetadataDraft(title = "Sample", documentDate = "2019-05-01"),
+            )
+            app.idle()
+            library.state.first { it.years == listOf(2019) }
+
+            library.filterYear(year = YearFilter(year = 2020))
+            val none = library.state.value.documents.size
+            library.filterYear(year = YearFilter(year = 2020, andEarlier = true))
+
+            assertEquals(expected = 0, actual = none)
+            assertEquals(expected = 1, actual = library.state.value.documents.size)
+        }
+    }
+
+    @Test
+    fun `recently added shows new documents, and a folded section hides its entries`() {
+        UiTest.run { app ->
+            val library = libraryWithOneFile(app = app)
+
+            library.select(selection = LibrarySelection.Recent)
+            val recent = library.state.value
+            library.toggle(target = ToggleTarget.Group(group = SidebarGroup.FOLDERS))
+
+            assertEquals(expected = "Recently added", actual = recent.title)
+            assertEquals(expected = 1, actual = recent.documents.size)
+            assertEquals(expected = setOf(SidebarGroup.FOLDERS), actual = library.state.value.collapsedGroups)
         }
     }
 

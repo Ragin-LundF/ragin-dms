@@ -1,9 +1,9 @@
 package dms.ui.components.surface
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.InsertDriveFile
 import androidx.compose.material.icons.rounded.Description
 import androidx.compose.material.icons.rounded.Image
-import androidx.compose.material.icons.rounded.InsertDriveFile
 import androidx.compose.material.icons.rounded.PictureAsPdf
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
@@ -28,7 +28,7 @@ object KindStyles {
             DocumentKind.PDF -> Icons.Rounded.PictureAsPdf
             DocumentKind.IMAGE -> Icons.Rounded.Image
             DocumentKind.OFFICE -> Icons.Rounded.Description
-            DocumentKind.OTHER -> Icons.Rounded.InsertDriveFile
+            DocumentKind.OTHER -> Icons.AutoMirrored.Rounded.InsertDriveFile
         }
     }
 

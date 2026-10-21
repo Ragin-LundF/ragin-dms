@@ -3,6 +3,7 @@ package dms.ui.library.model
 import dms.domain.document.Document
 import dms.domain.library.RelativePath
 import dms.domain.taxonomy.TagName
+import dms.ui.library.sidebar.model.SidebarGroup
 
 /** The library screen, derived from the catalog and the user's choices. */
 data class LibraryUiState(
@@ -19,4 +20,7 @@ data class LibraryUiState(
     val inspected: Document? = null,
     val busy: String? = null,
     val layout: DocumentLayout = DocumentLayout.LIST,
+    val years: List<Int> = emptyList(),
+    val year: YearFilter? = null,
+    val collapsedGroups: Set<SidebarGroup> = emptySet(),
 )

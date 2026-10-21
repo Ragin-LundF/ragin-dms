@@ -40,6 +40,43 @@ class LibraryTreesTest {
     }
 
     @Test
+    fun `subfolders show only below an unfolded folder`() {
+        val documents = listOf(
+            document(id = "1", path = "letters/2024/march/a.pdf"),
+            document(id = "2", path = "Archive/old/c.pdf"),
+        )
+
+        val folded = LibraryTrees.folders(documents = documents, createdFolders = emptySet(), expanded = emptySet())
+        val unfolded = LibraryTrees.folders(
+            documents = documents,
+            createdFolders = emptySet(),
+            expanded = setOf(RelativePath.of(raw = "letters")),
+        )
+
+        assertEquals(expected = listOf("", "Archive", "letters"), actual = folded.map { it.path.value })
+        assertEquals(expected = listOf(true, true, true), actual = folded.map { it.hasChildren })
+        assertEquals(
+            expected = listOf("", "Archive", "letters", "letters/2024"),
+            actual = unfolded.map { it.path.value },
+        )
+    }
+
+    @Test
+    fun `subcategories show only below an unfolded category`() {
+        val parent = Category(id = CategoryId(value = "p"), name = "Invoices")
+        val child = Category(id = CategoryId(value = "c"), name = "Energy", parentId = parent.id)
+
+        val folded = LibraryTrees.categories(
+            categories = listOf(parent, child),
+            documents = emptyList(),
+            expanded = emptySet(),
+        )
+
+        assertEquals(expected = listOf("Invoices"), actual = folded.map { it.category.name })
+        assertEquals(expected = true, actual = folded.single().hasChildren)
+    }
+
+    @Test
     fun `subcategories follow their parent, sorted by name`() {
         val parent = Category(id = CategoryId(value = "p"), name = "Invoices")
         val child = Category(id = CategoryId(value = "c"), name = "Energy", parentId = parent.id)

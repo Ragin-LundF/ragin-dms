@@ -3,6 +3,7 @@ package dms.ui.assistant
 import dms.application.port.assistant.model.ChatRole
 import dms.domain.document.Document
 import dms.ui.dashboard.DashboardViewModel
+import dms.ui.dashboard.model.TaskGroup
 import dms.ui.document.InspectorViewModel
 import dms.ui.library.LibraryViewModel
 import dms.ui.support.SampleImages
@@ -87,13 +88,34 @@ class AssistantUiTest {
         }
     }
 
+    @Test
+    fun `each tag suggestion shows under open tasks while the run goes on`() {
+        UiTest.run { app ->
+            val dashboard = DashboardViewModel(services = app.services, session = app.session)
+            libraryWithImages(app = app, names = listOf("scan-7.png", "scan-8.png"))
+            app.ai.suggestion = "Invoice"
+            app.ai.answerAtOnce = 1
+
+            dashboard.aiBatches.tagAll()
+
+            val running = dashboard.state.first { state -> state.groups.any { it.group == TaskGroup.SUGGESTIONS } }
+            assertNotNull(actual = running.busy)
+            app.ai.release.complete(value = Unit)
+            app.idle()
+            assertEquals(expected = 2, actual = app.ai.chatRequests)
+        }
+    }
+
     private suspend fun libraryWithOneImage(app: TestApp): Document {
+        return libraryWithImages(app = app, names = listOf("scan-7.png")).single()
+    }
+
+    private suspend fun libraryWithImages(app: TestApp, names: List<String>): List<Document> {
         app.configure()
         val library = LibraryViewModel(services = app.services, session = app.session, platform = app.platform)
-        val source = SampleImages.write(file = app.root.resolve("outside/scan-7.png"))
-        app.platform.nextFiles = listOf(source.toString())
+        app.platform.nextFiles = names.map { SampleImages.write(file = app.root.resolve("outside/$it")).toString() }
         library.addFilesToTopLevel()
         app.idle()
-        return library.state.first { it.documents.isNotEmpty() }.documents.single().document
+        return library.state.first { it.documents.size == names.size }.documents.map { it.document }
     }
 }

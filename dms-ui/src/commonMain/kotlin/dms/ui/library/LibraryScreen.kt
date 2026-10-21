@@ -60,6 +60,7 @@ fun LibraryScreen(viewModel: LibraryViewModel, inspector: InspectorViewModel, pl
                     state = state,
                     busyReason = busyReason,
                     onSearch = viewModel::search,
+                    onYear = viewModel::filterYear,
                     onLayout = viewModel::setLayout,
                     onAddFiles = { viewModel.addFiles() },
                     onNewFolder = viewModel::newFolder,

@@ -1,34 +1,29 @@
 package dms.ui.dashboard
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import dms.domain.document.DocumentId
-import dms.domain.library.RelativePath
-import dms.domain.taxonomy.CategoryId
-import dms.domain.taxonomy.TagName
 import dms.ui.PlatformActions
 import dms.ui.components.dialog.DialogHost
 import dms.ui.components.layout.FileDropZone
-import dms.ui.dashboard.hero.DashboardHero
-import dms.ui.dashboard.section.InsightsSection
-import dms.ui.dashboard.section.QuickAccessSection
-import dms.ui.dashboard.section.WorkSection
-import dms.ui.dashboard.widgets.StatRow
+import dms.ui.dashboard.section.DashboardOverview
+import dms.ui.dashboard.task.TaskList
 import dms.ui.library.model.LibrarySelection
+import dms.ui.library.model.YearFilter
 import dms.ui.review.ReviewDialog
 import dms.ui.theme.Spacing
 
 /**
  * The home screen: the main actions, the headline figures, quick access by category, tag and
- * correspondent, the open tasks, and charts of the library. Files dropped on it go to the top level.
+ * correspondent, the open tasks, and charts of the library. The open tasks can fill the screen.
+ * Files dropped on it go to the top level.
  */
 @Composable
 fun DashboardScreen(
@@ -37,45 +32,39 @@ fun DashboardScreen(
     onAddFiles: (List<String>) -> Unit,
     onChooseFiles: () -> Unit,
     onOpen: (LibrarySelection, String) -> Unit,
+    onOpenYear: (YearFilter) -> Unit,
     onOpenDocument: (DocumentId) -> Unit,
 ) {
     val state by viewModel.state.collectAsState()
     val busyReason = state.busy?.let { "Wait until \"$it\" finishes" }
-    val everything = LibrarySelection.Folder(path = RelativePath.ROOT)
+    var tasksFull by remember { mutableStateOf(value = false) }
     FileDropZone(
         platform = platform,
         label = "The files go to the top level of every library folder",
         onDrop = onAddFiles,
         modifier = Modifier.fillMaxSize(),
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(state = rememberScrollState())
-                .padding(all = Spacing.xxlarge),
-            verticalArrangement = Arrangement.spacedBy(space = Spacing.xlarge),
-        ) {
-            DashboardHero(
+        if (tasksFull) {
+            TaskList(
+                groups = state.groups,
+                filter = state.filter,
+                busyReason = busyReason,
+                onFilter = viewModel::setFilter,
+                full = true,
+                onFullView = { tasksFull = false },
+                modifier = Modifier.fillMaxSize().padding(all = Spacing.xxlarge),
+            )
+        } else {
+            DashboardOverview(
                 state = state,
                 busyReason = busyReason,
-                onAddFiles = onChooseFiles,
-                onScan = viewModel::scan,
-                onSync = viewModel::syncToAllDestinations,
-                onMerge = viewModel::mergeAllFolders,
-                onClassifyAll = viewModel.aiBatches::classifyAll,
-                onTagAll = viewModel.aiBatches::tagAll,
-                onSearch = { query -> onOpen(everything, query) },
-            )
-            StatRow(state = state, onOpenUncategorized = { onOpen(LibrarySelection.Uncategorized, "") })
-            QuickAccessSection(
-                stats = state.stats,
+                viewModel = viewModel,
+                onChooseFiles = onChooseFiles,
+                onOpen = onOpen,
+                onOpenYear = onOpenYear,
                 onOpenDocument = onOpenDocument,
-                onOpenCategory = { id -> onOpen(LibrarySelection.Category(categoryId = CategoryId(value = id)), "") },
-                onOpenUncategorized = { onOpen(LibrarySelection.Uncategorized, "") },
-                onOpenTag = { tag -> onOpen(LibrarySelection.Tag(tag = TagName.of(raw = tag)), "") },
+                onShowAllTasks = { tasksFull = true },
             )
-            WorkSection(state = state, busyReason = busyReason, onFilter = viewModel::setFilter)
-            InsightsSection(stats = state.stats, onSearch = { query -> onOpen(everything, query) })
         }
     }
     DialogHost(controller = viewModel.dialogs)

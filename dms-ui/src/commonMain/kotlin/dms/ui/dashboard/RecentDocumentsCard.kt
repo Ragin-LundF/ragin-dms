@@ -18,18 +18,26 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextOverflow
 import dms.domain.document.DocumentId
+import dms.ui.components.FullViewButton
 import dms.ui.components.surface.AppCard
 import dms.ui.components.surface.CardTitle
 import dms.ui.components.surface.KindBadge
 import dms.ui.dashboard.stats.model.RecentDocument
 import dms.ui.theme.Spacing
 
-/** The documents added last; a click opens one in the library. */
+/** The documents added last; a click opens one in the library, and the card opens all of them there. */
 @Composable
-fun RecentDocumentsCard(documents: List<RecentDocument>, onOpen: (DocumentId) -> Unit, modifier: Modifier = Modifier) {
+fun RecentDocumentsCard(
+    documents: List<RecentDocument>,
+    onOpen: (DocumentId) -> Unit,
+    onShowAll: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val colors = MaterialTheme.colorScheme
     AppCard(modifier = modifier) {
-        CardTitle(title = "Recently added", icon = Icons.Rounded.History, tint = colors.primary)
+        CardTitle(title = "Recently added", icon = Icons.Rounded.History, tint = colors.primary) {
+            FullViewButton(label = "Show all recently added documents", full = false, onClick = onShowAll)
+        }
         if (documents.isEmpty()) {
             Text(
                 text = "Drop files anywhere on this page to add them",

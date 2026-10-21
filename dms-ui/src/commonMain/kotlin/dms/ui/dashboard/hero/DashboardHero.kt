@@ -8,8 +8,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.MergeType
 import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.MergeType
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Sync
 import androidx.compose.material3.MaterialTheme
@@ -85,8 +85,14 @@ fun DashboardHero(
             HeroButton(label = "Add files", icon = Icons.Rounded.Add, busyReason = busyReason, onClick = onAddFiles)
             HeroButton(label = "Scan", icon = Icons.Rounded.Refresh, busyReason = busyReason, onClick = onScan)
             HeroButton(label = "Sync to all", icon = Icons.Rounded.Sync, busyReason = busyReason, onClick = onSync)
-            HeroButton(label = "Merge", icon = Icons.Rounded.MergeType, busyReason = busyReason, onClick = onMerge)
+            HeroButton(
+                label = "Merge",
+                icon = Icons.AutoMirrored.Rounded.MergeType,
+                busyReason = busyReason,
+                onClick = onMerge,
+            )
         }
         HeroAiButtons(state = state, busyReason = busyReason, onTagAll = onTagAll, onClassifyAll = onClassifyAll)
     }
 }
+

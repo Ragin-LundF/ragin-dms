@@ -15,13 +15,13 @@ import dms.ui.theme.Spacing
 
 /** Charts of the library: documents per year, file types and the main correspondents. */
 @Composable
-fun InsightsSection(stats: LibraryStats, onSearch: (String) -> Unit) {
+fun InsightsSection(stats: LibraryStats, onSearch: (String) -> Unit, onOpenYear: (String) -> Unit) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(space = Spacing.large),
     ) {
         val card = Modifier.height(height = 340.dp)
-        YearChartCard(points = stats.byYear, modifier = card.weight(weight = 1.6f))
+        YearChartCard(points = stats.byYear, onOpenYear = onOpenYear, modifier = card.weight(weight = 1.6f))
         KindCard(kinds = stats.byKind, modifier = card.weight(weight = 1.3f))
         CorrespondentCard(points = stats.correspondents, onSearch = onSearch, modifier = card.weight(weight = 1f))
     }

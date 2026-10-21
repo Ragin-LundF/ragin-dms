@@ -157,6 +157,14 @@ class LibrarySession(
         mutableState.update { it.copy(busy = null, cancellable = false, revision = it.revision + 1) }
     }
 
+    /**
+     * Tells the screens that the running operation changed something they show, such as a new
+     * suggestion under Open tasks, so they reload it now instead of when the operation ends.
+     */
+    fun changed() {
+        mutableState.update { it.copy(revision = it.revision + 1) }
+    }
+
     /** Shows how far the running operation is. Call inside [perform]; it is cleared when it ends. */
     fun progress(progress: OperationProgress) {
         mutableProgress.value = progress

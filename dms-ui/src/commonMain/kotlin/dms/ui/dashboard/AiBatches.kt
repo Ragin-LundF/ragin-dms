@@ -18,7 +18,8 @@ import kotlinx.coroutines.flow.takeWhile
 /**
  * The AI's runs over the whole library: classify every document without a classification, or tag
  * every document without tags. One document after the other, with progress, until the user cancels;
- * a run stops at once when the AI server does not answer. Every result waits under Open tasks.
+ * a run stops at once when the AI server does not answer. Every result waits under Open tasks and
+ * shows there as soon as it arrives.
  */
 class AiBatches(
     private val services: AppServices,
@@ -51,6 +52,7 @@ class AiBatches(
                         is SuggestOutcome.Suggested -> if (outcome.suggestion.hasValues()) {
                             suggested++
                             session.log.info(text = "AI suggestion for $name")
+                            session.changed()
                         } else {
                             session.log.info(text = "The AI found nothing new for $name")
                         }

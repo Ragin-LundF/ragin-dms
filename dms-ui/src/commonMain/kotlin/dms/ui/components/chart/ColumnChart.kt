@@ -21,10 +21,16 @@ import dms.ui.theme.Spacing
 
 /**
  * Vertical bars of one series on a common baseline. The last bar and the hovered bar carry their
- * value; every bar is labelled below.
+ * value; every bar is labelled below. With [onClick] a bar opens what it counts.
  */
 @Composable
-fun ColumnChart(points: List<ChartPoint>, color: Color, modifier: Modifier = Modifier, height: Dp = 180.dp) {
+fun ColumnChart(
+    points: List<ChartPoint>,
+    color: Color,
+    modifier: Modifier = Modifier,
+    height: Dp = 180.dp,
+    onClick: ((ChartPoint) -> Unit)? = null,
+) {
     val max = points.maxOfOrNull { it.value }?.takeIf { it > 0 } ?: 1
     Column(modifier = modifier) {
         Row(
@@ -38,6 +44,7 @@ fun ColumnChart(points: List<ChartPoint>, color: Color, modifier: Modifier = Mod
                     fraction = point.value.toFloat() / max,
                     color = color,
                     alwaysLabelled = index == points.lastIndex,
+                    onClick = onClick?.let { open -> { open(point) } },
                     modifier = Modifier.weight(weight = 1f).fillMaxHeight(),
                 )
             }
