@@ -1,0 +1,29 @@
+compose.desktop {
+    application {
+        mainClass = project.ext.desktopMainClass
+
+        nativeDistributions {
+            targetFormats = [
+                    TargetFormat.Msi,
+                    TargetFormat.Dmg,
+                    TargetFormat.Deb
+            ]
+
+            packageName = "ragin-dms"
+            packageVersion = package_version
+
+            windows {
+                shortcut = true
+                menu = true
+            }
+
+            macOS {
+                bundleID = "io.github.ragin-lundf.dms"
+            }
+
+            linux {
+                packageName = "ragin-dms"
+            }
+        }
+    }
+}

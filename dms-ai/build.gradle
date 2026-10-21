@@ -1,0 +1,16 @@
+plugins {
+    alias(libs.plugins.kotlin.jvm)
+    alias(libs.plugins.kotlin.serialization)
+}
+
+// Adapter: OpenAI-compatible LLM client and document reading (PDFBox, Apache POI).
+dependencies {
+    implementation project(":dms-application")
+    implementation libs.bundles.ktor.client
+    implementation libs.kotlinx.serialization.json
+    implementation libs.pdfbox
+    implementation libs.poi.ooxml
+    testImplementation libs.kotlin.test
+    testImplementation libs.kotlinx.coroutines.test
+    testImplementation libs.ktor.client.mock
+}

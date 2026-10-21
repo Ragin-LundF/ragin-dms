@@ -1,0 +1,59 @@
+# This workflow will build a Java project with Gradle
+# For more information see: https://help.github.com/actions/language-and-framework-guides/building-and-testing-java-with-gradle
+
+name: Build
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  checks: write
+
+jobs:
+  build:
+    name: Build and test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
+    steps:
+    - uses: actions/checkout@v7
+    - name: Set up JDK 25
+      uses: actions/setup-java@v5
+      with:
+        java-version: 25
+        distribution: 'liberica'
+
+    - name: Grant execute permission for gradlew
+      if: runner.os != 'Windows'
+      run: chmod +x gradlew
+
+    - name: Build with Gradle
+      run: ./gradlew build -x test -x jvmTest
+
+    - name: Execute tests
+      run: ./gradlew test allTests --continue
+
+    - name: Publish Test Report
+      uses: mikepenz/action-junit-report@v6
+      if: success() || failure() # always run even if the previous step fails
+      with:
+        check_name: Test report (${{ matrix.os }})
+        report_paths: '**/build/test-results/**/TEST-*.xml'
+        detailed_summary: true
+        truncate_stack_traces: false
+
+    - name: Upload HTML test reports
+      if: success() || failure()
+      uses: actions/upload-artifact@v7
+      with:
+        name: test-reports-html-${{ matrix.os }}
+        path: '**/build/reports/tests/**'
+        if-no-files-found: ignore
+        retention-days: 7

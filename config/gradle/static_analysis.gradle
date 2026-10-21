@@ -1,0 +1,39 @@
+// --- Detekt
+apply plugin: "dev.detekt"
+
+tasks.withType(Detekt).configureEach {
+    exclude("**/gen/**")
+    reports {
+        html.required.set(true) // observe findings in your browser with structure and code snippets
+        checkstyle.required.set(true) // checkstyle like format mainly for integrations like Jenkins
+        sarif.required.set(true)
+        // standardized SARIF format (https://sarifweb.azurewebsites.net/) to support integrations with Github Code Scanning
+    }
+}
+
+detekt {
+    config.setFrom("${rootDir}/config/detekt.yml")
+    buildUponDefaultConfig = true
+    // Detekt's default source set is src/main/kotlin + src/test/kotlin, which a Kotlin Multiplatform
+    // module does not have. Listing both layouts here covers the plain-JVM and the KMP modules with
+    // one config; detekt skips the directories a given module does not have.
+    source.setFrom(
+        "src/main/kotlin",
+        "src/test/kotlin",
+        "src/testFixtures/kotlin",
+        "src/commonMain/kotlin",
+        "src/jvmMain/kotlin",
+        "src/jvmTest/kotlin",
+    )
+}
+
+tasks.withType(Detekt).configureEach {
+    jvmTarget = java_version
+}
+tasks.withType(DetektCreateBaselineTask).configureEach {
+    jvmTarget = java_version
+}
+
+tasks.matching { it.name == "assemble" }.configureEach {
+    finalizedBy(tasks.named("detekt"))
+}

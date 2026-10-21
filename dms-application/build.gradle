@@ -1,0 +1,11 @@
+plugins {
+    alias(libs.plugins.kotlin.jvm)
+}
+
+// Use cases and ports. Knows the domain and coroutines, never an adapter or a framework.
+dependencies {
+    api project(":dms-domain")
+    api libs.kotlinx.coroutines.core
+    testImplementation libs.kotlin.test
+    testImplementation libs.kotlinx.coroutines.test
+}

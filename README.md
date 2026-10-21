@@ -1,23 +1,37 @@
 # ragin-dms
 
-This project uses [Gradle](https://gradle.org/).
-To build and run the application, use the *Gradle* tool window by clicking the Gradle icon in the right-hand toolbar,
-or run it directly from the terminal:
+A desktop document management system that keeps documents as ordinary files and folders on disk.
+Categories, tags and metadata live in a readable catalog file (`dms-catalog.yaml`) in the root of the
+library. The library can be kept in one primary folder plus any number of sync folders, and a local AI
+(LM Studio, Ollama or any OpenAI-compatible API) suggests titles, categories and tags for review.
 
-* Run `./gradlew run` to build and run the application.
-* Run `./gradlew build` to only build the application.
-* Run `./gradlew check` to run all checks, including tests.
-* Run `./gradlew clean` to clean all build outputs.
+Runs on macOS, Windows and Linux. Built with Kotlin and Compose Multiplatform.
 
-Note the usage of the Gradle Wrapper (`./gradlew`).
-This is the suggested way to use Gradle in production projects.
+## Modules
 
-[Learn more about the Gradle Wrapper](https://docs.gradle.org/current/userguide/gradle_wrapper.html).
+| Module | Purpose |
+|---|---|
+| `dms-domain` | Entities and domain rules. No dependencies. |
+| `dms-application` | Use cases and ports. |
+| `dms-storage` | File system, catalog file, synchronization of the library folders. |
+| `dms-ai` | OpenAI-compatible LLM client, reading PDFs, images and Office files. |
+| `dms-ui` | Compose Multiplatform desktop UI and composition root. |
 
-[Learn more about Gradle tasks](https://docs.gradle.org/current/userguide/command_line_interface.html#common_tasks).
+Dependencies point inwards only: `dms-ui` → `dms-application` → `dms-domain`; the adapters
+`dms-storage` and `dms-ai` implement ports of `dms-application`.
 
-This project follows the suggested multi-module setup and consists of the `app` and `utils` subprojects.
-The shared build logic was extracted to a convention plugin located in `buildSrc`.
+## Build
 
-This project uses a version catalog (see `gradle/libs.versions.toml`) to declare and version dependencies
-and both a build cache and a configuration cache (see `gradle.properties`).
+Requires JDK 25 (Gradle toolchains download it if missing).
+
+* `./gradlew build` builds all modules and runs tests and Detekt.
+* `./gradlew :dms-ui:run` starts the desktop app.
+* `./gradlew :dms-ui:packageDmg` / `packageMsi` / `packageDeb` builds a native installer on the matching OS.
+* `./gradlew versionCatalogUpdate` updates `gradle/libs.versions.toml` to the latest stable versions.
+
+Shared build logic lives in `config/gradle/`, all versions in `gradle/libs.versions.toml`, Detekt rules
+in `config/detekt.yml`.
+
+## AI instructions
+
+Instructions for AI coding assistants live in `.ai/` (entry points: `AGENTS.md`, `CLAUDE.md`).

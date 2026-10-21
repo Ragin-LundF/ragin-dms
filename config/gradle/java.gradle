@@ -1,0 +1,29 @@
+plugins.withType(JavaPlugin) {
+    java {
+        toolchain {
+            languageVersion.set(JavaLanguageVersion.of(java_version))
+        }
+    }
+}
+
+plugins.withId("org.jetbrains.kotlin.jvm") {
+    kotlin {
+        jvmToolchain {
+            languageVersion.set(JavaLanguageVersion.of(java_version))
+        }
+    }
+}
+
+plugins.withId("org.jetbrains.kotlin.multiplatform") {
+    kotlin {
+        jvmToolchain {
+            languageVersion.set(JavaLanguageVersion.of(java_version))
+        }
+    }
+}
+
+tasks.withType(KotlinCompile).configureEach {
+    compilerOptions {
+        jvmTarget = JvmTarget.fromTarget(java_version)
+    }
+}
