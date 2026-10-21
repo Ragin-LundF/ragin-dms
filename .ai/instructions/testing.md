@@ -19,7 +19,7 @@ Use this file when adding, modifying, or reviewing tests.
 
 ## Storage tests
 
-- Every file system test works in a fresh temporary directory (`kotlin.io.path.createTempDirectory`) and deletes it afterwards. Never touch the user's home folder, iCloud, or Proton Drive paths.
+- Every file system test works in a fresh temporary directory (`kotlin.io.path.createTempDirectory`) and deletes it afterwards. Never touch the user's home folder or any real library folder.
 - Synchronization tests use **at least three** temporary folders (primary + two sync folders) and assert the state of every folder after each operation.
 - Test failure paths explicitly: a sync folder not writable or missing (offline), file already exists, same path with different content, catalog file corrupt, catalog conflict copies present, file missing in one folder.
 - Test names with umlauts in both NFC and NFD form, and names that differ only by case.

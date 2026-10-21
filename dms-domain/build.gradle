@@ -1,0 +1,10 @@
+plugins {
+    alias(libs.plugins.kotlin.jvm)
+}
+
+// No production dependencies on purpose. This module is the innermost layer: documents, catalog,
+// taxonomy, library folders, detected changes and tasks — no I/O, no serialization, no coroutines.
+// Every other module depends on it. Adding a dependency here would break the dependency rule.
+dependencies {
+    testImplementation libs.kotlin.test
+}

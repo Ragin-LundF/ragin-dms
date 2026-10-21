@@ -1,0 +1,40 @@
+compose.desktop {
+    application {
+        mainClass = project.ext.desktopMainClass
+
+        // Without these, macOS shows the process as "java" in the menu bar and the Dock when the app
+        // runs from Gradle or the IDE. Only macOS JVMs know -Xdock; others refuse to start with it.
+        if (org.gradle.internal.os.OperatingSystem.current().isMacOsX()) {
+            jvmArgs("-Xdock:name=Ragin-DMS", "-Dapple.awt.application.name=Ragin-DMS")
+        }
+
+        nativeDistributions {
+            targetFormats = [
+                    TargetFormat.Msi,
+                    TargetFormat.Dmg,
+                    TargetFormat.Deb
+            ]
+
+            packageName = "Ragin-DMS"
+            packageVersion = package_version
+
+            // The logo; its source is packaging/icons/logo.svg in the UI module.
+            windows {
+                iconFile.set(project.file("packaging/icons/icon.ico"))
+                shortcut = true
+                menu = true
+            }
+
+            macOS {
+                iconFile.set(project.file("packaging/icons/icon.icns"))
+                bundleID = "io.github.ragin-lundf.dms"
+                dockName = "Ragin-DMS"
+            }
+
+            linux {
+                iconFile.set(project.file("packaging/icons/icon.png"))
+                packageName = "ragin-dms"
+            }
+        }
+    }
+}

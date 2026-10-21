@@ -11,10 +11,11 @@ Use this file when touching `dms-domain` or `dms-application`.
 | `dms.domain.taxonomy` | `Category`, `CategoryId`, `Tag`, `TagName`. |
 | `dms.domain.catalog` | `Catalog` (the aggregate root), `CatalogRevision`, `CatalogMerger`. |
 | `dms.domain.classification` | `ClassificationSuggestion` and its parts. Suggestions are values, never applied state. |
-| `dms.domain.change` | `DetectedChange` sealed hierarchy: what a scan found (`NewFile`, `ModifiedFile`, `MovedFile`, `MissingFile`, `MissingInFolder`, `ContentConflict`, `CatalogConflict`). |
-| `dms.domain.task` | `OpenTask` sealed hierarchy: what the dashboard asks the user to decide. |
+| `dms.domain.change` | `DetectedChange` sealed hierarchy — what a scan found (`NewFile`, `ModifiedFile`, `MovedFile`, `MissingFile`, `ContentConflict`) — and `ChangeDetector`, which compares the catalog with `FolderSnapshot`s. |
+| `dms.domain.task` | `OpenTask` sealed hierarchy: what the dashboard asks the user to decide, with a stable `TaskKey`. `OpenTask.forChange` maps every `DetectedChange` to its task. |
 | `dms.application.port` | Every port interface. |
-| `dms.application.<feature>` | Use cases grouped by feature: `library`, `sync`, `folder`, `document`, `taxonomy`, `classification`, `search`. Inputs and outcomes go in `<feature>.model`. |
+| `dms.application.common` | Shared outcome (`OperationOutcome`), `SiblingNames` (name collision checks against the primary and the catalog), `ActivityRecorder`. |
+| `dms.application.<feature>` | Use cases grouped by feature: `library`, `sync` (with `Replicator`), `folder`, `document`, `catalog`, `resolution`, `classification`, `search`. Inputs and outcomes go in `<feature>.model`. |
 
 ## Domain rules
 
@@ -22,7 +23,7 @@ Use this file when touching `dms-domain` or `dms-application`.
 - Every catalog change increments `CatalogRevision`. The revision decides which of two catalog copies is newer — never the file modification time, which cloud sync rewrites.
 - A document is identified by `DocumentId` (a UUID), not by its path. Paths change when the user moves or renames a file; the id does not.
 - `ContentHash` (SHA-256) is how a moved or renamed file is recognized again. Keep it in the catalog.
-- `RelativePath` is always relative to a library folder, uses `/` as separator, is **NFC-normalized** in its factory, and is never absolute. macOS stores umlauts decomposed (NFD), NAS, Windows and Linux composed (NFC); without normalization the same file looks like two.
+- `RelativePath` is always relative to a library folder, uses `/` as separator, is **NFC-normalized** in its factory, and is never absolute. macOS may store umlauts decomposed (NFD), Windows, Linux and network shares composed (NFC); without normalization the same file looks like two.
 - `FileNamePolicy` is the only validator for file and folder names from the user or the AI. A name must be valid on macOS, Windows **and** Linux: no `<>:"/\|?*` or control characters, no reserved Windows names (`CON`, `NUL`, …), no trailing dots or spaces, length limit, and no name that differs from a sibling only by case. Do not validate names anywhere else.
 - Keep original file names. A new name only comes from an approved suggestion or a user rename.
 - Tag names are normalized once, in `TagName`'s factory (trimmed, case-insensitive uniqueness, display casing preserved). Never compare raw tag strings.
@@ -36,9 +37,12 @@ Use this file when touching `dms-domain` or `dms-application`.
 - Use cases are stateless. State lives in the catalog (persisted, shared), in the task store and activity log (local), or in the UI's view models (transient).
 - **Nothing changes the library without a user action.** Scans only detect; they produce `DetectedChange`s, and `BuildDashboard` turns them into `OpenTask`s. Adopting, renaming, syncing, restoring and deleting are separate use cases the user triggers.
 - A use case that writes files writes the **file first and the catalog second**. A crash in between leaves an uncatalogued file, which the next scan finds; the reverse would leave a catalog entry pointing at nothing.
-- Every write goes to **all reachable library folders**, primary first. A failed primary aborts the operation; a failed sync folder is journaled and becomes a `RetryFailedOperation` task.
+- Every write goes to **all reachable library folders**, primary first. A failed primary aborts the operation; a failed sync folder is journaled and becomes a `RetryFailedOperations` task. Use `Replicator` for this; never loop over folders in a use case.
 - Sync never deletes. Deleting is its own use case (`TrashDocument`), requires an explicit confirmation flag in its input, and moves to the trash in every folder.
-- AI is optional. Every use case except the classification ones must work when no `DocumentClassifier` is configured.
+- Duplicates are files with the same size and SHA-256 that the storage also finds identical byte by byte (`DocumentStorage.sameContent`) right before anything moves; a name or a size alone never makes a duplicate. `MergeDuplicates` keeps one catalogued copy, takes over the assigned values of the others and trashes them per folder only where that folder's comparison passed; `TrashDuplicateFile` does the same for a new file that copies a document. Both need the confirmation flag.
+- A file found under another name in one folder (`MovedFile`) is brought in line by renaming it there (`MoveDecision.UNDO`), never by copying, which would leave a duplicate.
+- `dms.application.search.SearchContents` finds documents by their text: the AI's transcription from the `TextStore` plus the text layer from `DocumentContentReader.text`, which never renders pages and so needs no AI server. It keeps the texts in memory by content hash and never writes.
+- AI is optional. Every use case except the classification and assistant ones (`dms.application.assistant`: summary, tags, questions) must work when no AI server is configured.
 
 ## Extending the catalog model
 
@@ -53,6 +57,6 @@ Adding a field to `Document` or `Catalog` touches, in order:
 ## Adding a detected change or a task type
 
 1. The `DetectedChange` or `OpenTask` subtype (same package as its sealed parent).
-2. The detection in `ScanLibrary` / the folder comparison, with a test on fake folders.
-3. The mapping in `BuildDashboard`.
+2. The detection in `ChangeDetector`, with a test on synthetic snapshots.
+3. The mapping in `OpenTask.forChange` (exhaustive, so the compiler names it).
 4. The use case that resolves it, and the dashboard row with its actions. The `when` over `OpenTask` in the UI is exhaustive, so the compiler names what is missing.

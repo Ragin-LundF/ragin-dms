@@ -1,0 +1,10 @@
+def unstableVersionKeywords = ['-beta', 'dev', '-rc', '-m', '-SNAPSHOT', '-ALPHA']
+versionCatalogUpdate {
+    // sort the catalog by key (default is true)
+    sortByKey = false
+
+    // Return true in the version selector function to accept the updated version.
+    versionSelector { moduleVersionCandidate ->
+        !(unstableVersionKeywords.any { uk -> moduleVersionCandidate.candidate.version.containsIgnoreCase(uk) })
+    }
+}

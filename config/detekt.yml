@@ -1,0 +1,46 @@
+# Overwrites for Detekt
+# Example for most configs: https://github.com/detekt/detekt/blob/main/config/detekt/detekt.yml
+# Docs: https://detekt.dev/docs/intro
+naming:
+  FunctionNaming:
+    # Composables are PascalCase by framework convention — Compose's own tooling and every code
+    # sample name them that way, so this is the rule being configured for the framework rather than
+    # relaxed. Without it the UI module reports one finding per composable.
+    ignoreAnnotated: [ "Composable" ]
+
+style:
+  # using 5 instead of 2
+  ReturnCount:
+    active: true
+    excludeGuardClauses: true
+    max: 5
+  MagicNumber:
+    ignoreAnnotation: true
+    # dp/sp sizes and weights are the literal content of a layout; naming each one moves the value
+    # away from the only place it means anything.
+    ignoreAnnotated: [ "Composable" ]
+  ForbiddenComment:
+    active: false
+
+complexity:
+  NamedArguments:
+    active: true
+    allowedArguments: 0
+    ignoreArgumentsMatchingNames: false
+  LongParameterList:
+    ignoreDefaultParameters: true
+    allowedFunctionParameters: 25
+    allowedConstructorParameters: 15
+  TooManyFunctions:
+    allowedFunctionsPerClass: 20
+    allowedFunctionsPerInterface: 20
+    allowedFunctionsPerObject: 20
+    # Private helpers do not count. The threshold is about how much API a type asks a caller to
+    # learn; a long chain of private phrase-makers that only call each other is a file-length
+    # question, which LargeClass already answers.
+    ignorePrivate: true
+
+performance:
+  # disabled since Kotlin compiler optimizations since 1.1.60
+  SpreadOperator:
+    active: false
