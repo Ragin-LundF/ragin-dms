@@ -10,7 +10,7 @@ This module handles the user's real documents. A bug here loses data that may ex
 |---|---|
 | `dms.storage.fs` | `FileSystemDocumentStorage`: file operations in one folder, atomic writes, NFC path mapping, name collision handling. |
 | `dms.storage.catalog` | `FileCatalogRepository`, `CatalogMapper`, `CatalogMigrations`. DTOs in `dms.storage.catalog.dto`. |
-| `dms.storage.sync` | `ReplicatedDocumentStorage`, `ReplicatedCatalogRepository`, the failed-operation journal, `FolderComparison`. |
+| `dms.storage.journal` | `FileOperationJournal`: the failed-operation journal in the local app data directory. |
 | `dms.storage.scan` | Walking one folder, incremental hashing, producing the raw facts the use cases turn into `DetectedChange`s. |
 | `dms.storage.text` | `FileTextStore` for `.dms-text/<documentId>.txt`. |
 | `dms.storage.platform` | Platform specifics: placeholders (files not stored locally), conflict copies, the ignore list. |
@@ -47,12 +47,14 @@ The app runs on macOS, Windows and Linux, and one library is often spread over f
 
 One folder is the **primary**, any number are **sync folders**. All are equal in content; the primary decides direction for "Sync to all destinations" and is written first.
 
-- Every write goes through `ReplicatedDocumentStorage` / `ReplicatedCatalogRepository`, never to a single folder directly.
-- Order: primary first, then each sync folder. If the primary fails, abort without touching the others. If a sync folder fails or is offline, record the operation in the **failed-operation journal** (local app data directory, never inside a library folder) and continue with the next folder.
+- The **replication policy lives in the application layer** (`dms.application.sync.Replicator`), not here. Storage adapters work on **one folder per call** (`DocumentStorage`, `CatalogRepository`, `TextStore`) and persist the journal (`OperationJournal`); they never decide which folders to write.
+- Order (enforced by `Replicator`): primary first, then each sync folder. If the primary fails, abort without touching the others. If a sync folder fails or is offline, the operation goes into the **failed-operation journal** (local app data directory, never inside a library folder) and the next folder continues.
+- Every failure is a `StorageResult.Failure` with a `StorageFailure` reason, never an exception: an offline folder is `FOLDER_UNREACHABLE`, a missing source `NOT_FOUND`, an occupied target `ALREADY_EXISTS`. `RetryFailedOperations` relies on these reasons to drop operations that no longer apply.
+- `copyFile` with `replaceExisting` moves the replaced file to the system trash before writing.
 - All catalog copies carry the same `CatalogRevision` after a successful write. On load, the higher revision wins; equal revisions with different content, and conflict copies, are merged by `CatalogMerger` per document id and reported.
 - **Sync to all destinations**: copy what is missing or different in sync folders from the primary, apply catalog-known renames and moves. Files that exist only in a sync folder are reported, never removed.
 - **Merge all folders**: scan every folder, copy each file missing anywhere into the folders that lack it. Same relative path with different content is a `ContentConflict` — never pick a winner automatically.
-- `FolderComparison` compares by NFC relative path, then size, then hash (only when size and mtime do not settle it).
+- Folders are compared by the use cases (`SyncFromPrimary`, `MergeAllFolders`, `FileComparison`) on the `FolderSnapshot`s the scanner returns: by NFC relative path, then content hash, then size when a hash is missing.
 
 ## Scanning
 

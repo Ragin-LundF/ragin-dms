@@ -16,6 +16,7 @@ object FileNamePolicy {
     /** Conservative limit that leaves room for the folder path within Windows' path length. */
     const val MAX_LENGTH: Int = 200
 
+    private const val FIRST_SUFFIX = 2
     private const val FIRST_PRINTABLE = 32
     private const val DELETE = 127
     private val FORBIDDEN_CHARACTERS = setOf('<', '>', ':', '"', '/', '\\', '|', '?', '*')
@@ -45,6 +46,22 @@ object FileNamePolicy {
     /** `true` if [name] would clash with one of [siblings] in the same folder. */
     fun collidesWithAny(name: String, siblings: Collection<String>): Boolean {
         return siblings.any { isSameName(first = it, second = name) }
+    }
+
+    /**
+     * Returns [name] if it is free among [siblings], otherwise the first free `name (n).ext` with
+     * n starting at 2.
+     */
+    fun nextFreeName(name: String, siblings: Collection<String>): String {
+        if (!collidesWithAny(name = name, siblings = siblings)) {
+            return name
+        }
+        val dot = name.lastIndexOf(char = '.')
+        val base = if (dot > 0) name.substring(startIndex = 0, endIndex = dot) else name
+        val extension = if (dot > 0) name.substring(startIndex = dot) else ""
+        return generateSequence(seed = FIRST_SUFFIX) { it + 1 }
+            .map { "$base ($it)$extension" }
+            .first { !collidesWithAny(name = it, siblings = siblings) }
     }
 
     private fun isControlCharacter(character: Char): Boolean {

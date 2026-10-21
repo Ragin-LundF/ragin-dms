@@ -55,6 +55,18 @@ class FileNamePolicyTest {
     }
 
     @Test
+    fun `the next free name adds a counter before the extension`() {
+        val siblings = listOf("report.pdf", "Report (2).pdf", "notes")
+
+        assertEquals(expected = "new.pdf", actual = FileNamePolicy.nextFreeName(name = "new.pdf", siblings = siblings))
+        assertEquals(
+            expected = "report (3).pdf",
+            actual = FileNamePolicy.nextFreeName(name = "report.pdf", siblings = siblings),
+        )
+        assertEquals(expected = "notes (2)", actual = FileNamePolicy.nextFreeName(name = "notes", siblings = siblings))
+    }
+
+    @Test
     fun `collision check looks at all siblings`() {
         val siblings = listOf("alpha.pdf", "Beta.pdf")
 

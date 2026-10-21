@@ -146,6 +146,16 @@ class CatalogDocumentTest {
     }
 
     @Test
+    fun `chained updates stop at the first rejection`() {
+        val catalog = TestData.catalogWith(invoice)
+
+        val chained = catalog.removeDocument(documentId = DocumentId(value = "unknown"))
+            .andThen { it.removeDocument(documentId = invoice.id) }
+
+        assertEquals(expected = CatalogUpdate.Rejected(reason = CatalogRejection.DOCUMENT_NOT_FOUND), actual = chained)
+    }
+
+    @Test
     fun `documents inside a folder include nested folders`() {
         val catalog = TestData.catalogWith(invoice, contract, notes)
 
