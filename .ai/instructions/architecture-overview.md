@@ -6,7 +6,7 @@ Read this file for repository-level architecture decisions, cross-module changes
 
 A desktop document management system that keeps documents as **ordinary, readable files on disk**. The tool adds documents, creates folders, and stores categorization (categories, tags, metadata) in a **catalog file** in the root of the document library. Nothing is hidden in a database: deleting the tool must leave a complete, browsable folder tree behind.
 
-The library exists in **one primary folder and any number of sync folders** (iCloud Drive, Proton Drive, a NAS, an external disk, …), chosen by the user per device. Every folder holds the same tree and its own copy of the catalog file. The tool writes every change to all of them, detects changes made outside the tool by scanning, and shows everything that needs a decision as an open task on the **dashboard**.
+The library exists in **one primary folder and any number of sync folders** configured as plain **paths** per device. What is behind a path (local disk, external disk, network share, a folder a cloud client backs up) does not matter. The DMS synchronizes only between these paths and never talks to a cloud vendor; cloud backup is the vendor client's job. Every folder holds the same tree and its own copy of the catalog file. The tool writes every change to all of them, detects changes made outside the tool by scanning, and shows everything that needs a decision as an open task on the **dashboard**.
 
 The app runs on macOS, Windows and Linux. Never assume one platform's file system behavior (case sensitivity, Unicode normalization, path separators, allowed characters).
 

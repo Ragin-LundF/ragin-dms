@@ -68,5 +68,6 @@ A **model** is a pure data declaration with no behavior: `data class`, `enum cla
 - Never commit code. Everything must be reviewed and committed by the user.
 - When executing plans, follow the instructions provided in the plan. Ask after every step if the result is correct before continuing, unless it is explicitly unwanted by user prompt.
 - Ask always for clarification if needed.
-- Never run code against the user's real library folders (iCloud, Proton Drive, NAS) during development or tests. Use temporary directories.
-- The user's documents are private. Never read their content during development, never copy real documents or real file names into test fixtures, and never send document content anywhere except to the AI provider the user configured. Use synthetic fixtures.
+- Never run code against the user's real library folders during development or tests. Use temporary directories.
+- The user's documents are private. Never read their content, never use information from them (file names, folder names, structure, counts, conventions) in code, tests, fixtures, prompts or documentation, and never send document content anywhere except to the AI provider the user configured at runtime.
+- Any private playground folder the user provides is for manual trying-out only. Test data is always synthetic, created by the tests themselves with invented names.

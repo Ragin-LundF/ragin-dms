@@ -22,7 +22,7 @@ Use this file when touching `dms-domain` or `dms-application`.
 - Every catalog change increments `CatalogRevision`. The revision decides which of two catalog copies is newer — never the file modification time, which cloud sync rewrites.
 - A document is identified by `DocumentId` (a UUID), not by its path. Paths change when the user moves or renames a file; the id does not.
 - `ContentHash` (SHA-256) is how a moved or renamed file is recognized again. Keep it in the catalog.
-- `RelativePath` is always relative to a library folder, uses `/` as separator, is **NFC-normalized** in its factory, and is never absolute. macOS stores umlauts decomposed (NFD), NAS, Windows and Linux composed (NFC); without normalization the same file looks like two.
+- `RelativePath` is always relative to a library folder, uses `/` as separator, is **NFC-normalized** in its factory, and is never absolute. macOS may store umlauts decomposed (NFD), Windows, Linux and network shares composed (NFC); without normalization the same file looks like two.
 - `FileNamePolicy` is the only validator for file and folder names from the user or the AI. A name must be valid on macOS, Windows **and** Linux: no `<>:"/\|?*` or control characters, no reserved Windows names (`CON`, `NUL`, …), no trailing dots or spaces, length limit, and no name that differs from a sibling only by case. Do not validate names anywhere else.
 - Keep original file names. A new name only comes from an approved suggestion or a user rename.
 - Tag names are normalized once, in `TagName`'s factory (trimmed, case-insensitive uniqueness, display casing preserved). Never compare raw tag strings.

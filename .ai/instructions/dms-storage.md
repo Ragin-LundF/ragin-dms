@@ -13,7 +13,7 @@ This module handles the user's real documents. A bug here loses data that may ex
 | `dms.storage.sync` | `ReplicatedDocumentStorage`, `ReplicatedCatalogRepository`, the failed-operation journal, `FolderComparison`. |
 | `dms.storage.scan` | Walking one folder, incremental hashing, producing the raw facts the use cases turn into `DetectedChange`s. |
 | `dms.storage.text` | `FileTextStore` for `.dms-text/<documentId>.txt`. |
-| `dms.storage.cloud` | Cloud and platform specifics: placeholders (not downloaded files), conflict copies, the ignore list. |
+| `dms.storage.platform` | Platform specifics: placeholders (files not stored locally), conflict copies, the ignore list. |
 
 ## File safety rules
 
@@ -26,7 +26,7 @@ This module handles the user's real documents. A bug here loses data that may ex
 
 ## Cross-platform paths
 
-The app runs on macOS, Windows and Linux, and one library is often spread over file systems with different rules (APFS, NTFS, SMB/NAS, ext4).
+The app runs on macOS, Windows and Linux, and one library is often spread over file systems with different rules (APFS, NTFS, SMB network shares, ext4).
 
 - Convert between `RelativePath` (NFC, `/`) and `java.nio.file.Path` in **one** mapper. When resolving a `RelativePath` in a folder, find the existing entry by NFC comparison, because macOS returns NFD names.
 - Treat names case-insensitively when checking for collisions; never create two entries that differ only by case.
@@ -56,9 +56,9 @@ One folder is the **primary**, any number are **sync folders**. All are equal in
 
 ## Scanning
 
-- Files in iCloud, Proton Drive and other sync clients may be **placeholders** that are not downloaded. Reading one triggers a download. Scans compare path, size and modification time first and hash only new or changed files.
-  - macOS: iCloud may show evicted files as `.<name>.icloud`; map these back to their real name and treat them as "present, not downloaded". File Provider placeholders (Proton Drive) report their real size without local data.
-  - Windows: cloud placeholders carry the `RECALL_ON_DATA_ACCESS` / `OFFLINE` attributes; do not read them during a scan.
+- A library folder is just a path, but any sync client may manage it. Files can then be **placeholders** that are not stored locally, and reading one triggers a download. Scans compare path, size and modification time first and hash only new or changed files. The DMS never calls a cloud vendor's API.
+  - macOS: placeholders may be dataless files or `.<name>.icloud` stubs; treat stubs as "present, not downloaded" under their real name.
+  - Windows: placeholders carry the `RECALL_ON_DATA_ACCESS` / `OFFLINE` attributes; do not read them during a scan.
 - Sync clients create **conflict copies** (`dms-catalog 2.yaml`, `dms-catalog (conflicted copy).yaml`, …). Detect conflict copies of the catalog, merge them, and report them — never ignore them.
 - Ignore: `.DS_Store`, `._*`, `Icon\r`, `Thumbs.db`, `desktop.ini`, `.dms-tmp-*`, `dms-catalog*.yaml`, and `.dms-text/` (handled separately).
 

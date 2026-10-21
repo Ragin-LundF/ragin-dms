@@ -22,7 +22,7 @@ Use this file when touching `dms-ai`: LLM providers, prompts, structured output,
 ## Classification rules
 
 - Request **structured output** (JSON schema via `response_format`) and validate it against the schema before mapping. Invalid output becomes a typed failure, never a partly filled suggestion.
-- Give the model the **existing taxonomy** (categories and tags from the catalog), the folder tree, and the library's **naming convention** (`YYYY-MM-DD <Title>`, detected from existing file names). Instruct it to prefer existing values. New categories or tags are allowed but marked as new so the UI can highlight them.
+- Give the model the **existing taxonomy** (categories and tags from the catalog), the folder tree, and the library's **naming convention**, detected at runtime from the existing file names (never hard-coded). Instruct it to prefer existing values. New categories or tags are allowed but marked as new so the UI can highlight them.
 - The classifier returns a `ClassificationSuggestion`. It never writes to the catalog or renames files — the user approves on the dashboard, then a use case applies it.
 - Suggested file names go through the domain's `FileNamePolicy` before they are shown.
 - When images were sent, the schema also asks for a plain-text transcription; it is stored in `.dms-text/` for search.
