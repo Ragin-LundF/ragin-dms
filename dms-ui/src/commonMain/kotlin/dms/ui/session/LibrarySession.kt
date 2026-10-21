@@ -3,6 +3,7 @@ package dms.ui.session
 import dms.application.common.OperationOutcome
 import dms.application.library.model.OpenLibraryOutcome
 import dms.application.library.model.ScanResult
+import dms.application.port.state.model.Preferences
 import dms.domain.change.DetectedChange
 import dms.ui.service.AppServices
 import dms.ui.session.model.LibraryStatus
@@ -72,10 +73,23 @@ class LibrarySession(
 
     /** Switches adding new files during a scan on or off; it applies from the next scan. */
     fun setAddNewFilesWhileScanning(enabled: Boolean) {
+        updatePreferences { it.copy(addNewFilesWhileScanning = enabled) }
+    }
+
+    /** Saves the preferences of this device; the one writer of them. */
+    fun updatePreferences(change: (Preferences) -> Preferences) {
         perform(label = "Saving the preferences") {
-            val preferences = mutableState.value.preferences.copy(addNewFilesWhileScanning = enabled)
+            val preferences = change(mutableState.value.preferences)
             services.library.settings.savePreferences(preferences = preferences)
             mutableState.update { it.copy(preferences = preferences) }
+        }
+    }
+
+    /** Gives documents without a date the one found in their file name or creation date. */
+    fun detectDocumentDates() {
+        perform(label = "Detecting document dates") {
+            val dated = services.library.detectDocumentDates()
+            report(message = UiMessage(text = "Found a date for $dated documents"))
         }
     }
 

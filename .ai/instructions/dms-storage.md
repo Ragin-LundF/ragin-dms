@@ -63,6 +63,7 @@ One folder is the **primary**, any number are **sync folders**. All are equal in
 ## Scanning
 
 - A scan first lists the folder (cheap), then reads the files one by one and reports each to the `ScanListener`, so the UI can show "done of total". It checks for cancellation between two files and saves the `ScanCache` every 100 hashed files, so a cancelled first scan resumes where it stopped.
+- `DocumentStorage.createdOn` returns a file's creation date in the system time zone, or `null` where the file system has none (the epoch counts as none). `DocumentDates` uses it only when the file name holds no date.
 
 - A library folder is just a path, but any sync client may manage it. Files can then be **placeholders** that are not stored locally, and reading one triggers a download. Scans compare path, size and modification time first and hash only new or changed files. The DMS never calls a cloud vendor's API.
   - macOS: placeholders may be dataless files or `.<name>.icloud` stubs; treat stubs as "present, not downloaded" under their real name.

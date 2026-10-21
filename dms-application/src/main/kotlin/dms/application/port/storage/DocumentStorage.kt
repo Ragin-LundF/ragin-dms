@@ -5,6 +5,7 @@ import dms.application.port.storage.model.StorageResult
 import dms.domain.change.FileFacts
 import dms.domain.library.LibraryFolder
 import dms.domain.library.RelativePath
+import java.time.LocalDate
 
 /**
  * File operations inside one library folder. Implementations never overwrite or delete a file unless
@@ -36,6 +37,12 @@ interface DocumentStorage {
 
     /** Size and content hash of one file; always hashed. */
     suspend fun readFacts(folder: LibraryFolder, path: RelativePath): StorageResult<FileFacts>
+
+    /**
+     * The day the file was created, as far as the file system knows it, or `null` when it does not
+     * keep creation times or the file is missing.
+     */
+    suspend fun createdOn(folder: LibraryFolder, path: RelativePath): LocalDate?
 
     /** Names of the entries directly inside [path], for collision checks. */
     suspend fun listNames(folder: LibraryFolder, path: RelativePath): StorageResult<List<String>>

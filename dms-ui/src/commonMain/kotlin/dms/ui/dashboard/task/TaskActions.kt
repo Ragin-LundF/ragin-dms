@@ -1,6 +1,7 @@
 package dms.ui.dashboard.task
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Restore
@@ -16,8 +17,12 @@ object TaskActions {
         val dismiss = ActionButton(label = "Dismiss", style = ButtonStyle.TEXT) { handler.dismiss(key = task.key) }
         return when (task) {
             is OpenTask.ReviewSuggestion -> listOf(
-                ActionButton(label = "Reject") { handler.reject(documentId = task.suggestion.documentId) },
-                dismiss,
+                ActionButton(label = "Review", icon = Icons.Rounded.AutoAwesome, style = ButtonStyle.TONAL) {
+                    handler.review(suggestion = task.suggestion)
+                },
+                ActionButton(label = "Reject", style = ButtonStyle.TEXT) {
+                    handler.reject(documentId = task.suggestion.documentId)
+                },
             )
 
             is OpenTask.AdoptNewFile -> listOf(

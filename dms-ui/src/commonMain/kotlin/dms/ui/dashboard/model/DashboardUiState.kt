@@ -4,7 +4,10 @@ import dms.application.port.state.model.ActivityEntry
 import dms.ui.dashboard.stats.model.LibraryStats
 import java.time.Instant
 
-/** Everything the dashboard shows; derived from the session and the last dashboard build. */
+/**
+ * Everything the dashboard shows; derived from the session and the last dashboard build. [aiCandidates]
+ * counts the documents the AI can read that have neither a confirmed classification nor a suggestion.
+ */
 data class DashboardUiState(
     val folders: List<FolderStatus> = emptyList(),
     val documentCount: Int = 0,
@@ -15,6 +18,7 @@ data class DashboardUiState(
     val lastScanAt: Instant? = null,
     val busy: String? = null,
     val stats: LibraryStats = LibraryStats(),
+    val aiCandidates: Int = 0,
 ) {
     val openTaskCount: Int
         get() {

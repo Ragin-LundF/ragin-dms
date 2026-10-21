@@ -2,6 +2,7 @@ package dms.ui.dashboard.task
 
 import dms.application.resolution.model.MoveDecision
 import dms.domain.change.DetectedChange
+import dms.domain.classification.ClassificationSuggestion
 import dms.domain.document.DocumentId
 import dms.domain.library.LibraryFolderId
 import dms.domain.task.TaskKey
@@ -21,6 +22,9 @@ interface TaskHandler {
     fun keepBoth(change: DetectedChange.ContentConflict, renamedIn: LibraryFolderId)
 
     fun resolveMove(change: DetectedChange.MovedFile, decision: MoveDecision)
+
+    /** Opens the suggestion for review: edit, approve field by field, or reject. */
+    fun review(suggestion: ClassificationSuggestion)
 
     fun reject(documentId: DocumentId)
 

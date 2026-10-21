@@ -10,6 +10,10 @@ import dms.domain.library.RelativePath
 import dms.storage.platform.SystemTrash
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.attribute.BasicFileAttributes
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
 
 /**
  * File operations inside one library folder. Never overwrites: an existing entry with the same name,
@@ -114,6 +118,18 @@ class FileSystemDocumentStorage(private val trash: SystemTrash) : DocumentStorag
             val facts = FileFacts(size = Files.size(file), contentHash = ContentHasher.hash(path = file))
             StorageResult.Success(value = facts)
         }
+    }
+
+    override suspend fun createdOn(folder: LibraryFolder, path: RelativePath): LocalDate? {
+        val result = inFolder(folder = folder) { root ->
+            val file = PathResolver.existing(root = root, path = path)?.takeIf { Files.isRegularFile(it) }
+                ?: return@inFolder StorageIo.failure(reason = StorageFailure.NOT_FOUND)
+            // File systems without creation times report the modification time, or the epoch.
+            val created = Files.readAttributes(file, BasicFileAttributes::class.java).creationTime().toInstant()
+            val day = created.takeIf { it != Instant.EPOCH }?.atZone(ZoneId.systemDefault())?.toLocalDate()
+            StorageResult.Success(value = day)
+        }
+        return (result as? StorageResult.Success)?.value
     }
 
     override suspend fun listNames(folder: LibraryFolder, path: RelativePath): StorageResult<List<String>> {

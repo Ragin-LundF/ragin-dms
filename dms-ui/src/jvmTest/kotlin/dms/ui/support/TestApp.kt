@@ -15,8 +15,8 @@ import java.util.concurrent.atomic.AtomicInteger
 import kotlin.io.path.createTempDirectory
 
 /**
- * The real app on temporary folders: a primary, a sync folder, a trash and the app data directory.
- * Only synthetic file names and contents.
+ * The real app on temporary folders: a primary, a sync folder, a trash and the app data directory,
+ * with a fake AI server. Only synthetic file names and contents.
  */
 class TestApp(scope: CoroutineScope) {
 
@@ -25,6 +25,7 @@ class TestApp(scope: CoroutineScope) {
     val sync: Path = Files.createDirectories(root.resolve("sync"))
     val trash: Path = Files.createDirectories(root.resolve("trash"))
     val platform: FakePlatform = FakePlatform()
+    val ai: FakeAiServer = FakeAiServer()
 
     private val trashed = AtomicInteger()
 
@@ -34,6 +35,7 @@ class TestApp(scope: CoroutineScope) {
             Files.move(entry, trash.resolve("${trashed.incrementAndGet()}-${entry.fileName}"))
             true
         },
+        aiEngine = ai.engine,
     ).services
 
     val session: LibrarySession = LibrarySession(services = services, scope = scope)

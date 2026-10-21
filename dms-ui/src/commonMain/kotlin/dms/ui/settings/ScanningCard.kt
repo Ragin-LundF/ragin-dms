@@ -3,8 +3,10 @@ package dms.ui.settings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Event
 import androidx.compose.material.icons.rounded.TravelExplore
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
@@ -13,14 +15,21 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import dms.ui.components.ActionButtons
 import dms.ui.components.ReasonTooltip
+import dms.ui.components.model.ActionButton
 import dms.ui.components.surface.AppCard
 import dms.ui.components.surface.CardTitle
 import dms.ui.theme.Spacing
 
-/** How a scan treats files the catalog does not know yet. */
+/** How a scan treats files the catalog does not know yet, and the dates of documents that have none. */
 @Composable
-fun ScanningCard(addNewFiles: Boolean, busyReason: String?, onAddNewFilesChange: (Boolean) -> Unit) {
+fun ScanningCard(
+    addNewFiles: Boolean,
+    busyReason: String?,
+    onAddNewFilesChange: (Boolean) -> Unit,
+    onDetectDates: () -> Unit,
+) {
     AppCard(modifier = Modifier.widthIn(max = 920.dp)) {
         CardTitle(
             title = "Scanning",
@@ -49,5 +58,19 @@ fun ScanningCard(addNewFiles: Boolean, busyReason: String?, onAddNewFilesChange:
                 Switch(checked = addNewFiles, onCheckedChange = onAddNewFilesChange, enabled = busyReason == null)
             }
         }
+        Text(
+            text = "A new document's date comes from its file name (such as 2024-03-15 or 15.03.2024), " +
+                "else from the file's creation date. You can change it in the inspector.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = Spacing.large, bottom = Spacing.medium),
+        )
+        ActionButtons(
+            buttons = listOf(
+                ActionButton(label = "Detect missing dates", icon = Icons.Rounded.Event, onClick = onDetectDates),
+            ),
+            enabled = busyReason == null,
+            busyReason = busyReason,
+        )
     }
 }

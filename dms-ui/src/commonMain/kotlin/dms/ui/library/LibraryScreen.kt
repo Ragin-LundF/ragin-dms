@@ -31,6 +31,7 @@ import dms.ui.library.drag.DocumentDrag
 import dms.ui.library.drag.DragPreview
 import dms.ui.library.drag.DropTexts
 import dms.ui.library.sidebar.LibrarySidebar
+import dms.ui.review.ReviewDialog
 import dms.ui.theme.Spacing
 
 /**
@@ -96,4 +97,5 @@ fun LibraryScreen(viewModel: LibraryViewModel, inspector: InspectorViewModel, pl
     }
     DialogHost(controller = viewModel.dialogs)
     DialogHost(controller = inspector.dialogs)
+    ReviewDialog(controller = inspector.review)
 }

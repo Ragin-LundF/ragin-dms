@@ -5,4 +5,5 @@ class AppServices(
     val library: LibraryServices,
     val documents: DocumentServices,
     val sync: SyncServices,
+    val ai: AiServices,
 )

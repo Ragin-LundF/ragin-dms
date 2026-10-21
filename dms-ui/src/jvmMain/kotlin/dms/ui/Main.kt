@@ -29,7 +29,7 @@ fun main() {
         var logVisible by remember { mutableStateOf(value = false) }
         Window(
             onCloseRequest = ::exitApplication,
-            title = "ragin-dms",
+            title = "Ragin-DMS",
             icon = AppIcon.painter,
             state = rememberWindowState(size = DpSize(width = 1360.dp, height = 860.dp)),
         ) {

@@ -1,8 +1,14 @@
 package dms.ui
 
+import dms.ai.AiAdapters
 import dms.application.catalog.EditCatalog
+import dms.application.classification.ApproveSuggestion
+import dms.application.classification.ClassifyAllNew
+import dms.application.classification.ListAiModels
 import dms.application.classification.RejectSuggestion
+import dms.application.classification.SuggestClassification
 import dms.application.common.ActivityRecorder
+import dms.application.common.DocumentDates
 import dms.application.common.SiblingNames
 import dms.application.document.AddDocuments
 import dms.application.document.AdoptNewFile
@@ -15,6 +21,7 @@ import dms.application.library.AddScannedFiles
 import dms.application.library.BuildDashboard
 import dms.application.library.CatalogStore
 import dms.application.library.ConfigureLibrary
+import dms.application.library.DetectDocumentDates
 import dms.application.library.OpenLibrary
 import dms.application.library.ScanLibrary
 import dms.application.port.system.IdGenerator
@@ -27,21 +34,29 @@ import dms.application.sync.Replicator
 import dms.application.sync.RetryFailedOperations
 import dms.application.sync.SyncFromPrimary
 import dms.storage.StorageAdapters
+import dms.storage.fs.PathResolver
 import dms.storage.platform.PlatformTrash
 import dms.storage.platform.SystemTrash
+import dms.ui.service.AiServices
 import dms.ui.service.AppServices
 import dms.ui.service.DocumentServices
 import dms.ui.service.LibraryServices
 import dms.ui.service.SyncServices
 import dms.ui.system.SystemClock
+import io.ktor.client.engine.HttpClientEngine
 import java.nio.file.Path
 import java.util.UUID
 
 /**
  * The composition root: the only place that creates adapters and use cases. Local state lives in
- * [appDataDirectory]; the library folders are whatever the settings there name.
+ * [appDataDirectory]; the library folders are whatever the settings there name. Tests pass an
+ * [aiEngine] that answers in place of the AI server.
  */
-class AppContainer(appDataDirectory: Path, trash: SystemTrash = PlatformTrash()) {
+class AppContainer(
+    appDataDirectory: Path,
+    trash: SystemTrash = PlatformTrash(),
+    aiEngine: HttpClientEngine? = null,
+) {
 
     private val adapters = StorageAdapters(appDataDirectory = appDataDirectory, trash = trash)
     private val clock = SystemClock()
@@ -57,6 +72,21 @@ class AppContainer(appDataDirectory: Path, trash: SystemTrash = PlatformTrash())
     private val store = CatalogStore(settings = adapters.settings, replicator = replicator)
     private val activity = ActivityRecorder(activity = adapters.activity, clock = clock)
     private val names = SiblingNames(storage = adapters.documents)
+    private val dates = DocumentDates(storage = adapters.documents)
+    private val ai = AiAdapters(
+        settings = { adapters.settings.loadPreferences().ai },
+        locate = { folder, path ->
+            PathResolver.root(folder = folder)?.let { root -> PathResolver.existing(root = root, path = path) }
+        },
+        engine = aiEngine,
+    )
+    private val moveDocument = MoveDocument(
+        store = store,
+        storage = adapters.documents,
+        replicator = replicator,
+        names = names,
+        activity = activity,
+    )
     private val openLibrary = OpenLibrary(
         settings = adapters.settings,
         catalogs = adapters.catalogs,
@@ -70,6 +100,7 @@ class AppContainer(appDataDirectory: Path, trash: SystemTrash = PlatformTrash())
         library = libraryServices(),
         documents = documentServices(),
         sync = syncServices(),
+        ai = aiServices(),
     )
 
     private fun libraryServices(): LibraryServices {
@@ -82,8 +113,15 @@ class AppContainer(appDataDirectory: Path, trash: SystemTrash = PlatformTrash())
             scanLibrary = ScanLibrary(
                 store = store,
                 scanner = adapters.scanner,
-                addScannedFiles = AddScannedFiles(store = store, activity = activity, clock = clock, ids = ids),
+                addScannedFiles = AddScannedFiles(
+                    store = store,
+                    dates = dates,
+                    activity = activity,
+                    clock = clock,
+                    ids = ids,
+                ),
             ),
+            detectDocumentDates = DetectDocumentDates(store = store, dates = dates, activity = activity),
             buildDashboard = BuildDashboard(
                 store = store,
                 tasks = adapters.tasks,
@@ -108,18 +146,13 @@ class AppContainer(appDataDirectory: Path, trash: SystemTrash = PlatformTrash())
             adoptNewFile = AdoptNewFile(
                 store = store,
                 storage = storage,
+                dates = dates,
                 replicator = replicator,
                 activity = activity,
                 clock = clock,
                 ids = ids,
             ),
-            moveDocument = MoveDocument(
-                store = store,
-                storage = storage,
-                replicator = replicator,
-                names = names,
-                activity = activity,
-            ),
+            moveDocument = moveDocument,
             trashDocument = TrashDocument(
                 store = store,
                 replicator = replicator,
@@ -182,7 +215,32 @@ class AppContainer(appDataDirectory: Path, trash: SystemTrash = PlatformTrash())
             ),
             resolveMove = ResolveMove(store = store, storage = storage, replicator = replicator, activity = activity),
             dismissTask = DismissTask(tasks = adapters.tasks),
+        )
+    }
+
+    private fun aiServices(): AiServices {
+        val suggest = SuggestClassification(
+            store = store,
+            reader = ai.reader,
+            classifier = ai.client,
+            tasks = adapters.tasks,
+            texts = adapters.texts,
+            replicator = replicator,
+            clock = clock,
+        )
+        return AiServices(
+            suggestClassification = suggest,
+            classifyAllNew = ClassifyAllNew(store = store, tasks = adapters.tasks, suggest = suggest),
+            approveSuggestion = ApproveSuggestion(
+                store = store,
+                tasks = adapters.tasks,
+                moveDocument = moveDocument,
+                activity = activity,
+                clock = clock,
+                ids = ids,
+            ),
             rejectSuggestion = RejectSuggestion(tasks = adapters.tasks),
+            listAiModels = ListAiModels(server = ai.client),
         )
     }
 }

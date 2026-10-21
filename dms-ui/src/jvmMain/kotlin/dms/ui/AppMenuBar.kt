@@ -32,6 +32,7 @@ fun FrameWindowScope.AppMenuBar(
             )
             Item(text = "Merge all folders", enabled = idle, onClick = session::mergeAllFolders)
             Item(text = "Retry failed operations", enabled = idle, onClick = session::retryFailedOperations)
+            Item(text = "Detect missing document dates", enabled = idle, onClick = session::detectDocumentDates)
             Separator()
             Item(
                 text = "Cancel ${state.busy.orEmpty()}".trim(),

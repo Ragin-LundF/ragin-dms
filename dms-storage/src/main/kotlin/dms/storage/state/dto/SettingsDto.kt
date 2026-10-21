@@ -4,4 +4,5 @@ package dms.storage.state.dto
 data class SettingsDto(
     val folders: List<LibraryFolderDto> = emptyList(),
     val addNewFilesWhileScanning: Boolean = true,
+    val ai: AiSettingsDto = AiSettingsDto(),
 )

@@ -3,26 +3,34 @@ package dms.ui.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dms.application.library.model.LibraryCommand
+import dms.application.port.ai.model.ModelList
+import dms.application.port.state.model.AiSettings
 import dms.domain.library.FolderLocation
 import dms.domain.library.FolderRole
 import dms.domain.library.LibraryFolder
 import dms.ui.PlatformActions
 import dms.ui.components.dialog.DialogController
 import dms.ui.components.model.ConfirmationRequest
+import dms.ui.review.AiMessages
 import dms.ui.service.AppServices
 import dms.ui.session.LibrarySession
 import dms.ui.session.OutcomeMessages
 import dms.ui.session.model.LibraryStatus
 import dms.ui.session.model.SessionState
+import dms.ui.settings.model.AiConnection
 import dms.ui.settings.model.FolderRow
 import dms.ui.settings.model.SettingsUiState
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-/** Chooses the primary folder and adds, removes or promotes sync folders. */
+/**
+ * Chooses the primary folder, adds, removes or promotes sync folders, and edits the preferences of
+ * this device, including the AI settings and their connection test.
+ */
 class SettingsViewModel(
     private val services: AppServices,
     private val session: LibrarySession,
@@ -31,8 +39,11 @@ class SettingsViewModel(
 
     val dialogs: DialogController = DialogController()
 
-    val state: StateFlow<SettingsUiState> = session.state
-        .map { toUiState(sessionState = it) }
+    private val connection = MutableStateFlow(value = AiConnection())
+
+    val state: StateFlow<SettingsUiState> = combine(session.state, connection) { sessionState, aiConnection ->
+        toUiState(sessionState = sessionState).copy(aiConnection = aiConnection)
+    }
         .stateIn(scope = viewModelScope, started = SharingStarted.Eagerly, initialValue = SettingsUiState())
 
     fun choosePrimaryFolder() {
@@ -49,6 +60,39 @@ class SettingsViewModel(
 
     fun setAddNewFilesWhileScanning(enabled: Boolean) {
         session.setAddNewFilesWhileScanning(enabled = enabled)
+    }
+
+    fun detectDates() {
+        session.detectDocumentDates()
+    }
+
+    fun saveAi(settings: AiSettings) {
+        session.updatePreferences { it.copy(ai = settings) }
+    }
+
+    /** Asks the server for its models with the typed [settings], without saving them. */
+    fun testAi(settings: AiSettings) {
+        connection.value = AiConnection(checking = true)
+        viewModelScope.launch {
+            connection.value = when (val list = services.ai.listAiModels(settings = settings)) {
+                is ModelList.Available -> if (list.models.isEmpty()) {
+                    AiConnection(
+                        message = "The server answers, but has no model loaded. Load one in LM Studio",
+                        isError = true,
+                    )
+                } else {
+                    AiConnection(
+                        models = list.models,
+                        message = "Connected. The server offers ${list.models.size} models",
+                    )
+                }
+
+                is ModelList.Unavailable -> AiConnection(
+                    message = AiMessages.failure(reason = list.reason) + (list.detail?.let { " ($it)" } ?: ""),
+                    isError = true,
+                )
+            }
+        }
     }
 
     fun addSyncFolder() {
@@ -107,6 +151,7 @@ class SettingsViewModel(
             },
             busy = sessionState.busy,
             addNewFilesWhileScanning = sessionState.preferences.addNewFilesWhileScanning,
+            ai = sessionState.preferences.ai,
         )
     }
 

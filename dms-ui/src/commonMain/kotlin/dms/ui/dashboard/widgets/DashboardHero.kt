@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.MergeType
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Sync
@@ -42,6 +43,7 @@ fun DashboardHero(
     onScan: () -> Unit,
     onSync: () -> Unit,
     onMerge: () -> Unit,
+    onAskAi: () -> Unit,
     onSearch: (String) -> Unit,
 ) {
     var query by remember { mutableStateOf(value = "") }
@@ -84,6 +86,13 @@ fun DashboardHero(
             HeroButton(label = "Scan", icon = Icons.Rounded.Refresh, busyReason = busyReason, onClick = onScan)
             HeroButton(label = "Sync to all", icon = Icons.Rounded.Sync, busyReason = busyReason, onClick = onSync)
             HeroButton(label = "Merge", icon = Icons.Rounded.MergeType, busyReason = busyReason, onClick = onMerge)
+            HeroButton(
+                label = "Ask AI (${state.aiCandidates})",
+                icon = Icons.Rounded.AutoAwesome,
+                busyReason = busyReason ?: "Every document the AI can read has a suggestion or a classification"
+                    .takeIf { state.aiCandidates == 0 },
+                onClick = onAskAi,
+            )
         }
     }
 }

@@ -1,12 +1,14 @@
 package dms.storage.state
 
 import dms.application.port.state.SettingsRepository
+import dms.application.port.state.model.AiSettings
 import dms.application.port.state.model.Preferences
 import dms.domain.library.FolderLocation
 import dms.domain.library.FolderRole
 import dms.domain.library.LibraryFolder
 import dms.domain.library.LibraryFolderId
 import dms.domain.library.LibraryFolders
+import dms.storage.state.dto.AiSettingsDto
 import dms.storage.state.dto.LibraryFolderDto
 import dms.storage.state.dto.SettingsDto
 import dms.storage.yaml.YamlFile
@@ -39,14 +41,32 @@ class FileSettingsRepository(path: Path) : SettingsRepository {
     override suspend fun loadPreferences(): Preferences {
         return withContext(context = Dispatchers.IO) {
             val settings = file.read() ?: SettingsDto()
-            Preferences(addNewFilesWhileScanning = settings.addNewFilesWhileScanning)
+            Preferences(
+                addNewFilesWhileScanning = settings.addNewFilesWhileScanning,
+                ai = AiSettings(
+                    baseUrl = settings.ai.baseUrl,
+                    model = settings.ai.model,
+                    preferVisionForPdfs = settings.ai.preferVisionForPdfs,
+                    timeoutSeconds = settings.ai.timeoutSeconds,
+                ),
+            )
         }
     }
 
     override suspend fun savePreferences(preferences: Preferences) {
         withContext(context = Dispatchers.IO) {
             val current = file.read() ?: SettingsDto()
-            file.write(value = current.copy(addNewFilesWhileScanning = preferences.addNewFilesWhileScanning))
+            val ai = preferences.ai
+            val updated = current.copy(
+                addNewFilesWhileScanning = preferences.addNewFilesWhileScanning,
+                ai = AiSettingsDto(
+                    baseUrl = ai.baseUrl,
+                    model = ai.model,
+                    preferVisionForPdfs = ai.preferVisionForPdfs,
+                    timeoutSeconds = ai.timeoutSeconds,
+                ),
+            )
+            file.write(value = updated)
         }
     }
 

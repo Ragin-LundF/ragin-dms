@@ -23,6 +23,7 @@ import dms.ui.dashboard.section.WorkSection
 import dms.ui.dashboard.widgets.DashboardHero
 import dms.ui.dashboard.widgets.StatRow
 import dms.ui.library.model.LibrarySelection
+import dms.ui.review.ReviewDialog
 import dms.ui.theme.Spacing
 
 /**
@@ -61,6 +62,7 @@ fun DashboardScreen(
                 onScan = viewModel::scan,
                 onSync = viewModel::syncToAllDestinations,
                 onMerge = viewModel::mergeAllFolders,
+                onAskAi = viewModel::suggestAll,
                 onSearch = { query -> onOpen(everything, query) },
             )
             StatRow(state = state, onOpenUncategorized = { onOpen(LibrarySelection.Uncategorized, "") })
@@ -76,4 +78,5 @@ fun DashboardScreen(
         }
     }
     DialogHost(controller = viewModel.dialogs)
+    ReviewDialog(controller = viewModel.review)
 }

@@ -32,7 +32,7 @@ fun BrandMark() {
     ) {
         val logo = LocalAppLogo.current
         if (logo != null) {
-            Image(painter = logo, contentDescription = "ragin-dms logo", modifier = Modifier.size(size = 44.dp))
+            Image(painter = logo, contentDescription = "Ragin-DMS logo", modifier = Modifier.size(size = 44.dp))
         } else {
             Box(
                 modifier = Modifier
@@ -50,7 +50,7 @@ fun BrandMark() {
             }
         }
         Column {
-            Text(text = "ragin-dms", style = MaterialTheme.typography.titleMedium)
+            Text(text = "Ragin-DMS", style = MaterialTheme.typography.titleMedium)
             Text(
                 text = "Your documents",
                 style = MaterialTheme.typography.labelSmall,

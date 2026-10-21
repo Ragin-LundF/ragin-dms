@@ -47,7 +47,7 @@ A **model** is a pure data declaration with no behavior: `data class`, `enum cla
 
 - **`dms-domain`:** the domain *is* the model. Group by subject: `dms.domain.document`, `dms.domain.catalog`, `dms.domain.taxonomy`, `dms.domain.library`. Domain types carry no framework or serialization annotations.
 - **`dms-application`:** use case inputs and outcomes live in a `model` subpackage of the use case package, for example `dms.application.document.model`. Ports live in `dms.application.port`.
-- **Adapters (`dms-storage`, `dms-ai`):** serialization types live in `dto` packages (`dms.storage.catalog.dto`, `dms.ai.openai.dto`) and are mapped to domain types by a mapper in the adapter. A DTO never leaves its adapter.
+- **Adapters (`dms-storage`, `dms-ai`):** serialization types live in `dto` packages (`dms.storage.catalog.dto`, `dms.ai.client.dto`) and are mapped to domain types by a mapper in the adapter. A DTO never leaves its adapter.
 - **`dms-ui`:** every model and every enum lives in a `model` subpackage of its feature package — `ui.library.model`, `ui.inbox.model`. Never leave a model beside composables or view models.
   - Group inside `model` when it exceeds 8 files.
   - Composables, view models, services, mappers, and objects holding logic never go in a `model` package.

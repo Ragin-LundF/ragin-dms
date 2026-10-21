@@ -6,6 +6,7 @@ import dms.application.classification.ClassifyAllNew
 import dms.application.classification.RejectSuggestion
 import dms.application.classification.SuggestClassification
 import dms.application.common.ActivityRecorder
+import dms.application.common.DocumentDates
 import dms.application.common.OperationOutcome
 import dms.application.common.SiblingNames
 import dms.application.document.AddDocuments
@@ -27,6 +28,7 @@ import dms.application.folder.MoveFolder
 import dms.application.library.AddScannedFiles
 import dms.application.library.BuildDashboard
 import dms.application.library.CatalogStore
+import dms.application.library.DetectDocumentDates
 import dms.application.library.OpenLibrary
 import dms.application.library.ScanLibrary
 import dms.application.library.model.OpenLibraryOutcome
@@ -83,6 +85,7 @@ class TestLibrary {
     val store: CatalogStore = CatalogStore(settings = settings, replicator = replicator)
     private val activity = ActivityRecorder(activity = activityLog, clock = clock)
     private val names = SiblingNames(storage = folders)
+    private val dates = DocumentDates(storage = folders)
 
     val openLibrary: OpenLibrary = OpenLibrary(
         settings = settings,
@@ -92,7 +95,18 @@ class TestLibrary {
         tasks = tasks,
         ids = ids,
     )
-    val addScannedFiles: AddScannedFiles = AddScannedFiles(store = store, activity = activity, clock = clock, ids = ids)
+    val addScannedFiles: AddScannedFiles = AddScannedFiles(
+        store = store,
+        dates = dates,
+        activity = activity,
+        clock = clock,
+        ids = ids,
+    )
+    val detectDocumentDates: DetectDocumentDates = DetectDocumentDates(
+        store = store,
+        dates = dates,
+        activity = activity,
+    )
     val scanLibrary: ScanLibrary = ScanLibrary(store = store, scanner = folders, addScannedFiles = addScannedFiles)
     val buildDashboard: BuildDashboard = BuildDashboard(
         store = store,
@@ -113,6 +127,7 @@ class TestLibrary {
     val adoptNewFile: AdoptNewFile = AdoptNewFile(
         store = store,
         storage = folders,
+        dates = dates,
         replicator = replicator,
         activity = activity,
         clock = clock,

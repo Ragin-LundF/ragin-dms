@@ -44,6 +44,8 @@ kotlin {
                 implementation(libs.kotlinx.coroutines.test)
                 implementation(libs.compose.ui.test)
                 implementation(libs.konsist)
+                implementation(libs.ktor.client.mock)
+                implementation(libs.kotlinx.serialization.json)
             }
         }
     }

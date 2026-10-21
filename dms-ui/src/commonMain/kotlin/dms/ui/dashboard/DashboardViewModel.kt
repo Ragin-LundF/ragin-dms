@@ -2,11 +2,14 @@ package dms.ui.dashboard
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import dms.application.classification.model.SuggestOutcome
 import dms.application.common.OperationOutcome
 import dms.application.library.model.Dashboard
 import dms.application.library.model.FolderState
+import dms.application.port.ai.model.ClassificationFailure
 import dms.application.resolution.model.MoveDecision
 import dms.domain.change.DetectedChange
+import dms.domain.classification.ClassificationSuggestion
 import dms.domain.document.DocumentId
 import dms.domain.library.FolderRole
 import dms.domain.library.LibraryFolderId
@@ -27,20 +30,26 @@ import dms.ui.dashboard.task.TaskContext
 import dms.ui.dashboard.task.TaskGroups
 import dms.ui.dashboard.task.TaskHandler
 import dms.ui.dashboard.task.TaskTexts
+import dms.ui.review.AiMessages
+import dms.ui.review.ReviewController
 import dms.ui.service.AppServices
 import dms.ui.session.LibrarySession
 import dms.ui.session.OutcomeMessages
 import dms.ui.session.model.LibraryStatus
+import dms.ui.session.model.OperationProgress
 import dms.ui.session.model.SessionState
 import dms.ui.session.model.UiMessage
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.takeWhile
 import kotlinx.coroutines.launch
 import java.time.ZoneId
 
@@ -58,6 +67,7 @@ class DashboardViewModel(
     private val filter = MutableStateFlow<TaskGroup?>(value = null)
 
     val dialogs: DialogController = DialogController()
+    val review: ReviewController = ReviewController(services = services, session = session)
 
     val state: StateFlow<DashboardUiState> = combine(
         flow = dashboard,
@@ -152,9 +162,51 @@ class DashboardViewModel(
         }
     }
 
+    override fun review(suggestion: ClassificationSuggestion) {
+        review.open(suggestion = suggestion)
+    }
+
+    /**
+     * Lets the AI suggest a classification for every document that has none, one after the other,
+     * until the user cancels. Stops at once when the AI server does not answer.
+     */
+    fun suggestAll() {
+        session.perform(label = "Asking the AI", cancellable = true) {
+            var suggested = 0
+            var failure: SuggestOutcome.Failed? = null
+            session.progress(progress = OperationProgress(step = "Asking the AI"))
+            services.ai.classifyAllNew()
+                .onEach { progress ->
+                    val name = nameOf(documentId = progress.documentId)
+                    val step = OperationProgress(step = "Asking the AI", done = progress.done, total = progress.total)
+                    session.progress(progress = step.copy(detail = name))
+                    when (val outcome = progress.outcome) {
+                        is SuggestOutcome.Suggested -> {
+                            suggested++
+                            session.log.info(text = "AI suggestion for $name")
+                        }
+
+                        else -> session.log.error(text = AiMessages.of(outcome = outcome, name = name).text)
+                    }
+                    failure = (progress.outcome as? SuggestOutcome.Failed)
+                        ?.takeIf { it.reason == ClassificationFailure.PROVIDER_UNAVAILABLE }
+                }
+                .takeWhile { failure == null }
+                .collect()
+            val stopped = failure
+            session.report(
+                message = if (stopped != null) {
+                    UiMessage(text = AiMessages.failure(reason = stopped.reason), isError = true)
+                } else {
+                    UiMessage(text = "The AI made $suggested suggestions; review them under Open tasks")
+                },
+            )
+        }
+    }
+
     override fun reject(documentId: DocumentId) {
         session.perform(label = "Rejecting the suggestion") {
-            services.sync.rejectSuggestion(documentId = documentId)
+            services.ai.rejectSuggestion(documentId = documentId)
         }
     }
 
@@ -207,6 +259,19 @@ class DashboardViewModel(
         }
     }
 
+    private fun aiCandidates(dashboard: Dashboard?): Int {
+        val pending = dashboard?.tasks.orEmpty()
+            .filterIsInstance<OpenTask.ReviewSuggestion>()
+            .map { it.suggestion.documentId }
+            .toSet()
+        return services.library.catalog.value?.documents?.values.orEmpty()
+            .count { it.classification == null && it.kind.readableByAi && it.id !in pending }
+    }
+
+    private fun nameOf(documentId: DocumentId): String {
+        return services.library.catalog.value?.documents?.get(documentId)?.path?.value ?: documentId.value
+    }
+
     private fun countMessage(verb: String, done: Int, total: Int): UiMessage {
         return UiMessage(text = "$verb $done of $total files", isError = done < total)
     }
@@ -230,6 +295,7 @@ class DashboardViewModel(
             activity = dashboard?.recentActivity.orEmpty(),
             lastScanAt = sessionState.lastScanAt,
             busy = sessionState.busy,
+            aiCandidates = aiCandidates(dashboard = dashboard),
             stats = LibraryStatistics.of(
                 catalog = services.library.catalog.value,
                 now = services.library.clock.now(),

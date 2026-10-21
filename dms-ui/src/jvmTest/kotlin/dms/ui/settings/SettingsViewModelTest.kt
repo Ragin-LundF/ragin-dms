@@ -1,10 +1,13 @@
 package dms.ui.settings
 
+import dms.application.port.state.model.AiSettings
 import dms.ui.session.model.LibraryStatus
 import dms.ui.support.UiTest
+import kotlinx.coroutines.flow.first
 import java.nio.file.Files
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
@@ -78,6 +81,52 @@ class SettingsViewModelTest {
             assertNull(actual = viewModel.dialogs.confirmation.value)
             assertEquals(expected = 1, actual = viewModel.state.value.rows.size)
             assertTrue(actual = Files.exists(app.sync.resolve("dms-catalog.yaml")))
+        }
+    }
+
+    @Test
+    fun `the connection test lists the server's models without saving the typed settings`() {
+        UiTest.run { app ->
+            app.configure()
+            val viewModel = SettingsViewModel(services = app.services, session = app.session, platform = app.platform)
+            app.ai.models = listOf("sample-a", "sample-b")
+
+            viewModel.testAi(settings = AiSettings(baseUrl = "http://localhost:4321/v1"))
+
+            val connection = viewModel.state.first { it.aiConnection.models.isNotEmpty() }.aiConnection
+            assertEquals(expected = listOf("sample-a", "sample-b"), actual = connection.models)
+            assertFalse(actual = connection.isError)
+            assertEquals(expected = AiSettings(), actual = app.services.library.settings.loadPreferences().ai)
+        }
+    }
+
+    @Test
+    fun `a server that does not answer is reported by the connection test`() {
+        UiTest.run { app ->
+            app.configure()
+            val viewModel = SettingsViewModel(services = app.services, session = app.session, platform = app.platform)
+            app.ai.reachable = false
+
+            viewModel.testAi(settings = AiSettings())
+
+            val connection = viewModel.state.first { it.aiConnection.message != null }.aiConnection
+            assertTrue(actual = connection.isError)
+            assertTrue(actual = connection.models.isEmpty())
+        }
+    }
+
+    @Test
+    fun `saved AI settings are kept for the next start`() {
+        UiTest.run { app ->
+            app.configure()
+            val viewModel = SettingsViewModel(services = app.services, session = app.session, platform = app.platform)
+            val settings = AiSettings(model = "sample-b", timeoutSeconds = 60)
+
+            viewModel.saveAi(settings = settings)
+            app.idle()
+
+            assertEquals(expected = settings, actual = viewModel.state.value.ai)
+            assertEquals(expected = settings, actual = app.services.library.settings.loadPreferences().ai)
         }
     }
 }

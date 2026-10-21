@@ -1,6 +1,5 @@
 package dms.ui.service
 
-import dms.application.classification.RejectSuggestion
 import dms.application.resolution.DismissTask
 import dms.application.resolution.KeepBothVersions
 import dms.application.resolution.KeepVersion
@@ -18,5 +17,4 @@ class SyncServices(
     val keepBothVersions: KeepBothVersions,
     val resolveMove: ResolveMove,
     val dismissTask: DismissTask,
-    val rejectSuggestion: RejectSuggestion,
 )

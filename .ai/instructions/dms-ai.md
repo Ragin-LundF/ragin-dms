@@ -6,10 +6,12 @@ Use this file when touching `dms-ai`: LLM providers, prompts, structured output,
 
 | Package | Purpose |
 |---|---|
-| `dms.ai.openai` | Client for OpenAI-compatible chat completion APIs (LM Studio, Ollama's `/v1`, OpenAI), text and image content parts, `/v1/models`. DTOs in `dms.ai.openai.dto`. |
-| `dms.ai.classification` | `LlmDocumentClassifier` (implements `DocumentClassifier`), prompt building, response parsing and validation. |
-| `dms.ai.content` | `DocumentContentReader` implementations: PDF (PDFBox: text layer or rendered pages), images, Office (Apache POI), plain text. |
-| `dms.ai.config` | Provider settings: base URL, model, timeouts, input budget, "prefer vision for PDFs". |
+| `dms.ai` | `AiAdapters`: builds the HTTP client and hands out the client and the reader. Tests pass a Ktor `MockEngine`. |
+| `dms.ai.client` | `OpenAiCompatibleClient` (implements `DocumentClassifier` and `AiServer`) for OpenAI-compatible APIs (LM Studio, Ollama's `/v1`, OpenAI): `/models`, `/chat/completions` with text and image parts, error mapping, response parsing. DTOs in `dms.ai.client.dto`. |
+| `dms.ai.prompt` | The answer schema, the prompt texts (templates in `src/main/resources/prompts/`), the naming convention detected from file names, and the mapping of the answer to a `ClassificationSuggestion`. |
+| `dms.ai.read` | `FileContentReader` (implements `DocumentContentReader`): PDF (PDFBox: text layer or rendered pages), images, Office (Apache POI). |
+
+The provider settings (`AiSettings`: base URL, model, timeout, "prefer vision for PDFs") are a port model in `dms-application` and are stored per device by `dms-storage`. The client reads them for every request, so a change in Settings applies at once.
 
 ## Provider rules
 

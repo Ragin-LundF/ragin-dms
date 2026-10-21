@@ -18,6 +18,7 @@ import dms.domain.library.LibraryFolder
 import dms.domain.library.LibraryFolderId
 import dms.domain.library.RelativePath
 import java.security.MessageDigest
+import java.time.LocalDate
 
 /**
  * Every library folder of a test, in memory: file contents per path, empty folders, the catalog file
@@ -158,6 +159,13 @@ class FakeFolders : DocumentStorage, LibraryScanner, CatalogRepository, TextStor
         unreachableFailure(folder = folder)?.let { return it }
         val content = filesOf(folderId = folder.id)[path] ?: return failure(reason = StorageFailure.NOT_FOUND)
         return StorageResult.Success(value = factsOf(content = content))
+    }
+
+    /** Creation days the test set; files without one have none, like on file systems without them. */
+    val creationDays: MutableMap<RelativePath, LocalDate> = mutableMapOf()
+
+    override suspend fun createdOn(folder: LibraryFolder, path: RelativePath): LocalDate? {
+        return creationDays[path]
     }
 
     override suspend fun listNames(folder: LibraryFolder, path: RelativePath): StorageResult<List<String>> {

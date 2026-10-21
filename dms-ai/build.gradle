@@ -6,6 +6,8 @@ plugins {
 // Adapter: OpenAI-compatible LLM client and document reading (PDFBox, Apache POI).
 dependencies {
     implementation project(":dms-application")
+    // The engine is part of AiAdapters' constructor, so tests of the app can pass a mock one.
+    api libs.ktor.client.core
     implementation libs.bundles.ktor.client
     implementation libs.kotlinx.serialization.json
     implementation libs.pdfbox

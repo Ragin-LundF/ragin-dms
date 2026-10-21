@@ -1,6 +1,7 @@
 package dms.application.library
 
 import dms.application.common.ActivityRecorder
+import dms.application.common.DocumentDates
 import dms.application.common.OperationOutcome
 import dms.application.library.model.ScannedFile
 import dms.application.port.state.model.ActivityKind
@@ -12,14 +13,18 @@ import dms.domain.catalog.CatalogUpdate
 import dms.domain.document.ContentHash
 import dms.domain.document.Document
 import dms.domain.document.DocumentId
+import dms.domain.document.DocumentMetadata
+import dms.domain.library.RelativePath
 
 /**
  * Catalogs files of the primary folder while a scan reads them, many in one catalog write. The files
- * keep their name and place; nothing on disk changes except the catalog. A file whose path or content
- * the catalog already knows is left to the change detection, because it may be a moved document.
+ * keep their name and place; nothing on disk changes except the catalog. Their date is guessed by
+ * [DocumentDates]. A file whose path or content the catalog already knows is left to the change
+ * detection, because it may be a moved document.
  */
 class AddScannedFiles(
     private val store: CatalogStore,
+    private val dates: DocumentDates,
     private val activity: ActivityRecorder,
     private val clock: Clock,
     private val ids: IdGenerator,
@@ -27,13 +32,15 @@ class AddScannedFiles(
 
     /** Returns how many of [files] were added. */
     suspend operator fun invoke(files: List<ScannedFile>): Int {
-        if (files.isEmpty()) {
+        val primary = store.current()?.folders?.primary
+        if (files.isEmpty() || primary == null) {
             return 0
         }
+        val metadata = files.associate { it.path to dates.metadataFor(folder = primary, path = it.path) }
         var added = emptyList<Document>()
         val outcome = store.commit { catalog ->
             var current = catalog
-            added = newDocuments(catalog = catalog, files = files).filter { document ->
+            added = newDocuments(catalog = catalog, files = files, metadata = metadata).filter { document ->
                 val update = current.addDocument(document = document)
                 if (update is CatalogUpdate.Applied) {
                     current = update.catalog
@@ -54,7 +61,11 @@ class AddScannedFiles(
         return added.size
     }
 
-    private fun newDocuments(catalog: Catalog, files: List<ScannedFile>): List<Document> {
+    private fun newDocuments(
+        catalog: Catalog,
+        files: List<ScannedFile>,
+        metadata: Map<RelativePath, DocumentMetadata>,
+    ): List<Document> {
         val knownPaths = catalog.documents.values.map { it.path }.toMutableSet()
         val knownHashes: MutableSet<ContentHash> = catalog.documents.values.map { it.contentHash }.toMutableSet()
         val now = clock.now()
@@ -67,6 +78,7 @@ class AddScannedFiles(
                     contentHash = file.contentHash,
                     size = file.size,
                     addedAt = now,
+                    metadata = metadata[file.path] ?: DocumentMetadata.EMPTY,
                 )
             }
     }

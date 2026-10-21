@@ -2,6 +2,7 @@ package dms.ui.document
 
 import androidx.lifecycle.ViewModel
 import dms.application.catalog.model.CatalogEdit
+import dms.application.classification.model.SuggestOutcome
 import dms.application.common.OperationOutcome
 import dms.domain.document.Document
 import dms.domain.document.DocumentMetadata
@@ -13,6 +14,8 @@ import dms.ui.components.dialog.DialogController
 import dms.ui.components.model.ConfirmationRequest
 import dms.ui.components.model.TextInputRequest
 import dms.ui.document.model.MetadataDraft
+import dms.ui.review.AiMessages
+import dms.ui.review.ReviewController
 import dms.ui.service.AppServices
 import dms.ui.session.LibrarySession
 import dms.ui.session.NameInput
@@ -28,6 +31,7 @@ class InspectorViewModel(
 ) : ViewModel() {
 
     val dialogs: DialogController = DialogController()
+    val review: ReviewController = ReviewController(services = services, session = session)
 
     val fileManagerName: String
         get() {
@@ -73,6 +77,17 @@ class InspectorViewModel(
     }
 
     /** Renames the file in every library folder; the original name stays until the user changes it. */
+    /** Lets the AI suggest a classification and opens it for review right away. */
+    fun askAi(document: Document) {
+        val name = document.path.fileName
+        session.perform(label = "Asking the AI about $name", cancellable = true) {
+            when (val outcome = services.ai.suggestClassification(documentId = document.id)) {
+                is SuggestOutcome.Suggested -> review.open(suggestion = outcome.suggestion)
+                else -> session.report(message = AiMessages.of(outcome = outcome, name = name))
+            }
+        }
+    }
+
     fun rename(document: Document) {
         askName(title = "Rename file", label = "Name", initial = document.path.fileName) { name ->
             move(

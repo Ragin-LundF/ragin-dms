@@ -1,6 +1,7 @@
 package dms.application.document
 
 import dms.application.common.ActivityRecorder
+import dms.application.common.DocumentDates
 import dms.application.common.OperationOutcome
 import dms.application.library.CatalogStore
 import dms.application.port.state.model.ActivityKind
@@ -22,6 +23,7 @@ import dms.domain.document.DocumentId
 class AdoptNewFile(
     private val store: CatalogStore,
     private val storage: DocumentStorage,
+    private val dates: DocumentDates,
     private val replicator: Replicator,
     private val activity: ActivityRecorder,
     private val clock: Clock,
@@ -32,9 +34,11 @@ class AdoptNewFile(
         val library = store.current() ?: return OperationOutcome.LibraryNotOpen
         val contentHash = change.contentHash ?: return OperationOutcome.ScanOutdated
         val primary = library.folders.primary
+        // Where the file was found first: there its creation date is still the original one.
+        val source = library.folders.folders.firstOrNull { it.id in change.presentIn }
+            ?: return OperationOutcome.ScanOutdated
+        val metadata = dates.metadataFor(folder = source, path = change.path)
         if (primary.id !in change.presentIn) {
-            val source = library.folders.folders.firstOrNull { it.id in change.presentIn }
-                ?: return OperationOutcome.ScanOutdated
             val copied = storage.copyFile(from = source, to = primary, path = change.path, replaceExisting = false)
             if (copied is StorageResult.Failure) {
                 return OperationOutcome.StorageFailed(failure = copied)
@@ -51,6 +55,7 @@ class AdoptNewFile(
             contentHash = contentHash,
             size = change.size,
             addedAt = clock.now(),
+            metadata = metadata,
         )
         val outcome = store.commit { it.addDocument(document = document) }.withPendingFolders(folders = pending)
         if (outcome is OperationOutcome.Done) {

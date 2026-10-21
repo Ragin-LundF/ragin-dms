@@ -1,6 +1,7 @@
 package dms.ui.document
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.DriveFileRenameOutline
 import androidx.compose.material.icons.rounded.FileOpen
 import androidx.compose.material.icons.rounded.FolderOpen
@@ -30,6 +31,12 @@ fun DocumentActions(document: Document, busyReason: String?, viewModel: Inspecto
     )
     ActionButtons(
         buttons = listOf(
+            ActionButton(
+                label = "Ask AI",
+                icon = Icons.Rounded.AutoAwesome,
+                style = ButtonStyle.TONAL,
+                disabledReason = "The AI does not read this kind of file".takeIf { !document.kind.readableByAi },
+            ) { viewModel.askAi(document = document) },
             ActionButton(label = "Rename…", icon = Icons.Rounded.DriveFileRenameOutline, style = ButtonStyle.TEXT) {
                 viewModel.rename(document = document)
             },

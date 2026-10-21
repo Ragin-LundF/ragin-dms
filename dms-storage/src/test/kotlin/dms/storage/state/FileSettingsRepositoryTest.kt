@@ -1,5 +1,6 @@
 package dms.storage.state
 
+import dms.application.port.state.model.AiSettings
 import dms.application.port.state.model.Preferences
 import dms.domain.library.FolderLocation
 import dms.domain.library.FolderRole
@@ -58,11 +59,19 @@ class FileSettingsRepositoryTest {
             )
             assertEquals(expected = Preferences(), actual = repository.loadPreferences())
 
-            repository.savePreferences(preferences = Preferences(addNewFilesWhileScanning = false))
+            val preferences = Preferences(
+                addNewFilesWhileScanning = false,
+                ai = AiSettings(
+                    baseUrl = "http://localhost:9999/v1",
+                    model = "sample-model",
+                    preferVisionForPdfs = true,
+                ),
+            )
+            repository.savePreferences(preferences = preferences)
             repository.saveLibraryFolders(folders = folders)
 
             val reloaded = FileSettingsRepository(path = path)
-            assertEquals(expected = Preferences(addNewFilesWhileScanning = false), actual = reloaded.loadPreferences())
+            assertEquals(expected = preferences, actual = reloaded.loadPreferences())
             assertEquals(expected = folders, actual = reloaded.loadLibraryFolders())
         }
     }

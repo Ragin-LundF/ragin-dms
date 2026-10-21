@@ -18,6 +18,8 @@ import dms.application.sync.Replicator
 import dms.application.sync.model.Replication
 import dms.domain.document.Document
 import dms.domain.document.DocumentId
+import dms.domain.document.DocumentMetadata
+import dms.domain.document.FileNameDates
 import dms.domain.library.FileNamePolicy
 import dms.domain.library.RelativePath
 
@@ -90,6 +92,8 @@ class AddDocuments(
             contentHash = contentHash,
             size = copied.value.size,
             addedAt = clock.now(),
+            // The copy was just created, so only the name can tell how old the document is.
+            metadata = DocumentMetadata(documentDate = FileNameDates.dateIn(name = target.fileName)),
         )
         return store.commit { it.addDocument(document = document) }
             .withPendingFolders(folders = copied.pendingFolders)
