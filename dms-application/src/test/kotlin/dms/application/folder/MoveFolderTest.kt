@@ -33,6 +33,20 @@ class MoveFolderTest {
     }
 
     @Test
+    fun `a folder cannot move onto an existing folder`() {
+        runTest {
+            val library = TestLibrary()
+            library.open()
+            library.add(path = "letters/a.pdf", content = "alpha")
+            library.add(path = "archive/b.pdf", content = "beta")
+
+            val outcome = library.moveFolder(from = letters, to = RelativePath.of(raw = "Archive"))
+
+            assertEquals(expected = OperationOutcome.NameTaken, actual = outcome)
+        }
+    }
+
+    @Test
     fun `a folder cannot move into itself`() {
         runTest {
             val library = TestLibrary()

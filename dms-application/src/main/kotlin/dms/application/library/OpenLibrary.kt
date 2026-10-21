@@ -44,7 +44,10 @@ class OpenLibrary(
         val libraryId = libraryIdOf(folders = folders, found = found)
         val foreign = found.filterValues { it.catalog.libraryId != libraryId }.keys
         val own = found - foreign
-        val copies = own.values.flatMap { listOf(it.catalog) + it.conflictCopies }
+        // A conflict copy of another library's catalog cannot be merged; it stays where it is.
+        val copies = own.values.flatMap { load ->
+            listOf(load.catalog) + load.conflictCopies.filter { it.libraryId == libraryId }
+        }
         val merge = mergeAll(libraryId = libraryId, copies = copies)
 
         val outdated = loads.filter { (folder, load) ->
@@ -62,7 +65,7 @@ class OpenLibrary(
         }
         discardMergedConflictCopies(found = own, pending = pending)
 
-        store.publish(catalog = merge.catalog)
+        store.publish(catalog = merge.catalog, foreign = foreign.map { it.id }.toSet())
         tasks.replaceMergeConflicts(conflicts = merge.conflicts)
         return OpenLibraryOutcome.Opened(
             catalog = merge.catalog,

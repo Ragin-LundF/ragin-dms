@@ -32,16 +32,17 @@ class MoveFolder(
         if (violation != null) {
             return OperationOutcome.InvalidName(violation = violation)
         }
-        val check = library.catalog.moveFolder(from = from, to = to)
-        if (check is CatalogUpdate.Rejected) {
-            return OperationOutcome.Rejected(reason = check.reason)
-        }
+        // Names first: a clash with an existing folder is a taken name, whether or not it holds documents.
         val free = names.isFree(library = library, target = to, moving = from)
         if (free is StorageResult.Failure) {
             return OperationOutcome.StorageFailed(failure = free)
         }
         if (free == StorageResult.Success(value = false)) {
             return OperationOutcome.NameTaken
+        }
+        val check = library.catalog.moveFolder(from = from, to = to)
+        if (check is CatalogUpdate.Rejected) {
+            return OperationOutcome.Rejected(reason = check.reason)
         }
         val replication = replicator.replicate(
             folders = library.folders,

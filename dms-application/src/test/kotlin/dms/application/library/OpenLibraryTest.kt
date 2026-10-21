@@ -65,6 +65,11 @@ class OpenLibraryTest {
             assertEquals(expected = setOf(library.syncB.id), actual = outcome.foreignFolders)
             assertEquals(expected = foreign, actual = library.folders.catalogs[library.syncB.id])
             assertEquals(expected = libraryId, actual = outcome.catalog.libraryId)
+
+            library.add(path = "letters/a.pdf", content = "alpha")
+
+            assertEquals(expected = foreign, actual = library.folders.catalogs[library.syncB.id])
+            assertTrue(actual = library.folders.paths(folder = library.syncB).isEmpty())
         }
     }
 

@@ -6,15 +6,15 @@ Use this file when touching `dms-ui`, UI source sets, Compose code, view models,
 
 `dms-ui` is a Kotlin Multiplatform module with a single `jvm()` target (Compose for Desktop) that runs on **macOS, Windows and Linux**, with two source sets:
 
-- `commonMain`: composables, view models, UI state, theme, and `expect` declarations for platform operations (file and folder pickers, drag and drop of files, "show in Finder/Explorer", opening a file in the default app, notifications).
-- `jvmMain`: `actual` implementations, the `main` function, and the **composition root**.
+- `commonMain`: composables, view models, UI state, theme, and the `PlatformActions` interface for platform operations (file and folder pickers, drag and drop of files, "show in Finder/Explorer", opening a file in the default app, notifications).
+- `jvmMain`: `DesktopPlatformActions`, the `main` function, the menu bar, and the **composition root**.
 
 Browser and mobile targets are out of scope. Do not add `expect`/`actual` indirection for its own sake.
 
 ## Source-set rules
 
 - Put shared composables and UI state in `commonMain`.
-- Put only platform-specific I/O or platform API calls in `jvmMain` `actual` implementations. Branch on the OS there, never in `commonMain`.
+- Put only platform-specific I/O or platform API calls in `jvmMain` (`DesktopPlatformActions`, `HostOs`). Branch on the OS there, never in `commonMain`.
 - `commonMain` depends on `dms-domain` and `dms-application` only. It never imports `dms.storage.*` or `dms.ai.*`.
 - The composition root (`dms.ui.AppContainer` in `jvmMain`) is the only place that instantiates adapters and use cases. Use constructor injection; no service locator calls from composables.
 
@@ -31,6 +31,9 @@ Feature packages: `ui.dashboard`, `ui.library`, `ui.document` (inspector), `ui.r
 
 - A new data class or enum goes in `model`, never beside the composable that uses it.
 - `ui.components` holds only cross-feature Compose widgets — nothing feature-specific.
+- `ui.session` holds `LibrarySession`, the one owner of the open library: it runs one operation at a time (`perform`), keeps the last scan and the folder list, and maps outcomes to messages. View models start work through it, never in parallel to it.
+- `ui.service` holds the use case bundles (`AppServices`) that the composition root hands to the view models.
+- Confirmations and text input go through `DialogController` in `ui.components`; a view model asks, a `DialogHost` renders.
 - `ui.theme` holds colours, typography, shapes and spacing.
 - Keep at most 8 files per directory.
 

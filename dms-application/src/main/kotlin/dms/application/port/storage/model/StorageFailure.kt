@@ -10,4 +10,7 @@ enum class StorageFailure {
     /** The copy was written but its content hash does not match the source. */
     VERIFICATION_FAILED,
     IO_ERROR,
+
+    /** A file written by a newer version of the tool, or not a file this tool can read. */
+    UNSUPPORTED_FORMAT,
 }

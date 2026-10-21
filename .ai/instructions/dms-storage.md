@@ -8,12 +8,16 @@ This module handles the user's real documents. A bug here loses data that may ex
 
 | Package | Purpose |
 |---|---|
-| `dms.storage.fs` | `FileSystemDocumentStorage`: file operations in one folder, atomic writes, NFC path mapping, name collision handling. |
-| `dms.storage.catalog` | `FileCatalogRepository`, `CatalogMapper`, `CatalogMigrations`. DTOs in `dms.storage.catalog.dto`. |
-| `dms.storage.journal` | `FileOperationJournal`: the failed-operation journal in the local app data directory. |
-| `dms.storage.scan` | Walking one folder, incremental hashing, producing the raw facts the use cases turn into `DetectedChange`s. |
+| `dms.storage` | `StorageAdapters`: builds every adapter for one app data directory. |
+| `dms.storage.fs` | `FileSystemDocumentStorage` (file operations in one folder, name collisions), `PathResolver` (the one `RelativePath` ↔ `Path` mapping, NFC lookup), `AtomicFiles`, `ContentHasher`, `StorageIo` (I/O on `Dispatchers.IO`, exceptions to `StorageResult.Failure`). |
+| `dms.storage.catalog` | `FileCatalogRepository`, `CatalogMapper`, `CatalogMigrations`, `CatalogFiles` (file name and conflict copies). DTOs in `dms.storage.catalog.dto`. |
+| `dms.storage.scan` | `FileSystemLibraryScanner`, `ScanCache` (incremental hashing, kept in the app data directory), `IgnoredEntries`, `CloudPlaceholders`. DTOs in `dms.storage.scan.dto`. |
 | `dms.storage.text` | `FileTextStore` for `.dms-text/<documentId>.txt`. |
-| `dms.storage.platform` | Platform specifics: placeholders (files not stored locally), conflict copies, the ignore list. |
+| `dms.storage.state` | Local state in the app data directory: `FileOperationJournal`, `FileTaskStore`, `FileActivityLog`, `FileSettingsRepository`, with their mappers. DTOs in `dms.storage.state.dto`. |
+| `dms.storage.yaml` | `YamlMappers` (the one Jackson YAML configuration) and `YamlFile` (one atomically written YAML file). |
+| `dms.storage.platform` | `SystemTrash` with `PlatformTrash` (system trash, `.dms-trash/` fallback) and `AppDataDirectory`. |
+
+Tests use temporary folders, synthetic file names and a recording `SystemTrash`, never the system trash or a real library.
 
 ## File safety rules
 
@@ -62,7 +66,7 @@ One folder is the **primary**, any number are **sync folders**. All are equal in
   - macOS: placeholders may be dataless files or `.<name>.icloud` stubs; treat stubs as "present, not downloaded" under their real name.
   - Windows: placeholders carry the `RECALL_ON_DATA_ACCESS` / `OFFLINE` attributes; do not read them during a scan.
 - Sync clients create **conflict copies** (`dms-catalog 2.yaml`, `dms-catalog (conflicted copy).yaml`, …). Detect conflict copies of the catalog, merge them, and report them — never ignore them.
-- Ignore: `.DS_Store`, `._*`, `Icon\r`, `Thumbs.db`, `desktop.ini`, `.dms-tmp-*`, `dms-catalog*.yaml`, and `.dms-text/` (handled separately).
+- Ignore: `.DS_Store`, `._*`, `Icon\r`, `Thumbs.db`, `desktop.ini`, `.dms-tmp-*`, `.dms-trash/`, `dms-catalog*.yaml` in the folder root, and `.dms-text/` (handled separately). The list lives in `IgnoredEntries` only.
 
 ## The `.dms-text/` store
 
