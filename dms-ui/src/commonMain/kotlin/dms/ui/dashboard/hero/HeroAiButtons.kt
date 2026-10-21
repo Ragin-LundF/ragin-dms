@@ -11,7 +11,8 @@ import dms.ui.theme.Spacing
 
 /** The AI's runs over the library, each with the number of documents it would read. */
 @Composable
-fun HeroAiButtons(state: DashboardUiState, busyReason: String?, onTagAll: () -> Unit, onClassifyAll: () -> Unit) {
+fun HeroAiButtons(state: DashboardUiState, onTagAll: () -> Unit, onClassifyAll: () -> Unit) {
+    val busyReason = state.aiBusy?.let { "Wait until \"$it\" finishes" }
     Row(horizontalArrangement = Arrangement.spacedBy(space = Spacing.small)) {
         HeroButton(
             label = "Tag with AI (${state.tagCandidates})",

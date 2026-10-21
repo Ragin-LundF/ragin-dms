@@ -92,7 +92,7 @@ fun DashboardHero(
                 onClick = onMerge,
             )
         }
-        HeroAiButtons(state = state, busyReason = busyReason, onTagAll = onTagAll, onClassifyAll = onClassifyAll)
+        HeroAiButtons(state = state, onTagAll = onTagAll, onClassifyAll = onClassifyAll)
     }
 }
 

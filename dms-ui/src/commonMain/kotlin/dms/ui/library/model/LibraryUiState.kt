@@ -3,9 +3,13 @@ package dms.ui.library.model
 import dms.domain.document.Document
 import dms.domain.library.RelativePath
 import dms.domain.taxonomy.TagName
+import dms.ui.library.search.model.ContentSearchState
 import dms.ui.library.sidebar.model.SidebarGroup
 
-/** The library screen, derived from the catalog and the user's choices. */
+/**
+ * The library screen, derived from the catalog and the user's choices. [busy] names the library
+ * operation that runs now, [aiBusy] the AI run.
+ */
 data class LibraryUiState(
     val isOpen: Boolean = false,
     val title: String = "All documents",
@@ -19,8 +23,10 @@ data class LibraryUiState(
     val documents: List<DocumentRow> = emptyList(),
     val inspected: Document? = null,
     val busy: String? = null,
+    val aiBusy: String? = null,
     val layout: DocumentLayout = DocumentLayout.LIST,
     val years: List<Int> = emptyList(),
     val year: YearFilter? = null,
     val collapsedGroups: Set<SidebarGroup> = emptySet(),
+    val contentSearch: ContentSearchState = ContentSearchState(),
 )

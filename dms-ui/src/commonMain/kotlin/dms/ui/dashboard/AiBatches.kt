@@ -8,6 +8,7 @@ import dms.domain.document.DocumentId
 import dms.ui.review.AiMessages
 import dms.ui.service.AppServices
 import dms.ui.session.LibrarySession
+import dms.ui.session.model.OperationLane
 import dms.ui.session.model.OperationProgress
 import dms.ui.session.model.UiMessage
 import kotlinx.coroutines.flow.Flow
@@ -19,7 +20,8 @@ import kotlinx.coroutines.flow.takeWhile
  * The AI's runs over the whole library: classify every document without a classification, or tag
  * every document without tags. One document after the other, with progress, until the user cancels;
  * a run stops at once when the AI server does not answer. Every result waits under Open tasks and
- * shows there as soon as it arrives.
+ * shows there as soon as it arrives. The run leaves the library free, so the user can review the
+ * results and change the library while it goes on.
  */
 class AiBatches(
     private val services: AppServices,
@@ -39,15 +41,15 @@ class AiBatches(
     }
 
     private fun run(step: String, batch: () -> Flow<ClassificationProgress>, done: (Int) -> String) {
-        session.perform(label = step, cancellable = true) {
+        session.perform(label = step, lane = OperationLane.AI, cancellable = true) {
             var suggested = 0
             var failure: SuggestOutcome.Failed? = null
-            session.progress(progress = OperationProgress(step = step))
+            session.progress(progress = OperationProgress(step = step), lane = OperationLane.AI)
             batch()
                 .onEach { progress ->
                     val name = nameOf(documentId = progress.documentId)
                     val current = OperationProgress(step = step, done = progress.done, total = progress.total)
-                    session.progress(progress = current.copy(detail = name))
+                    session.progress(progress = current.copy(detail = name), lane = OperationLane.AI)
                     when (val outcome = progress.outcome) {
                         is SuggestOutcome.Suggested -> if (outcome.suggestion.hasValues()) {
                             suggested++

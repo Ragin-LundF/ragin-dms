@@ -5,7 +5,6 @@ import dms.domain.document.Document
 import dms.ui.dashboard.DashboardViewModel
 import dms.ui.dashboard.model.TaskGroup
 import dms.ui.document.InspectorViewModel
-import dms.ui.library.LibraryViewModel
 import dms.ui.support.SampleImages
 import dms.ui.support.TestApp
 import dms.ui.support.UiTest
@@ -89,7 +88,7 @@ class AssistantUiTest {
     }
 
     @Test
-    fun `each tag suggestion shows under open tasks while the run goes on`() {
+    fun `each tag suggestion can be reviewed while the run goes on`() {
         UiTest.run { app ->
             val dashboard = DashboardViewModel(services = app.services, session = app.session)
             libraryWithImages(app = app, names = listOf("scan-7.png", "scan-8.png"))
@@ -99,7 +98,12 @@ class AssistantUiTest {
             dashboard.aiBatches.tagAll()
 
             val running = dashboard.state.first { state -> state.groups.any { it.group == TaskGroup.SUGGESTIONS } }
-            assertNotNull(actual = running.busy)
+            assertNotNull(actual = running.aiBusy)
+            assertNull(actual = running.busy)
+            val suggestions = running.groups.single { it.group == TaskGroup.SUGGESTIONS }
+            suggestions.rows.first().buttons.single { it.label == "Review" }.onClick()
+            dashboard.review.approve()
+            assertNull(actual = dashboard.review.state.value)
             app.ai.release.complete(value = Unit)
             app.idle()
             assertEquals(expected = 2, actual = app.ai.chatRequests)
@@ -112,7 +116,7 @@ class AssistantUiTest {
 
     private suspend fun libraryWithImages(app: TestApp, names: List<String>): List<Document> {
         app.configure()
-        val library = LibraryViewModel(services = app.services, session = app.session, platform = app.platform)
+        val library = app.libraryViewModel()
         app.platform.nextFiles = names.map { SampleImages.write(file = app.root.resolve("outside/$it")).toString() }
         library.addFilesToTopLevel()
         app.idle()

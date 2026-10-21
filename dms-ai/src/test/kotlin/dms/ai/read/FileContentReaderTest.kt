@@ -26,6 +26,7 @@ import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class FileContentReaderTest {
@@ -57,6 +58,22 @@ class FileContentReaderTest {
             val content = reader.read(folder = folder, document = document(name = "a.pdf"))
 
             assertTrue(actual = "Sample invoice number 4711" in assertIs<DocumentContent.Text>(value = content).text)
+        }
+    }
+
+    @Test
+    fun `the text for search is the whole text layer, and nothing for a scan or an image`() {
+        runTest {
+            writePdf(name = "a.pdf", text = sampleText)
+            writePdf(name = "scan.pdf", text = null)
+
+            val text = reader.text(folder = folder, document = document(name = "a.pdf"))
+            val scan = reader.text(folder = folder, document = document(name = "scan.pdf"))
+            val missing = reader.text(folder = folder, document = document(name = "gone.png"))
+
+            assertTrue(actual = text.orEmpty().contains(other = "Sample invoice number 4711"))
+            assertNull(actual = scan)
+            assertNull(actual = missing)
         }
     }
 

@@ -34,11 +34,12 @@ fun FrameWindowScope.AppMenuBar(
             Item(text = "Retry failed operations", enabled = idle, onClick = session::retryFailedOperations)
             Item(text = "Detect missing document dates", enabled = idle, onClick = session::detectDocumentDates)
             Separator()
+            val cancellable = state.operations.firstOrNull { it.cancellable }
             Item(
-                text = "Cancel ${state.busy.orEmpty()}".trim(),
-                enabled = state.cancellable,
+                text = "Cancel ${cancellable?.label.orEmpty()}".trim(),
+                enabled = cancellable != null,
                 shortcut = HostOs.shortcut(key = Key.Period),
-                onClick = session::cancel,
+                onClick = { cancellable?.let { session.cancel(lane = it.lane) } },
             )
         }
         Menu(text = "View") {

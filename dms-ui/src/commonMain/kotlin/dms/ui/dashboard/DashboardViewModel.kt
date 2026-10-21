@@ -253,6 +253,7 @@ class DashboardViewModel(
             activity = dashboard?.recentActivity.orEmpty(),
             lastScanAt = sessionState.lastScanAt,
             busy = sessionState.busy,
+            aiBusy = sessionState.aiBusy,
             classifyCandidates = aiCandidates(dashboard = dashboard) { it.classification == null },
             tagCandidates = aiCandidates(dashboard = dashboard) { it.tags.isEmpty() },
             stats = LibraryStatistics.of(

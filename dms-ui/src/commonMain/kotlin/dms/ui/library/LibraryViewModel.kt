@@ -22,6 +22,8 @@ import dms.ui.library.model.LibrarySelection
 import dms.ui.library.model.LibraryUiState
 import dms.ui.library.model.LibraryViewState
 import dms.ui.library.model.YearFilter
+import dms.ui.library.search.ContentSearch
+import dms.ui.library.search.model.ContentSearchState
 import dms.ui.library.sidebar.model.ToggleTarget
 import dms.ui.service.AppServices
 import dms.ui.session.LibrarySession
@@ -33,6 +35,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -52,12 +55,19 @@ class LibraryViewModel(
 
     val dialogs: DialogController = DialogController()
 
+    val contentSearch: ContentSearch = ContentSearch(
+        services = services,
+        queries = view.map { it.query },
+        scope = viewModelScope,
+    )
+
     val state: StateFlow<LibraryUiState> = combine(
         flow = services.library.catalog,
         flow2 = session.state,
         flow3 = view,
-    ) { catalog, sessionState, viewState ->
-        derive(catalog = catalog, sessionState = sessionState, view = viewState)
+        flow4 = contentSearch.state,
+    ) { catalog, sessionState, viewState, search ->
+        derive(catalog = catalog, sessionState = sessionState, view = viewState, search = search)
     }.stateIn(scope = viewModelScope, started = SharingStarted.Eagerly, initialValue = LibraryUiState())
 
     fun select(selection: LibrarySelection) {
@@ -315,9 +325,14 @@ class LibraryViewModel(
         return if (moves) path.relocate(from = from, to = to) else path
     }
 
-    private fun derive(catalog: Catalog?, sessionState: SessionState, view: LibraryViewState): LibraryUiState {
+    private fun derive(
+        catalog: Catalog?,
+        sessionState: SessionState,
+        view: LibraryViewState,
+        search: ContentSearchState,
+    ): LibraryUiState {
         if (catalog == null) {
-            return LibraryUiState(busy = sessionState.busy)
+            return LibraryUiState(busy = sessionState.busy, aiBusy = sessionState.aiBusy)
         }
         val documents = catalog.documents.values
         val zone = ZoneId.systemDefault()
@@ -326,6 +341,7 @@ class LibraryViewModel(
             view = view,
             now = services.library.clock.now(),
             zone = zone,
+            textMatches = search.matches,
         )
         return LibraryUiState(
             isOpen = true,
@@ -353,10 +369,12 @@ class LibraryViewModel(
             },
             inspected = view.inspected?.let { catalog.documents[it] },
             busy = sessionState.busy,
+            aiBusy = sessionState.aiBusy,
             layout = view.layout,
             years = LibraryFilter.years(documents = documents, zone = zone),
             year = view.year,
             collapsedGroups = view.collapsedGroups,
+            contentSearch = search,
         )
     }
 

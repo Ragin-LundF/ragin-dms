@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.VerticalDivider
@@ -21,14 +20,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
-import androidx.compose.ui.unit.round
 import dms.ui.PlatformActions
 import dms.ui.document.InspectorPanel
 import dms.ui.document.InspectorViewModel
 import dms.ui.library.documents.DocumentArea
 import dms.ui.library.drag.DocumentDrag
-import dms.ui.library.drag.DragPreview
-import dms.ui.library.drag.DropTexts
+import dms.ui.library.drag.DragOverlay
 import dms.ui.library.sidebar.LibrarySidebar
 import dms.ui.theme.Spacing
 
@@ -60,6 +57,7 @@ fun LibraryScreen(viewModel: LibraryViewModel, inspector: InspectorViewModel, pl
                     state = state,
                     busyReason = busyReason,
                     onSearch = viewModel::search,
+                    onContentSearch = viewModel.contentSearch::enable,
                     onYear = viewModel::filterYear,
                     onLayout = viewModel::setLayout,
                     onAddFiles = { viewModel.addFiles() },
@@ -80,19 +78,14 @@ fun LibraryScreen(viewModel: LibraryViewModel, inspector: InspectorViewModel, pl
                     categories = state.categories,
                     allTags = state.tags,
                     busyReason = busyReason,
+                    aiBusyReason = state.aiBusy?.let { "Wait until \"$it\" finishes" },
                     viewModel = inspector,
                     onClose = { viewModel.inspect(documentId = null) },
                     modifier = Modifier.width(width = Spacing.inspectorWidth).fillMaxHeight(),
                 )
             }
         }
-        drag.dragged?.let { document ->
-            DragPreview(
-                document = document,
-                action = drag.hovered?.let { DropTexts.action(target = it, categories = state.categories) },
-                modifier = Modifier.offset { (drag.pointer - origin + Offset(x = 16f, y = 12f)).round() },
-            )
-        }
+        DragOverlay(drag = drag, origin = origin, categories = state.categories)
     }
     LibraryDialogs(viewModel = viewModel, inspector = inspector)
 }

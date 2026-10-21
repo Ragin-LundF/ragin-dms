@@ -70,9 +70,8 @@ fun AppContent(
                     LogPanel(entries = entries, onClear = session.log::clear)
                 }
                 ActivityBar(
-                    busy = sessionState.busy,
+                    operations = sessionState.operations,
                     progress = progress,
-                    cancellable = sessionState.cancellable,
                     logVisible = logVisible,
                     onCancel = session::cancel,
                     onToggleLog = { onLogVisibleChange(!logVisible) },

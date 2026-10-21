@@ -221,7 +221,7 @@ class LibraryViewModelTest {
     /** A library with the folder `letters` and one file in it, inspected. */
     private suspend fun libraryWithOneFile(app: TestApp): LibraryViewModel {
         app.configure()
-        val library = LibraryViewModel(services = app.services, session = app.session, platform = app.platform)
+        val library = app.libraryViewModel()
         library.newFolder()
         library.dialogs.submit(text = "letters")
         app.idle()

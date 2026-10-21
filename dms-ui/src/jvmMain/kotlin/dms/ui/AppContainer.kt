@@ -34,6 +34,7 @@ import dms.application.resolution.DismissTask
 import dms.application.resolution.KeepBothVersions
 import dms.application.resolution.KeepVersion
 import dms.application.resolution.ResolveMove
+import dms.application.search.SearchContents
 import dms.application.sync.MergeAllFolders
 import dms.application.sync.Replicator
 import dms.application.sync.RetryFailedOperations
@@ -133,6 +134,7 @@ class AppContainer(
                 journal = adapters.journal,
                 activity = adapters.activity,
             ),
+            searchContents = SearchContents(store = store, reader = ai.reader, texts = adapters.texts),
         )
     }
 

@@ -42,6 +42,7 @@ import dms.application.resolution.DismissTask
 import dms.application.resolution.KeepBothVersions
 import dms.application.resolution.KeepVersion
 import dms.application.resolution.ResolveMove
+import dms.application.search.SearchContents
 import dms.application.sync.MergeAllFolders
 import dms.application.sync.Replicator
 import dms.application.sync.RetryFailedOperations
@@ -242,6 +243,7 @@ class TestLibrary {
     val suggestTags: SuggestTags = SuggestTags(reading = reading, assistant = assistant, tasks = tasks)
     val tagAllUntagged: TagAllUntagged = TagAllUntagged(store = store, tasks = tasks, suggestTags = suggestTags)
     val askAboutDocument: AskAboutDocument = AskAboutDocument(store = store, reading = reading, assistant = assistant)
+    val searchContents: SearchContents = SearchContents(store = store, reader = reader, texts = folders)
 
     /** The open catalog; fails the test while no library is open. */
     val catalog: Catalog

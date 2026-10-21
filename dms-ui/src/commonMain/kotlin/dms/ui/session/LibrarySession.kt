@@ -7,7 +7,9 @@ import dms.application.port.state.model.Preferences
 import dms.domain.change.DetectedChange
 import dms.ui.service.AppServices
 import dms.ui.session.model.LibraryStatus
+import dms.ui.session.model.OperationLane
 import dms.ui.session.model.OperationProgress
+import dms.ui.session.model.RunningOperation
 import dms.ui.session.model.SessionState
 import dms.ui.session.model.UiMessage
 import kotlinx.coroutines.CoroutineScope
@@ -19,12 +21,13 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.Duration
 import java.util.Locale
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * The open library as every screen sees it, and the one place that runs operations changing the
- * library. Operations run one after the other: while one runs, others are refused, so two of them
- * never write the same files at once.
+ * library. Each operation runs in a lane: while one runs, others in its lane are refused, so two of
+ * them never write the same files at once, but an AI run and a change of the library run side by side.
  */
 class LibrarySession(
     private val services: AppServices,
@@ -32,16 +35,16 @@ class LibrarySession(
 ) {
 
     private val mutableState = MutableStateFlow(value = SessionState())
-    private val mutableProgress = MutableStateFlow<OperationProgress?>(value = null)
-    private var running: Job? = null
+    private val mutableProgress = MutableStateFlow<Map<OperationLane, OperationProgress>>(value = emptyMap())
+    private val running = ConcurrentHashMap<OperationLane, Job>()
 
     val state: StateFlow<SessionState> = mutableState.asStateFlow()
 
     /**
-     * How far the running operation is. Kept apart from [state], because it changes with every file
-     * and screens that only need [state] should not recompute that often.
+     * How far the running operations are, by lane. Kept apart from [state], because it changes with
+     * every file and screens that only need [state] should not recompute that often.
      */
-    val progress: StateFlow<OperationProgress?> = mutableProgress.asStateFlow()
+    val progress: StateFlow<Map<OperationLane, OperationProgress>> = mutableProgress.asStateFlow()
 
     val log: SessionLog = SessionLog(clock = services.library.clock)
 
@@ -63,12 +66,11 @@ class LibrarySession(
         perform(label = "Scanning the library folders", cancellable = true) { rescan() }
     }
 
-    /** Stops the running operation if it can be stopped safely; see [perform]. */
-    fun cancel() {
-        if (mutableState.value.cancellable) {
-            log.info(text = "Cancelling: ${mutableState.value.busy}")
-            running?.cancel()
-        }
+    /** Stops the operation running in [lane] if it can be stopped safely; see [perform]. */
+    fun cancel(lane: OperationLane) {
+        val operation = mutableState.value.operations.firstOrNull { it.lane == lane && it.cancellable } ?: return
+        log.info(text = "Cancelling: ${operation.label}")
+        running[lane]?.cancel()
     }
 
     /** Switches adding new files during a scan on or off; it applies from the next scan. */
@@ -116,20 +118,48 @@ class LibrarySession(
     }
 
     /**
-     * Runs [block] as the one operation that may change the library. Returns `false` and does
-     * nothing while another operation runs. Only a [cancellable] operation can be stopped by the
-     * user: one that, like a scan, leaves the library consistent wherever it stops.
+     * Runs [block] as the one operation of its [lane]. Returns `false` and does nothing while another
+     * operation runs in that lane. Only a [cancellable] operation can be stopped by the user: one
+     * that, like a scan, leaves the library consistent wherever it stops.
      */
-    fun perform(label: String, cancellable: Boolean = false, block: suspend () -> Unit): Boolean {
-        val current = mutableState.value
-        val claimed = current.busy == null &&
-            mutableState.compareAndSet(expect = current, update = current.copy(busy = label, cancellable = cancellable))
-        if (!claimed) {
+    fun perform(
+        label: String,
+        lane: OperationLane = OperationLane.LIBRARY,
+        cancellable: Boolean = false,
+        block: suspend () -> Unit,
+    ): Boolean {
+        val operation = RunningOperation(label = label, lane = lane, cancellable = cancellable)
+        if (!claim(operation = operation)) {
             return false
         }
+        val job = launchLogged(label = label, block = block)
+        running[lane] = job
+        job.invokeOnCompletion { cause -> finish(operation = operation, cancelled = cause is CancellationException) }
+        return true
+    }
+
+    /**
+     * Adds [operation] to the running ones unless its lane is busy. Retries when another lane changed
+     * the state at the same moment, so a busy AI run never makes a library operation fail to start.
+     */
+    private fun claim(operation: RunningOperation): Boolean {
+        while (true) {
+            val current = mutableState.value
+            if (current.busyIn(lane = operation.lane) != null) {
+                return false
+            }
+            val update = current.copy(operations = current.operations + operation)
+            if (mutableState.compareAndSet(expect = current, update = update)) {
+                return true
+            }
+        }
+    }
+
+    /** Runs [block], logging how long it took, and reports a failure instead of throwing it. */
+    private fun launchLogged(label: String, block: suspend () -> Unit): Job {
         log.info(text = "$label…")
         val started = services.library.clock.now()
-        val job = scope.launch {
+        return scope.launch {
             val failure = runCatching { block() }.exceptionOrNull()
             if (failure is CancellationException) {
                 throw failure
@@ -142,19 +172,17 @@ class LibrarySession(
                 log.info(text = "$label: finished in ${"%.1f".format(Locale.ROOT, seconds)} s")
             }
         }
-        job.invokeOnCompletion { cause -> finish(label = label, cancelled = cause is CancellationException) }
-        running = job
-        return true
     }
 
     /** Frees the session after an operation; runs even when it was cancelled before it started. */
-    private fun finish(label: String, cancelled: Boolean) {
+    private fun finish(operation: RunningOperation, cancelled: Boolean) {
         if (cancelled) {
-            log.info(text = "$label: cancelled")
-            report(message = UiMessage(text = "$label: cancelled"))
+            log.info(text = "${operation.label}: cancelled")
+            report(message = UiMessage(text = "${operation.label}: cancelled"))
         }
-        mutableProgress.value = null
-        mutableState.update { it.copy(busy = null, cancellable = false, revision = it.revision + 1) }
+        running.remove(operation.lane)
+        mutableProgress.update { it - operation.lane }
+        mutableState.update { it.copy(operations = it.operations - operation, revision = it.revision + 1) }
     }
 
     /**
@@ -165,9 +193,12 @@ class LibrarySession(
         mutableState.update { it.copy(revision = it.revision + 1) }
     }
 
-    /** Shows how far the running operation is. Call inside [perform]; it is cleared when it ends. */
-    fun progress(progress: OperationProgress) {
-        mutableProgress.value = progress
+    /**
+     * Shows how far the operation running in [lane] is. Call inside [perform]; it is cleared when the
+     * operation ends.
+     */
+    fun progress(progress: OperationProgress, lane: OperationLane = OperationLane.LIBRARY) {
+        mutableProgress.update { it + (lane to progress) }
     }
 
     /**

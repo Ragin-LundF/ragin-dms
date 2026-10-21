@@ -1,10 +1,15 @@
 package dms.ui.support
 
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.ViewModelStore
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
 import dms.application.library.model.LibraryCommand
 import dms.application.port.state.model.Preferences
 import dms.domain.library.FolderLocation
 import dms.storage.platform.SystemTrash
 import dms.ui.AppContainer
+import dms.ui.library.LibraryViewModel
 import dms.ui.service.AppServices
 import dms.ui.session.LibrarySession
 import kotlinx.coroutines.CoroutineScope
@@ -28,6 +33,8 @@ class TestApp(scope: CoroutineScope) {
     val ai: FakeAiServer = FakeAiServer()
 
     private val trashed = AtomicInteger()
+    private val viewModels = ViewModelStore()
+    private val viewModelKeys = AtomicInteger()
 
     val services: AppServices = AppContainer(
         appDataDirectory = root.resolve("app-data"),
@@ -66,7 +73,19 @@ class TestApp(scope: CoroutineScope) {
 
     /** Waits until the running operation finished. */
     suspend fun idle() {
-        session.state.first { it.busy == null }
+        session.state.first { it.operations.isEmpty() }
+    }
+
+    /**
+     * A new library view model, cleared in [close] as the app clears it when its screen leaves, so
+     * its work in the background does not run on into the next test.
+     */
+    fun libraryViewModel(): LibraryViewModel {
+        val factory = viewModelFactory {
+            initializer { LibraryViewModel(services = services, session = session, platform = platform) }
+        }
+        val provider = ViewModelProvider.create(store = viewModels, factory = factory)
+        return provider["library-${viewModelKeys.incrementAndGet()}", LibraryViewModel::class]
     }
 
     fun write(file: Path, content: String): Path {
@@ -80,6 +99,7 @@ class TestApp(scope: CoroutineScope) {
     }
 
     fun close() {
+        viewModels.clear()
         root.toFile().deleteRecursively()
     }
 }

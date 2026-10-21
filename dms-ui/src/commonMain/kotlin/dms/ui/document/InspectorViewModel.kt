@@ -23,6 +23,7 @@ import dms.ui.service.AppServices
 import dms.ui.session.LibrarySession
 import dms.ui.session.NameInput
 import dms.ui.session.OutcomeMessages
+import dms.ui.session.model.OperationLane
 import dms.ui.session.model.UiMessage
 import java.time.LocalDate
 
@@ -87,7 +88,7 @@ class InspectorViewModel(
     /** Lets the AI suggest a classification and opens it for review right away. */
     fun classifyWithAi(document: Document) {
         val name = document.path.fileName
-        session.perform(label = "Classifying $name with AI", cancellable = true) {
+        session.perform(label = "Classifying $name with AI", lane = OperationLane.AI, cancellable = true) {
             when (val outcome = services.ai.suggestClassification(documentId = document.id)) {
                 is SuggestOutcome.Suggested -> review.open(suggestion = outcome.suggestion)
                 else -> session.report(message = AiMessages.of(outcome = outcome, name = name))
@@ -98,7 +99,7 @@ class InspectorViewModel(
     /** Lets the AI suggest tags and opens them for review right away. */
     fun tagWithAi(document: Document) {
         val name = document.path.fileName
-        session.perform(label = "Tagging $name with AI", cancellable = true) {
+        session.perform(label = "Tagging $name with AI", lane = OperationLane.AI, cancellable = true) {
             when (val outcome = services.ai.suggestTags(documentId = document.id)) {
                 is SuggestOutcome.Suggested -> if (outcome.suggestion.tags.isEmpty()) {
                     session.report(message = UiMessage(text = "The AI found no new tags for $name"))

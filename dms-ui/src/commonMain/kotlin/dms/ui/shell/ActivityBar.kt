@@ -1,6 +1,7 @@
 package dms.ui.shell
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -18,20 +19,21 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import dms.ui.session.model.OperationLane
 import dms.ui.session.model.OperationProgress
+import dms.ui.session.model.RunningOperation
 import dms.ui.theme.Spacing
 
 /**
- * The bar along the bottom of the window: what is running, how far it is and the file it is on, a
- * button to stop it when that is safe, and the switch for the log panel.
+ * The bar along the bottom of the window: what is running, one line per operation, how far each is
+ * and the file it is on, a button to stop it when that is safe, and the switch for the log panel.
  */
 @Composable
 fun ActivityBar(
-    busy: String?,
-    progress: OperationProgress?,
-    cancellable: Boolean,
+    operations: List<RunningOperation>,
+    progress: Map<OperationLane, OperationProgress>,
     logVisible: Boolean,
-    onCancel: () -> Unit,
+    onCancel: (OperationLane) -> Unit,
     onToggleLog: () -> Unit,
 ) {
     val colors = MaterialTheme.colorScheme
@@ -45,20 +47,25 @@ fun ActivityBar(
                 modifier = Modifier.weight(weight = 1f),
                 verticalArrangement = Arrangement.spacedBy(space = Spacing.xsmall),
             ) {
-                if (busy == null) {
+                if (operations.isEmpty()) {
                     Text(text = "Ready", style = MaterialTheme.typography.labelLarge, color = colors.onSurfaceVariant)
-                } else {
-                    ProgressLine(busy = busy, progress = progress)
                 }
-            }
-            if (busy != null && cancellable) {
-                TextButton(onClick = onCancel) {
-                    Icon(
-                        imageVector = Icons.Rounded.Close,
-                        contentDescription = null,
-                        modifier = Modifier.size(size = Spacing.icon),
-                    )
-                    Text(text = "Cancel", modifier = Modifier.padding(start = Spacing.xsmall))
+                operations.forEach { operation ->
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(modifier = Modifier.weight(weight = 1f)) {
+                            ProgressLine(busy = operation.label, progress = progress[operation.lane])
+                        }
+                        if (operation.cancellable) {
+                            TextButton(onClick = { onCancel(operation.lane) }) {
+                                Icon(
+                                    imageVector = Icons.Rounded.Close,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(size = Spacing.icon),
+                                )
+                                Text(text = "Cancel", modifier = Modifier.padding(start = Spacing.xsmall))
+                            }
+                        }
+                    }
                 }
             }
             FilterChip(

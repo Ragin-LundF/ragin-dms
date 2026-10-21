@@ -22,6 +22,13 @@ object PdfContent {
     /** Fewer characters than this is a scan with at most a page number or a stamp as text. */
     private const val MIN_TEXT = 80
 
+    /** The whole text layer, or an empty string for a scan. */
+    fun text(file: Path): String {
+        return Loader.loadPDF(RandomAccessReadBufferedFile(file.toString())).use { pdf ->
+            PDFTextStripper().getText(pdf).trim()
+        }
+    }
+
     fun read(file: Path, preferVision: Boolean): DocumentContent {
         return Loader.loadPDF(RandomAccessReadBufferedFile(file.toString())).use { pdf ->
             val text = if (preferVision) {

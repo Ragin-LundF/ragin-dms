@@ -37,7 +37,7 @@ fun StatusFooter(sessionState: SessionState) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(space = Spacing.medium),
         ) {
-            val busy = sessionState.busy
+            val busy = sessionState.operations.firstOrNull()?.label
             val idleText = when (sessionState.status) {
                 LibraryStatus.Loading -> "Opening"
                 LibraryStatus.NotConfigured -> "No library yet"

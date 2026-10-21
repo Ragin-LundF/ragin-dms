@@ -1,12 +1,12 @@
 package dms.ui.session
 
+import dms.ui.session.model.OperationLane
 import dms.ui.support.UiTest
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.first
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
-import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class LibrarySessionTest {
@@ -23,7 +23,7 @@ class LibrarySessionTest {
                 ?.documents?.values?.map { it.path.value }?.toSet()
             assertEquals(expected = setOf("letters/a.pdf", "b.pdf"), actual = paths)
             assertEquals(expected = "beta", actual = app.read(file = app.primary.resolve("b.pdf")))
-            assertNull(actual = app.session.progress.value)
+            assertTrue(actual = app.session.progress.value.isEmpty())
             val log = app.session.log.entries.value.map { it.text }
             assertTrue(actual = "Read letters/a.pdf" in log)
             assertTrue(actual = "Adding new files: b.pdf" in log)
@@ -48,9 +48,24 @@ class LibrarySessionTest {
             app.configure()
 
             app.session.perform(label = "Waiting") { awaitCancellation() }
-            app.session.cancel()
+            app.session.cancel(lane = OperationLane.LIBRARY)
             assertEquals(expected = "Waiting", actual = app.session.state.value.busy)
-            assertFalse(actual = app.session.state.value.cancellable)
+            assertFalse(actual = app.session.state.value.operations.single().cancellable)
+        }
+    }
+
+    @Test
+    fun `an AI run and a library operation run side by side, but two of a lane do not`() {
+        UiTest.run { app ->
+            app.configure()
+
+            assertTrue(actual = app.session.perform(label = "AI", lane = OperationLane.AI) { awaitCancellation() })
+            assertTrue(actual = app.session.perform(label = "Library") { awaitCancellation() })
+            assertFalse(actual = app.session.perform(label = "Second AI", lane = OperationLane.AI) {})
+            assertFalse(actual = app.session.perform(label = "Second library") {})
+
+            assertEquals(expected = "AI", actual = app.session.state.value.aiBusy)
+            assertEquals(expected = "Library", actual = app.session.state.value.busy)
         }
     }
 
@@ -60,7 +75,7 @@ class LibrarySessionTest {
             app.configure()
 
             app.session.perform(label = "Waiting", cancellable = true) { awaitCancellation() }
-            app.session.cancel()
+            app.session.cancel(lane = OperationLane.LIBRARY)
             app.idle()
 
             assertEquals(expected = "Waiting: cancelled", actual = app.session.state.value.message?.text)

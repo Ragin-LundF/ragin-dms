@@ -2,6 +2,7 @@ package dms.ui.library
 
 import dms.domain.catalog.Catalog
 import dms.domain.document.Document
+import dms.domain.document.DocumentId
 import dms.ui.library.model.LibrarySelection
 import dms.ui.library.model.LibraryViewState
 import java.time.Duration
@@ -15,14 +16,23 @@ object LibraryFilter {
     /** How far back "Recently added" reaches. */
     private val RECENT: Duration = Duration.ofDays(30)
 
-    /** The documents [view] selects; recent ones newest first, all others by path. */
-    fun documents(catalog: Catalog, view: LibraryViewState, now: Instant, zone: ZoneId): List<Document> {
+    /**
+     * The documents [view] selects; recent ones newest first, all others by path. The query matches
+     * the name, title, correspondent and tags, and finds [textMatches] as well.
+     */
+    fun documents(
+        catalog: Catalog,
+        view: LibraryViewState,
+        now: Instant,
+        zone: ZoneId,
+        textMatches: Set<DocumentId> = emptySet(),
+    ): List<Document> {
         val query = view.query.trim().lowercase(Locale.ROOT)
         val year = view.year
         val shown = catalog.documents.values.filter { document ->
             matches(document = document, selection = view.selection, now = now) &&
                 (year == null || year.matches(year = yearOf(document = document, zone = zone))) &&
-                matches(document = document, query = query)
+                (matches(document = document, query = query) || document.id in textMatches)
         }
         return if (view.selection == LibrarySelection.Recent) {
             shown.sortedByDescending { it.addedAt }

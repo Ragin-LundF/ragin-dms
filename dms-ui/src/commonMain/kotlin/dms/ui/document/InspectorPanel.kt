@@ -27,6 +27,7 @@ fun InspectorPanel(
     categories: List<CategoryEntry>,
     allTags: List<TagName>,
     busyReason: String?,
+    aiBusyReason: String?,
     viewModel: InspectorViewModel,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
@@ -38,7 +39,12 @@ fun InspectorPanel(
             verticalArrangement = Arrangement.spacedBy(space = Spacing.small),
         ) {
             InspectorHeader(document = document, onClose = onClose)
-            DocumentActions(document = document, busyReason = busyReason, viewModel = viewModel)
+            DocumentActions(
+                document = document,
+                busyReason = busyReason,
+                aiBusyReason = aiBusyReason,
+                viewModel = viewModel,
+            )
             DocumentFacts(document = document)
             SectionHeader(title = "Details")
             MetadataEditor(document = document, enabled = enabled) { draft ->
