@@ -1,5 +1,10 @@
 package dms.application
 
+import dms.application.assistant.AskAboutDocument
+import dms.application.assistant.DocumentReading
+import dms.application.assistant.SuggestTags
+import dms.application.assistant.SummarizeDocument
+import dms.application.assistant.TagAllUntagged
 import dms.application.catalog.EditCatalog
 import dms.application.classification.ApproveSuggestion
 import dms.application.classification.ClassifyAllNew
@@ -14,6 +19,7 @@ import dms.application.document.AdoptNewFile
 import dms.application.document.MoveDocument
 import dms.application.document.RestoreDocument
 import dms.application.document.TrashDocument
+import dms.application.fake.ai.FakeAssistant
 import dms.application.fake.ai.FakeClassifier
 import dms.application.fake.ai.FakeContentReader
 import dms.application.fake.state.InMemoryActivityLog
@@ -73,6 +79,7 @@ class TestLibrary {
     val ids: SequentialIds = SequentialIds()
     val classifier: FakeClassifier = FakeClassifier()
     val reader: FakeContentReader = FakeContentReader()
+    val assistant: FakeAssistant = FakeAssistant()
 
     val replicator: Replicator = Replicator(
         storage = folders,
@@ -229,6 +236,12 @@ class TestLibrary {
     )
     val rejectSuggestion: RejectSuggestion = RejectSuggestion(tasks = tasks)
     val classifyAllNew: ClassifyAllNew = ClassifyAllNew(store = store, tasks = tasks, suggest = suggestClassification)
+
+    private val reading: DocumentReading = DocumentReading(store = store, reader = reader)
+    val summarizeDocument: SummarizeDocument = SummarizeDocument(reading = reading, assistant = assistant)
+    val suggestTags: SuggestTags = SuggestTags(reading = reading, assistant = assistant, tasks = tasks)
+    val tagAllUntagged: TagAllUntagged = TagAllUntagged(store = store, tasks = tasks, suggestTags = suggestTags)
+    val askAboutDocument: AskAboutDocument = AskAboutDocument(store = store, reading = reading, assistant = assistant)
 
     /** The open catalog; fails the test while no library is open. */
     val catalog: Catalog

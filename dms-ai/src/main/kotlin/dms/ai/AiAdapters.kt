@@ -1,5 +1,7 @@
 package dms.ai
 
+import dms.ai.assistant.OpenAiAssistant
+import dms.ai.client.ChatTransport
 import dms.ai.client.OpenAiCompatibleClient
 import dms.ai.read.FileContentReader
 import dms.application.port.state.model.AiSettings
@@ -15,9 +17,9 @@ import kotlinx.serialization.json.Json
 import java.nio.file.Path
 
 /**
- * The AI adapters: the client for an OpenAI-compatible server and the document reader. [settings]
- * is read for every call. [locate] finds a library file on disk. Tests pass their own [engine]; the
- * default talks HTTP through CIO.
+ * The AI adapters: the classifier and the assistant on an OpenAI-compatible server, and the
+ * document reader. [settings] is read for every call. [locate] finds a library file on disk. Tests
+ * pass their own [engine]; the default talks HTTP through CIO.
  */
 class AiAdapters(
     settings: suspend () -> AiSettings,
@@ -33,7 +35,10 @@ class AiAdapters(
         }
     }
 
-    val client: OpenAiCompatibleClient = OpenAiCompatibleClient(http = http, settings = settings)
+    private val transport: ChatTransport = ChatTransport(http = http, settings = settings)
+
+    val client: OpenAiCompatibleClient = OpenAiCompatibleClient(transport = transport)
+    val assistant: OpenAiAssistant = OpenAiAssistant(transport = transport)
     val reader: FileContentReader = FileContentReader(locate = locate, settings = settings)
 
     private companion object {

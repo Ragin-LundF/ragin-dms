@@ -114,6 +114,22 @@ class OpenAiCompatibleClientTest {
         }
     }
 
+    @Test
+    fun `a reasoning model's JSON in the reasoning content is used when the answer is empty`() {
+        runTest {
+            val reasoning = Json.encodeToString(value = """{"title":"Sample bill"}""")
+            val body = """{"choices":[{"message":{"role":"assistant","content":"","reasoning_content":$reasoning}}]}"""
+            val client = clientAnswering { json(text = body) }
+
+            val result = client.suggest(request = Requests.request())
+
+            assertEquals(
+                expected = "Sample bill",
+                actual = assertIs<ClassificationResult.Suggested>(value = result).suggestion.title,
+            )
+        }
+    }
+
     private fun clientAnswering(
         settings: AiSettings = this.settings,
         handler: suspend MockRequestHandleScope.(HttpRequestData) -> HttpResponseData,

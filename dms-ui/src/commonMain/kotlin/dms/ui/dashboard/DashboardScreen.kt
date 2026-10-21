@@ -17,10 +17,10 @@ import dms.domain.taxonomy.TagName
 import dms.ui.PlatformActions
 import dms.ui.components.dialog.DialogHost
 import dms.ui.components.layout.FileDropZone
+import dms.ui.dashboard.hero.DashboardHero
 import dms.ui.dashboard.section.InsightsSection
 import dms.ui.dashboard.section.QuickAccessSection
 import dms.ui.dashboard.section.WorkSection
-import dms.ui.dashboard.widgets.DashboardHero
 import dms.ui.dashboard.widgets.StatRow
 import dms.ui.library.model.LibrarySelection
 import dms.ui.review.ReviewDialog
@@ -62,7 +62,8 @@ fun DashboardScreen(
                 onScan = viewModel::scan,
                 onSync = viewModel::syncToAllDestinations,
                 onMerge = viewModel::mergeAllFolders,
-                onAskAi = viewModel::suggestAll,
+                onClassifyAll = viewModel.aiBatches::classifyAll,
+                onTagAll = viewModel.aiBatches::tagAll,
                 onSearch = { query -> onOpen(everything, query) },
             )
             StatRow(state = state, onOpenUncategorized = { onOpen(LibrarySelection.Uncategorized, "") })

@@ -36,7 +36,9 @@ object FileNameDates {
         return candidates.minByOrNull { it.first }?.second
     }
 
-    private fun MatchResult.group(name: String): String = groups[name]?.value.orEmpty()
+    private fun MatchResult.group(name: String): String {
+        return groups[name]?.value.orEmpty()
+    }
 
     private fun dateOf(year: String, month: String, day: String): LocalDate? {
         val yearNumber = year.toInt()

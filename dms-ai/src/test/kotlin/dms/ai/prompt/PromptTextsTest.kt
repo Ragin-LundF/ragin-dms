@@ -13,7 +13,8 @@ class PromptTextsTest {
 
         assertFalse(actual = "{{" in system)
         assertTrue(actual = "Existing categories: Invoices; Invoices / Energy" in system)
-        assertTrue(actual = "ending in \".pdf\"" in system)
+        assertTrue(actual = "\".pdf\"" in system)
+        assertTrue(actual = "\"Tax\"" in system)
         assertTrue(actual = "Today is 2026-01-15." in system)
     }
 

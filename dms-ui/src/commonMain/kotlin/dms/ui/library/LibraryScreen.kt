@@ -23,7 +23,6 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.unit.round
 import dms.ui.PlatformActions
-import dms.ui.components.dialog.DialogHost
 import dms.ui.document.InspectorPanel
 import dms.ui.document.InspectorViewModel
 import dms.ui.library.documents.DocumentArea
@@ -31,7 +30,6 @@ import dms.ui.library.drag.DocumentDrag
 import dms.ui.library.drag.DragPreview
 import dms.ui.library.drag.DropTexts
 import dms.ui.library.sidebar.LibrarySidebar
-import dms.ui.review.ReviewDialog
 import dms.ui.theme.Spacing
 
 /**
@@ -95,7 +93,5 @@ fun LibraryScreen(viewModel: LibraryViewModel, inspector: InspectorViewModel, pl
             )
         }
     }
-    DialogHost(controller = viewModel.dialogs)
-    DialogHost(controller = inspector.dialogs)
-    ReviewDialog(controller = inspector.review)
+    LibraryDialogs(viewModel = viewModel, inspector = inspector)
 }

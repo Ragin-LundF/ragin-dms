@@ -1,5 +1,6 @@
 package dms.ui.review
 
+import dms.application.assistant.model.AnswerOutcome
 import dms.application.classification.model.SuggestOutcome
 import dms.application.port.ai.model.ClassificationFailure
 import dms.ui.session.model.UiMessage
@@ -18,6 +19,19 @@ object AiMessages {
             )
 
             is SuggestOutcome.Failed -> UiMessage(text = failure(reason = outcome.reason), isError = true)
+        }
+    }
+
+    /** Why a summary or an answer is missing; `null` when there is one. */
+    fun problemOf(outcome: AnswerOutcome, name: String): String? {
+        return when (outcome) {
+            is AnswerOutcome.Answered -> null
+            AnswerOutcome.LibraryNotOpen -> "No library is open"
+            AnswerOutcome.NotFound -> "$name is no longer in the library"
+            is AnswerOutcome.NotReadable ->
+                "$name could not be read for the AI" + (outcome.detail?.let { ": $it" } ?: "")
+
+            is AnswerOutcome.Failed -> failure(reason = outcome.reason)
         }
     }
 

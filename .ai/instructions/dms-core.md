@@ -39,7 +39,7 @@ Use this file when touching `dms-domain` or `dms-application`.
 - A use case that writes files writes the **file first and the catalog second**. A crash in between leaves an uncatalogued file, which the next scan finds; the reverse would leave a catalog entry pointing at nothing.
 - Every write goes to **all reachable library folders**, primary first. A failed primary aborts the operation; a failed sync folder is journaled and becomes a `RetryFailedOperations` task. Use `Replicator` for this; never loop over folders in a use case.
 - Sync never deletes. Deleting is its own use case (`TrashDocument`), requires an explicit confirmation flag in its input, and moves to the trash in every folder.
-- AI is optional. Every use case except the classification ones must work when no `DocumentClassifier` is configured.
+- AI is optional. Every use case except the classification and assistant ones (`dms.application.assistant`: summary, tags, questions) must work when no AI server is configured.
 
 ## Extending the catalog model
 

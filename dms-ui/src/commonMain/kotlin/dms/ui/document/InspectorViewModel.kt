@@ -1,6 +1,7 @@
 package dms.ui.document
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import dms.application.catalog.model.CatalogEdit
 import dms.application.classification.model.SuggestOutcome
 import dms.application.common.OperationOutcome
@@ -10,6 +11,8 @@ import dms.domain.library.RelativePath
 import dms.domain.taxonomy.CategoryId
 import dms.domain.taxonomy.TagName
 import dms.ui.PlatformActions
+import dms.ui.assistant.ChatController
+import dms.ui.assistant.SummaryController
 import dms.ui.components.dialog.DialogController
 import dms.ui.components.model.ConfirmationRequest
 import dms.ui.components.model.TextInputRequest
@@ -23,7 +26,10 @@ import dms.ui.session.OutcomeMessages
 import dms.ui.session.model.UiMessage
 import java.time.LocalDate
 
-/** Changes to the one document shown in the inspector: metadata, category, tags, name, place. */
+/**
+ * Changes to the one document shown in the inspector: metadata, category, tags, name, place; and
+ * what the AI can do with it: summarize, tag, classify, and answer questions.
+ */
 class InspectorViewModel(
     private val services: AppServices,
     private val session: LibrarySession,
@@ -32,6 +38,8 @@ class InspectorViewModel(
 
     val dialogs: DialogController = DialogController()
     val review: ReviewController = ReviewController(services = services, session = session)
+    val summary: SummaryController = SummaryController(services = services, scope = viewModelScope)
+    val chat: ChatController = ChatController(services = services, scope = viewModelScope)
 
     val fileManagerName: String
         get() {
@@ -76,11 +84,10 @@ class InspectorViewModel(
         edit(edit = CatalogEdit.RemoveTags(documentId = document.id, tags = setOf(tag)))
     }
 
-    /** Renames the file in every library folder; the original name stays until the user changes it. */
     /** Lets the AI suggest a classification and opens it for review right away. */
-    fun askAi(document: Document) {
+    fun classifyWithAi(document: Document) {
         val name = document.path.fileName
-        session.perform(label = "Asking the AI about $name", cancellable = true) {
+        session.perform(label = "Classifying $name with AI", cancellable = true) {
             when (val outcome = services.ai.suggestClassification(documentId = document.id)) {
                 is SuggestOutcome.Suggested -> review.open(suggestion = outcome.suggestion)
                 else -> session.report(message = AiMessages.of(outcome = outcome, name = name))
@@ -88,6 +95,23 @@ class InspectorViewModel(
         }
     }
 
+    /** Lets the AI suggest tags and opens them for review right away. */
+    fun tagWithAi(document: Document) {
+        val name = document.path.fileName
+        session.perform(label = "Tagging $name with AI", cancellable = true) {
+            when (val outcome = services.ai.suggestTags(documentId = document.id)) {
+                is SuggestOutcome.Suggested -> if (outcome.suggestion.tags.isEmpty()) {
+                    session.report(message = UiMessage(text = "The AI found no new tags for $name"))
+                } else {
+                    review.open(suggestion = outcome.suggestion)
+                }
+
+                else -> session.report(message = AiMessages.of(outcome = outcome, name = name))
+            }
+        }
+    }
+
+    /** Renames the file in every library folder; the original name stays until the user changes it. */
     fun rename(document: Document) {
         askName(title = "Rename file", label = "Name", initial = document.path.fileName) { name ->
             move(

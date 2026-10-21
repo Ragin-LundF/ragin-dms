@@ -39,6 +39,8 @@ Feature packages: `ui.dashboard`, `ui.library`, `ui.document` (inspector), `ui.r
 - `ui.session` holds `LibrarySession`, the one owner of the open library: it runs one operation at a time (`perform`), keeps the last scan and the folder list, and maps outcomes to messages. View models start work through it, never in parallel to it.
 - `ui.service` holds the use case bundles (`AppServices`) that the composition root hands to the view models.
 - `ui.review` holds the review of one AI suggestion: `ReviewController` (owned by the dashboard and the inspector view models), `ReviewDialog`, and `ReviewDrafts`, which turns the edited draft into a `SuggestionApproval`. Nothing changes before the user approves.
+- `ui.assistant` holds what the AI does with one document beside the library's operations, because it only reads: `SummaryController`/`SummaryDialog` and the conversation (`ChatController`, `ChatDialog`). The inspector view model owns both. Tagging and classifying store suggestions and therefore run through `LibrarySession.perform` and the review dialog.
+- `ui.dashboard.AiBatches` runs "Tag with AI" and "Classify with AI" over the library; `ui.dashboard.hero` holds the gradient header with its buttons.
 - `ui.settings.ai` holds the AI settings card: server address, model, timeout, "Read PDFs as images", and the connection test that lists the server's models. Saving goes through `LibrarySession.updatePreferences`, the one writer of the preferences.
 - UI tests run the real `AppContainer` with a `FakeAiServer` (a Ktor `MockEngine`) in place of LM Studio; tests never call a real AI server.
 - Confirmations and text input go through `DialogController` in `ui.components.dialog`; a view model asks, a `DialogHost` renders.

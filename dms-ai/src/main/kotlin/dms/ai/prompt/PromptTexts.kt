@@ -14,18 +14,17 @@ object PromptTexts {
     /** Enough text for a classification; longer documents are cut. */
     const val MAX_TEXT_CHARACTERS: Int = 12_000
     private const val MAX_LISTED = 200
-    private val SYSTEM: String by lazy { resource(name = "system.md") }
-    private val USER: String by lazy { resource(name = "user.md") }
 
     fun system(request: ClassificationRequest): String {
         val extension = request.currentFileName.substringAfterLast(delimiter = '.', missingDelimiterValue = "")
         val categories = request.categories.map { pathOf(category = it, categories = request.categories) }.sorted()
-        return fill(
-            template = SYSTEM,
+        return PromptTemplates.fill(
+            name = "classification.md",
             values = mapOf(
                 "extension" to extension,
                 "categories" to listed(values = categories),
                 "tags" to listed(values = request.tags.map { it.value }.sorted()),
+                "taxTag" to TaxTag.of(existingTags = request.tags.map { it.value }),
                 "convention" to NamingConvention.describe(examples = request.fileNameExamples),
                 "examples" to listed(values = request.fileNameExamples),
                 "today" to request.today.toString(),
@@ -35,16 +34,24 @@ object PromptTexts {
 
     fun user(request: ClassificationRequest, text: String?): String {
         val folders = listed(values = request.folders.map { it.value })
-        val document = if (text == null) {
+        return PromptTemplates.fill(
+            name = "classification-request.md",
+            values = mapOf(
+                "fileName" to request.currentFileName,
+                "folders" to folders,
+                "document" to documentSection(text = text),
+            ),
+        )
+    }
+
+    /** The document's text, cut to [MAX_TEXT_CHARACTERS], or a note that `null` text means page images. */
+    fun documentSection(text: String?): String {
+        return if (text == null) {
             "The document is attached as page images."
         } else {
             "Text of the document (long documents are cut after $MAX_TEXT_CHARACTERS characters):\n" +
                 text.take(n = MAX_TEXT_CHARACTERS)
         }
-        return fill(
-            template = USER,
-            values = mapOf("fileName" to request.currentFileName, "folders" to folders, "document" to document),
-        )
     }
 
     /** "Parent / Child" for nested categories, the way the user sees them. */
@@ -55,17 +62,6 @@ object PromptTexts {
             .map { it.name }
             .toList()
         return names.reversed().joinToString(separator = " / ")
-    }
-
-    private fun fill(template: String, values: Map<String, String>): String {
-        return values.entries.fold(initial = template) { text, (key, value) -> text.replace("{{$key}}", value) }
-    }
-
-    private fun resource(name: String): String {
-        val stream = checkNotNull(value = PromptTexts::class.java.getResourceAsStream("/prompts/$name")) {
-            "Missing prompt resource $name"
-        }
-        return stream.use { it.readBytes().decodeToString() }.trim()
     }
 
     private fun listed(values: List<String>): String {

@@ -3,6 +3,7 @@ package dms.ui.support
 import io.ktor.client.engine.HttpClientEngine
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
+import io.ktor.client.engine.mock.toByteArray
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.headersOf
@@ -20,6 +21,8 @@ class FakeAiServer {
     var reachable: Boolean = true
     var chatRequests: Int = 0
         private set
+    var lastChatBody: String = ""
+        private set
 
     val engine: HttpClientEngine = MockEngine { request ->
         if (!reachable) {
@@ -30,6 +33,7 @@ class FakeAiServer {
             """{"data":[$data]}"""
         } else {
             chatRequests++
+            lastChatBody = request.body.toByteArray().decodeToString()
             """{"choices":[{"message":{"role":"assistant","content":${Json.encodeToString(value = suggestion)}}}]}"""
         }
         respond(

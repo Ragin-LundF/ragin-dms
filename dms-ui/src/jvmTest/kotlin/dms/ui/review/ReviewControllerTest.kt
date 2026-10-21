@@ -29,7 +29,7 @@ class ReviewControllerTest {
             val document = libraryWithOneImage(app = app)
             app.ai.suggestion = answer
 
-            inspector.askAi(document = document)
+            inspector.classifyWithAi(document = document)
             app.idle()
 
             val review = assertNotNull(actual = inspector.review.state.value)
@@ -46,7 +46,7 @@ class ReviewControllerTest {
             val inspector = InspectorViewModel(services = app.services, session = app.session, platform = app.platform)
             val document = libraryWithOneImage(app = app)
             app.ai.suggestion = answer
-            inspector.askAi(document = document)
+            inspector.classifyWithAi(document = document)
             app.idle()
             val draft = assertNotNull(actual = inspector.review.state.value).draft
 
@@ -71,7 +71,7 @@ class ReviewControllerTest {
             val document = libraryWithOneImage(app = app)
             app.ai.reachable = false
 
-            inspector.askAi(document = document)
+            inspector.classifyWithAi(document = document)
             app.idle()
 
             assertNull(actual = inspector.review.state.value)

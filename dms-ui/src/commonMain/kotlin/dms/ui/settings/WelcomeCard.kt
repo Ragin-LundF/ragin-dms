@@ -15,7 +15,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import dms.ui.dashboard.widgets.HeroButton
+import dms.ui.dashboard.hero.HeroButton
 import dms.ui.theme.AppColors
 import dms.ui.theme.Spacing
 

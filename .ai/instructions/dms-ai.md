@@ -7,8 +7,9 @@ Use this file when touching `dms-ai`: LLM providers, prompts, structured output,
 | Package | Purpose |
 |---|---|
 | `dms.ai` | `AiAdapters`: builds the HTTP client and hands out the client and the reader. Tests pass a Ktor `MockEngine`. |
-| `dms.ai.client` | `OpenAiCompatibleClient` (implements `DocumentClassifier` and `AiServer`) for OpenAI-compatible APIs (LM Studio, Ollama's `/v1`, OpenAI): `/models`, `/chat/completions` with text and image parts, error mapping, response parsing. DTOs in `dms.ai.client.dto`. |
-| `dms.ai.prompt` | The answer schema, the prompt texts (templates in `src/main/resources/prompts/`), the naming convention detected from file names, and the mapping of the answer to a `ClassificationSuggestion`. |
+| `dms.ai.client` | `ChatTransport`: the HTTP side of OpenAI-compatible APIs (LM Studio, Ollama's `/v1`, OpenAI): `/models`, `/chat/completions`, the model choice (`ModelChoice` skips embedding models when no model is set), error mapping, and `AnswerText`, which drops `<think>` blocks. `ChatRequestBuilder` builds the bodies with text and image parts. `OpenAiCompatibleClient` implements `DocumentClassifier` and `AiServer`. DTOs in `dms.ai.client.dto`. |
+| `dms.ai.assistant` | `OpenAiAssistant` (implements `DocumentAssistant`): summary, tags and questions about one document, free-text answers. `TagAnswerParser` turns a free-text tag answer into `TagName`s. |
+| `dms.ai.prompt` | The answer schema, the prompt texts, the naming convention detected from file names, the tax tag (`TaxTag`), and the mapping of the answer to a `ClassificationSuggestion`. `PromptTemplates` loads and fills the templates in `src/main/resources/prompts/` (`classification`, `summary`, `tags`, `chat`, each with a `-request` user part where needed). |
 | `dms.ai.read` | `FileContentReader` (implements `DocumentContentReader`): PDF (PDFBox: text layer or rendered pages), images, Office (Apache POI). |
 
 The provider settings (`AiSettings`: base URL, model, timeout, "prefer vision for PDFs") are a port model in `dms-application` and are stored per device by `dms-storage`. The client reads them for every request, so a change in Settings applies at once.

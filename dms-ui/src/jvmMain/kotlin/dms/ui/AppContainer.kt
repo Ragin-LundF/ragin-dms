@@ -1,6 +1,11 @@
 package dms.ui
 
 import dms.ai.AiAdapters
+import dms.application.assistant.AskAboutDocument
+import dms.application.assistant.DocumentReading
+import dms.application.assistant.SuggestTags
+import dms.application.assistant.SummarizeDocument
+import dms.application.assistant.TagAllUntagged
 import dms.application.catalog.EditCatalog
 import dms.application.classification.ApproveSuggestion
 import dms.application.classification.ClassifyAllNew
@@ -228,6 +233,8 @@ class AppContainer(
             replicator = replicator,
             clock = clock,
         )
+        val reading = DocumentReading(store = store, reader = ai.reader)
+        val suggestTags = SuggestTags(reading = reading, assistant = ai.assistant, tasks = adapters.tasks)
         return AiServices(
             suggestClassification = suggest,
             classifyAllNew = ClassifyAllNew(store = store, tasks = adapters.tasks, suggest = suggest),
@@ -241,6 +248,10 @@ class AppContainer(
             ),
             rejectSuggestion = RejectSuggestion(tasks = adapters.tasks),
             listAiModels = ListAiModels(server = ai.client),
+            summarizeDocument = SummarizeDocument(reading = reading, assistant = ai.assistant),
+            suggestTags = suggestTags,
+            tagAllUntagged = TagAllUntagged(store = store, tasks = adapters.tasks, suggestTags = suggestTags),
+            askAboutDocument = AskAboutDocument(store = store, reading = reading, assistant = ai.assistant),
         )
     }
 }
