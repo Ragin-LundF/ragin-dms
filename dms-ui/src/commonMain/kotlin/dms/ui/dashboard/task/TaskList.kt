@@ -17,6 +17,7 @@ import dms.ui.components.surface.CardTitle
 import dms.ui.components.surface.EmptyState
 import dms.ui.dashboard.model.TaskGroup
 import dms.ui.dashboard.model.TaskGroupState
+import dms.ui.preview.ThumbnailLoader
 import dms.ui.theme.Spacing
 
 /** The open tasks, grouped by kind, with a filter per kind; as a card or, when [full], filling the screen. */
@@ -25,6 +26,7 @@ fun TaskList(
     groups: List<TaskGroupState>,
     filter: TaskGroup?,
     busyReason: String?,
+    thumbnails: ThumbnailLoader,
     onFilter: (TaskGroup?) -> Unit,
     full: Boolean,
     onFullView: () -> Unit,
@@ -58,9 +60,9 @@ fun TaskList(
             groups.filter { filter == null || it.group == filter }.forEach { group ->
                 item(key = "group:${group.group.name}") {
                     SectionHeader(title = group.group.label) {
-                        group.bulkAction?.let { action ->
+                        if (group.bulkActions.isNotEmpty()) {
                             ActionButtons(
-                                buttons = listOf(action),
+                                buttons = group.bulkActions,
                                 enabled = busyReason == null,
                                 busyReason = busyReason,
                             )
@@ -68,7 +70,7 @@ fun TaskList(
                     }
                 }
                 items(items = group.rows, key = { it.key.value }) { row ->
-                    TaskRowView(row = row, group = group.group, busyReason = busyReason)
+                    TaskRowView(row = row, group = group.group, busyReason = busyReason, thumbnails = thumbnails)
                 }
             }
         }

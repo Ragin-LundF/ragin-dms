@@ -11,14 +11,14 @@ import javax.imageio.ImageWriteParam
 import kotlin.math.max
 import kotlin.math.roundToInt
 
-/** Prepares an image for a vision model: at most [MAX_SIDE] pixels on the long side, as JPEG. */
+/** Prepares an image for a vision model or the screen: at most [MAX_SIDE] pixels on the long side, as JPEG. */
 object VisionImages {
 
     const val MAX_SIDE: Int = 1600
     private const val QUALITY = 0.85f
 
-    fun of(image: BufferedImage): PageImage {
-        val scale = minOf(1.0, MAX_SIDE.toDouble() / max(image.width, image.height))
+    fun of(image: BufferedImage, maxSide: Int = MAX_SIDE): PageImage {
+        val scale = minOf(1.0, maxSide.toDouble() / max(image.width, image.height))
         val width = max(1, (image.width * scale).roundToInt())
         val height = max(1, (image.height * scale).roundToInt())
         // JPEG has no alpha channel, so transparent parts become white.

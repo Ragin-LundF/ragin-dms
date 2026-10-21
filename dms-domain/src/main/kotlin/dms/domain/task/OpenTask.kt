@@ -3,6 +3,8 @@ package dms.domain.task
 import dms.domain.catalog.CatalogMergeConflict
 import dms.domain.change.DetectedChange
 import dms.domain.classification.ClassificationSuggestion
+import dms.domain.document.ContentHash
+import dms.domain.document.DocumentId
 import dms.domain.library.LibraryFolderId
 
 /**
@@ -58,6 +60,17 @@ sealed interface OpenTask {
         override val key: TaskKey
             get() {
                 return TaskKey(value = "conflict:${change.path}")
+            }
+    }
+
+    /**
+     * Keep one of several catalogued documents with the same size and content hash, and move the other
+     * copies to the trash. [documentIds] has at least two entries.
+     */
+    data class ResolveDuplicates(val contentHash: ContentHash, val documentIds: List<DocumentId>) : OpenTask {
+        override val key: TaskKey
+            get() {
+                return TaskKey(value = "duplicates:$contentHash")
             }
     }
 

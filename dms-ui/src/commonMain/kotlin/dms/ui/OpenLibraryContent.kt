@@ -28,7 +28,7 @@ fun OpenLibraryContent(
     val library = viewModel { LibraryViewModel(services = services, session = session, platform = platform) }
     when (screen) {
         Screen.DASHBOARD -> DashboardScreen(
-            viewModel = viewModel { DashboardViewModel(services = services, session = session) },
+            viewModel = viewModel { DashboardViewModel(services = services, session = session, platform = platform) },
             platform = platform,
             onAddFiles = { files -> library.addFiles(locations = files, target = RelativePath.ROOT) },
             onChooseFiles = library::addFilesToTopLevel,

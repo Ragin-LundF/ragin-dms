@@ -246,8 +246,17 @@ class LibraryViewModel(
     }
 
     fun removeCategory(category: Category) {
-        edit(edit = CatalogEdit.RemoveCategory(categoryId = category.id))
-        view.update { it.copy(selection = LibrarySelection.Folder(path = RelativePath.ROOT)) }
+        dialogs.ask(
+            request = ConfirmationRequest(
+                title = "Delete category \"${category.name}\"",
+                message = "The category leaves the catalog. No document uses it and no file changes.",
+                affected = emptyList(),
+                confirmLabel = "Delete category",
+            ),
+        ) {
+            edit(edit = CatalogEdit.RemoveCategory(categoryId = category.id))
+            view.update { it.copy(selection = LibrarySelection.Folder(path = RelativePath.ROOT)) }
+        }
     }
 
     fun renameTag(tag: TagName) {

@@ -6,6 +6,7 @@ import dms.application.catalog.model.CatalogEdit
 import dms.application.classification.model.SuggestOutcome
 import dms.application.common.OperationOutcome
 import dms.domain.document.Document
+import dms.domain.document.DocumentId
 import dms.domain.document.DocumentMetadata
 import dms.domain.library.RelativePath
 import dms.domain.taxonomy.CategoryId
@@ -176,6 +177,11 @@ class InspectorViewModel(
                 message = UiMessage(text = "No application could open ${document.path.fileName}", isError = true),
             )
         }
+    }
+
+    /** Opens a catalogued document by its id, for example from the review of a suggestion. */
+    fun open(documentId: DocumentId) {
+        services.library.catalog.value?.documents?.get(documentId)?.let { open(document = it) }
     }
 
     private fun move(document: Document, target: RelativePath) {

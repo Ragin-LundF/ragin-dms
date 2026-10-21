@@ -20,6 +20,8 @@ import dms.application.document.AdoptNewFile
 import dms.application.document.MoveDocument
 import dms.application.document.RestoreDocument
 import dms.application.document.TrashDocument
+import dms.application.document.TrashDuplicateFile
+import dms.application.document.TrashNewFile
 import dms.application.folder.CreateFolder
 import dms.application.folder.MoveFolder
 import dms.application.library.AddScannedFiles
@@ -30,9 +32,11 @@ import dms.application.library.DetectDocumentDates
 import dms.application.library.OpenLibrary
 import dms.application.library.ScanLibrary
 import dms.application.port.system.IdGenerator
+import dms.application.preview.DocumentThumbnails
 import dms.application.resolution.DismissTask
 import dms.application.resolution.KeepBothVersions
 import dms.application.resolution.KeepVersion
+import dms.application.resolution.MergeDuplicates
 import dms.application.resolution.ResolveMove
 import dms.application.search.SearchContents
 import dms.application.sync.MergeAllFolders
@@ -135,6 +139,7 @@ class AppContainer(
                 activity = adapters.activity,
             ),
             searchContents = SearchContents(store = store, reader = ai.reader, texts = adapters.texts),
+            thumbnails = DocumentThumbnails(store = store, previewer = ai.previewer),
         )
     }
 
@@ -166,6 +171,8 @@ class AppContainer(
                 tasks = adapters.tasks,
                 activity = activity,
             ),
+            trashNewFile = TrashNewFile(store = store, storage = storage, activity = activity),
+            trashDuplicateFile = TrashDuplicateFile(store = store, storage = storage, activity = activity),
             restoreDocument = RestoreDocument(
                 store = store,
                 storage = storage,
@@ -222,6 +229,12 @@ class AppContainer(
             ),
             resolveMove = ResolveMove(store = store, storage = storage, replicator = replicator, activity = activity),
             dismissTask = DismissTask(tasks = adapters.tasks),
+            mergeDuplicates = MergeDuplicates(
+                store = store,
+                storage = storage,
+                tasks = adapters.tasks,
+                activity = activity,
+            ),
         )
     }
 

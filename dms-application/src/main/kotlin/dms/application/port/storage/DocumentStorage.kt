@@ -39,6 +39,12 @@ interface DocumentStorage {
     suspend fun readFacts(folder: LibraryFolder, path: RelativePath): StorageResult<FileFacts>
 
     /**
+     * Whether [first] and [second] in [folder] are two files with exactly the same bytes, compared
+     * byte by byte. Two names of one file, as on a file system that ignores case, are not two files.
+     */
+    suspend fun sameContent(folder: LibraryFolder, first: RelativePath, second: RelativePath): StorageResult<Boolean>
+
+    /**
      * The day the file was created, as far as the file system knows it, or `null` when it does not
      * keep creation times or the file is missing.
      */

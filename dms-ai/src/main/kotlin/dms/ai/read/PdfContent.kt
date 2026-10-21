@@ -2,6 +2,7 @@ package dms.ai.read
 
 import dms.ai.prompt.PromptTexts
 import dms.application.port.ai.model.DocumentContent
+import dms.application.port.ai.model.PageImage
 import org.apache.pdfbox.Loader
 import org.apache.pdfbox.io.RandomAccessReadBufferedFile
 import org.apache.pdfbox.rendering.ImageType
@@ -19,6 +20,9 @@ object PdfContent {
     private const val VISION_PAGES = 2
     private const val DPI = 150f
 
+    /** An A4 page at this resolution is about 400 pixels wide, enough for any thumbnail. */
+    private const val THUMBNAIL_DPI = 48f
+
     /** Fewer characters than this is a scan with at most a page number or a stamp as text. */
     private const val MIN_TEXT = 80
 
@@ -26,6 +30,18 @@ object PdfContent {
     fun text(file: Path): String {
         return Loader.loadPDF(RandomAccessReadBufferedFile(file.toString())).use { pdf ->
             PDFTextStripper().getText(pdf).trim()
+        }
+    }
+
+    /** The first page, at most [maxSide] pixels on its long side; `null` for a PDF without pages. */
+    fun thumbnail(file: Path, maxSide: Int): PageImage? {
+        return Loader.loadPDF(RandomAccessReadBufferedFile(file.toString())).use { pdf ->
+            if (pdf.numberOfPages == 0) {
+                null
+            } else {
+                val page = PDFRenderer(pdf).renderImageWithDPI(0, THUMBNAIL_DPI, ImageType.RGB)
+                VisionImages.of(image = page, maxSide = maxSide)
+            }
         }
     }
 

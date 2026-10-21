@@ -18,6 +18,7 @@ import java.time.LocalDate
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -215,6 +216,52 @@ class LibraryViewModelTest {
             app.idle()
             val unfiled = library.state.first { documentOf(state = it).categoryId == null }
             assertEquals(expected = 1, actual = unfiled.uncategorizedCount)
+        }
+    }
+
+    @Test
+    fun `moving a document to the trash asks first`() {
+        UiTest.run { app ->
+            val library = libraryWithOneFile(app = app)
+            val inspector = InspectorViewModel(services = app.services, session = app.session, platform = app.platform)
+
+            inspector.trash(document = documentOf(state = library.state.value))
+            assertNotNull(actual = inspector.dialogs.confirmation.value)
+            inspector.dialogs.dismissConfirmation()
+            app.idle()
+            assertTrue(actual = Files.exists(app.primary.resolve("letters/scan-1.pdf")))
+
+            inspector.trash(document = documentOf(state = library.state.value))
+            inspector.dialogs.confirm()
+            app.idle()
+
+            library.state.first { it.documents.isEmpty() }
+            assertFalse(actual = Files.exists(app.primary.resolve("letters/scan-1.pdf")))
+            assertFalse(actual = Files.exists(app.sync.resolve("letters/scan-1.pdf")))
+        }
+    }
+
+    @Test
+    fun `deleting a category asks first`() {
+        UiTest.run { app ->
+            app.configure()
+            val library = app.libraryViewModel()
+            library.newCategory()
+            library.dialogs.submit(text = "Invoices")
+            app.idle()
+            val category = library.state.first { it.categories.isNotEmpty() }.categories.single().category
+
+            library.removeCategory(category = category)
+            assertNotNull(actual = library.dialogs.confirmation.value)
+            library.dialogs.dismissConfirmation()
+            app.idle()
+            assertEquals(expected = 1, actual = library.state.value.categories.size)
+
+            library.removeCategory(category = category)
+            library.dialogs.confirm()
+            app.idle()
+
+            library.state.first { it.categories.isEmpty() }
         }
     }
 

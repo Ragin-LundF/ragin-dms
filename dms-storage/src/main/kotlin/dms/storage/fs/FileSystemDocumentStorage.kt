@@ -120,6 +120,22 @@ class FileSystemDocumentStorage(private val trash: SystemTrash) : DocumentStorag
         }
     }
 
+    override suspend fun sameContent(
+        folder: LibraryFolder,
+        first: RelativePath,
+        second: RelativePath,
+    ): StorageResult<Boolean> {
+        return inFolder(folder = folder) { root ->
+            val firstFile = PathResolver.existing(root = root, path = first)?.takeIf { Files.isRegularFile(it) }
+                ?: return@inFolder StorageIo.failure(reason = StorageFailure.NOT_FOUND)
+            val secondFile = PathResolver.existing(root = root, path = second)?.takeIf { Files.isRegularFile(it) }
+                ?: return@inFolder StorageIo.failure(reason = StorageFailure.NOT_FOUND)
+            // `mismatch` reads both files and returns -1 only if every byte, and so the size, is the same.
+            val same = !Files.isSameFile(firstFile, secondFile) && Files.mismatch(firstFile, secondFile) == -1L
+            StorageResult.Success(value = same)
+        }
+    }
+
     override suspend fun createdOn(folder: LibraryFolder, path: RelativePath): LocalDate? {
         val result = inFolder(folder = folder) { root ->
             val file = PathResolver.existing(root = root, path = path)?.takeIf { Files.isRegularFile(it) }

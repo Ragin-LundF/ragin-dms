@@ -158,4 +158,39 @@ class FileSystemDocumentStorageTest {
             assertTrue(actual = Files.notExists(temp.resolve("offline")))
         }
     }
+
+    @Test
+    fun `two files count as the same content only if every byte is the same`() {
+        runTest {
+            TestFolders.write(file = primaryRoot.resolve("a.pdf"), content = "alpha-1")
+            TestFolders.write(file = primaryRoot.resolve("copy/a.pdf"), content = "alpha-1")
+            TestFolders.write(file = primaryRoot.resolve("b.pdf"), content = "alpha-2")
+
+            val copy = storage.sameContent(
+                folder = primary,
+                first = TestFolders.path(raw = "a.pdf"),
+                second = TestFolders.path(raw = "copy/a.pdf"),
+            )
+            val sameSize = storage.sameContent(
+                folder = primary,
+                first = TestFolders.path(raw = "a.pdf"),
+                second = TestFolders.path(raw = "b.pdf"),
+            )
+
+            assertEquals(expected = true, actual = StorageResults.valueOf(result = copy))
+            assertEquals(expected = false, actual = StorageResults.valueOf(result = sameSize))
+        }
+    }
+
+    @Test
+    fun `a file is never a copy of itself`() {
+        runTest {
+            TestFolders.write(file = primaryRoot.resolve("a.pdf"), content = "alpha")
+            val path = TestFolders.path(raw = "a.pdf")
+
+            val result = storage.sameContent(folder = primary, first = path, second = path)
+
+            assertEquals(expected = false, actual = StorageResults.valueOf(result = result))
+        }
+    }
 }

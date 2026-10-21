@@ -66,6 +66,7 @@ fun DashboardOverview(
         WorkSection(
             state = state,
             busyReason = busyReason,
+            thumbnails = viewModel.thumbnails,
             onFilter = viewModel::setFilter,
             onFullView = onShowAllTasks,
         )

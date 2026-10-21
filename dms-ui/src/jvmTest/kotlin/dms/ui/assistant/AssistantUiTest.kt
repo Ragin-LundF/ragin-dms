@@ -74,7 +74,7 @@ class AssistantUiTest {
     @Test
     fun `the dashboard tags every untagged document for review`() {
         UiTest.run { app ->
-            val dashboard = DashboardViewModel(services = app.services, session = app.session)
+            val dashboard = DashboardViewModel(services = app.services, session = app.session, platform = app.platform)
             libraryWithOneImage(app = app)
             app.ai.suggestion = "Invoice"
             assertEquals(expected = 1, actual = dashboard.state.first { it.tagCandidates > 0 }.tagCandidates)
@@ -90,7 +90,7 @@ class AssistantUiTest {
     @Test
     fun `each tag suggestion can be reviewed while the run goes on`() {
         UiTest.run { app ->
-            val dashboard = DashboardViewModel(services = app.services, session = app.session)
+            val dashboard = DashboardViewModel(services = app.services, session = app.session, platform = app.platform)
             libraryWithImages(app = app, names = listOf("scan-7.png", "scan-8.png"))
             app.ai.suggestion = "Invoice"
             app.ai.answerAtOnce = 1

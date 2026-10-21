@@ -20,8 +20,11 @@ sealed interface LibraryStatus {
         val unreachableFolders: Set<LibraryFolderId>,
     ) : LibraryStatus
 
-    /** The primary folder or its catalog could not be read; nothing was opened. */
-    data class PrimaryFailed(val reason: StorageFailure) : LibraryStatus
+    /**
+     * The primary folder or its catalog could not be read or saved; nothing was opened. [detail] is
+     * what the file system reported, if anything.
+     */
+    data class PrimaryFailed(val reason: StorageFailure, val detail: String? = null) : LibraryStatus
 
     /** Opening failed unexpectedly, for example because the settings file is unreadable. */
     data class Failed(val detail: String?) : LibraryStatus

@@ -10,7 +10,8 @@ import dms.domain.task.OpenTask
 
 /**
  * Collects everything that waits for the user: pending suggestions, the changes of the last scan,
- * decisions of the last catalog merge and failed operations — minus the tasks the user dismissed.
+ * catalogued documents that are copies of each other, decisions of the last catalog merge and failed
+ * operations — minus the tasks the user dismissed.
  */
 class BuildDashboard(
     private val store: CatalogStore,
@@ -29,6 +30,11 @@ class BuildDashboard(
                 .filter { it.documentId in documents }
                 .forEach { add(OpenTask.ReviewSuggestion(suggestion = it)) }
             scan?.changes?.forEach { add(OpenTask.forChange(change = it)) }
+            documents.values.groupBy { it.contentHash to it.size }
+                .filterValues { it.size > 1 }
+                .forEach { (key, copies) ->
+                    add(OpenTask.ResolveDuplicates(contentHash = key.first, documentIds = copies.map { it.id }))
+                }
             tasks.mergeConflicts().forEach { add(OpenTask.ReviewCatalogMerge(conflict = it)) }
             pending.forEach { (folderId, count) ->
                 add(OpenTask.RetryFailedOperations(folderId = folderId, count = count))

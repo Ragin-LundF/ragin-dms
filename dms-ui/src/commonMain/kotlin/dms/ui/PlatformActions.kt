@@ -1,6 +1,7 @@
 package dms.ui
 
 import androidx.compose.ui.draganddrop.DragAndDropEvent
+import androidx.compose.ui.graphics.ImageBitmap
 import dms.domain.library.FolderLocation
 import dms.domain.library.RelativePath
 
@@ -24,6 +25,9 @@ interface PlatformActions {
 
     /** Opens a file in its default application; returns `false` if that failed. */
     fun openFile(location: String): Boolean
+
+    /** Decodes a JPEG or PNG for the screen; `null` if [bytes] are no image. */
+    fun decodeImage(bytes: ByteArray): ImageBitmap?
 
     /** Whether something dragged in from outside the app carries files. */
     fun carriesFiles(event: DragAndDropEvent): Boolean

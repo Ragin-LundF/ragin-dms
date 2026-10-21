@@ -229,7 +229,12 @@ class LibrarySession(
         val folders = services.library.settings.loadLibraryFolders()
         val status = when (val outcome = services.library.openLibrary()) {
             OpenLibraryOutcome.NotConfigured -> LibraryStatus.NotConfigured
-            is OpenLibraryOutcome.PrimaryFailed -> LibraryStatus.PrimaryFailed(reason = outcome.failure.reason)
+            is OpenLibraryOutcome.PrimaryFailed -> {
+                val failure = outcome.failure
+                log.error(text = "The primary folder failed: ${failure.reason} ${failure.detail.orEmpty()}".trim())
+                LibraryStatus.PrimaryFailed(reason = failure.reason, detail = failure.detail)
+            }
+
             is OpenLibraryOutcome.Opened -> LibraryStatus.Open(
                 foreignFolders = outcome.foreignFolders,
                 unreachableFolders = outcome.unreachableFolders,
@@ -263,7 +268,11 @@ class LibrarySession(
     }
 
     private suspend fun adoptNewFiles(result: ScanResult) {
-        val newFiles = result.changes.filterIsInstance<DetectedChange.NewFile>().filter { it.contentHash != null }
+        // A copy of a catalogued document, or of another new file, would only become a second document.
+        val known = services.library.catalog.value?.documents?.values.orEmpty().map { it.contentHash }.toSet()
+        val newFiles = result.changes.filterIsInstance<DetectedChange.NewFile>()
+            .filter { it.contentHash != null && it.contentHash !in known }
+            .distinctBy { it.contentHash }
         if (newFiles.isEmpty()) {
             return
         }

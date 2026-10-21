@@ -19,6 +19,8 @@ import dms.application.document.AdoptNewFile
 import dms.application.document.MoveDocument
 import dms.application.document.RestoreDocument
 import dms.application.document.TrashDocument
+import dms.application.document.TrashDuplicateFile
+import dms.application.document.TrashNewFile
 import dms.application.fake.ai.FakeAssistant
 import dms.application.fake.ai.FakeClassifier
 import dms.application.fake.ai.FakeContentReader
@@ -41,6 +43,7 @@ import dms.application.library.model.OpenLibraryOutcome
 import dms.application.resolution.DismissTask
 import dms.application.resolution.KeepBothVersions
 import dms.application.resolution.KeepVersion
+import dms.application.resolution.MergeDuplicates
 import dms.application.resolution.ResolveMove
 import dms.application.search.SearchContents
 import dms.application.sync.MergeAllFolders
@@ -154,6 +157,12 @@ class TestLibrary {
         tasks = tasks,
         activity = activity,
     )
+    val trashNewFile: TrashNewFile = TrashNewFile(store = store, storage = folders, activity = activity)
+    val trashDuplicateFile: TrashDuplicateFile = TrashDuplicateFile(
+        store = store,
+        storage = folders,
+        activity = activity,
+    )
     val restoreDocument: RestoreDocument = RestoreDocument(
         store = store,
         storage = folders,
@@ -217,6 +226,12 @@ class TestLibrary {
         activity = activity,
     )
     val dismissTask: DismissTask = DismissTask(tasks = tasks)
+    val mergeDuplicates: MergeDuplicates = MergeDuplicates(
+        store = store,
+        storage = folders,
+        tasks = tasks,
+        activity = activity,
+    )
 
     val suggestClassification: SuggestClassification = SuggestClassification(
         store = store,

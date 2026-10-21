@@ -1,6 +1,7 @@
 package dms.ui.support
 
 import androidx.compose.ui.draganddrop.DragAndDropEvent
+import androidx.compose.ui.graphics.ImageBitmap
 import dms.domain.library.FolderLocation
 import dms.domain.library.RelativePath
 import dms.ui.PlatformActions
@@ -12,6 +13,7 @@ class FakePlatform : PlatformActions {
     var nextFolder: String? = null
     var nextFiles: List<String> = emptyList()
     val shown: MutableList<String> = mutableListOf()
+    var decodedImages: Int = 0
 
     override val fileManagerName: String = "file manager"
 
@@ -35,6 +37,11 @@ class FakePlatform : PlatformActions {
     override fun openFile(location: String): Boolean {
         shown += location
         return true
+    }
+
+    override fun decodeImage(bytes: ByteArray): ImageBitmap? {
+        decodedImages += 1
+        return ImageBitmap(width = 1, height = 1)
     }
 
     override fun carriesFiles(event: DragAndDropEvent): Boolean {

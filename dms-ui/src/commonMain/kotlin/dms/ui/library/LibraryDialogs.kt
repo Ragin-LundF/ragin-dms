@@ -12,7 +12,7 @@ import dms.ui.review.ReviewDialog
 fun LibraryDialogs(viewModel: LibraryViewModel, inspector: InspectorViewModel) {
     DialogHost(controller = viewModel.dialogs)
     DialogHost(controller = inspector.dialogs)
-    ReviewDialog(controller = inspector.review)
+    ReviewDialog(controller = inspector.review, onOpenDocument = inspector::open)
     SummaryDialog(controller = inspector.summary, onAsk = { inspector.chat.open(document = it) })
     ChatDialog(controller = inspector.chat)
 }

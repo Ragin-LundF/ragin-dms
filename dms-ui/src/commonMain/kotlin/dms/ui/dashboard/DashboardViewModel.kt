@@ -12,11 +12,13 @@ import dms.domain.document.Document
 import dms.domain.document.DocumentId
 import dms.domain.library.FolderRole
 import dms.domain.library.LibraryFolderId
+import dms.domain.library.RelativePath
 import dms.domain.task.OpenTask
 import dms.domain.task.TaskKey
+import dms.ui.PlatformActions
 import dms.ui.components.dialog.DialogController
-import dms.ui.components.model.ActionButton
 import dms.ui.components.model.ConfirmationRequest
+import dms.ui.dashboard.bulk.BulkActions
 import dms.ui.dashboard.model.DashboardUiState
 import dms.ui.dashboard.model.FolderHealth
 import dms.ui.dashboard.model.FolderStatus
@@ -29,6 +31,7 @@ import dms.ui.dashboard.task.TaskContext
 import dms.ui.dashboard.task.TaskGroups
 import dms.ui.dashboard.task.TaskHandler
 import dms.ui.dashboard.task.TaskTexts
+import dms.ui.preview.ThumbnailLoader
 import dms.ui.review.ReviewController
 import dms.ui.service.AppServices
 import dms.ui.session.LibrarySession
@@ -55,14 +58,17 @@ import java.time.ZoneId
 class DashboardViewModel(
     private val services: AppServices,
     private val session: LibrarySession,
+    private val platform: PlatformActions,
 ) : ViewModel(), TaskHandler {
 
     private val dashboard = MutableStateFlow<Dashboard?>(value = null)
     private val filter = MutableStateFlow<TaskGroup?>(value = null)
 
     val dialogs: DialogController = DialogController()
+    val bulk: BulkActions = BulkActions(services = services, session = session, dialogs = dialogs)
     val review: ReviewController = ReviewController(services = services, session = session)
     val aiBatches: AiBatches = AiBatches(services = services, session = session)
+    val thumbnails: ThumbnailLoader = ThumbnailLoader(services = services, platform = platform)
 
     val state: StateFlow<DashboardUiState> = combine(
         flow = dashboard,
@@ -105,6 +111,65 @@ class DashboardViewModel(
     override fun restore(change: DetectedChange.MissingFile) {
         act(label = "Restoring ${change.path}", resolves = change, done = "Restored ${change.path}") {
             services.documents.restoreDocument(change = change)
+        }
+    }
+
+    override fun trashNewFile(change: DetectedChange.NewFile) {
+        val folders = session.state.value.folders?.folders.orEmpty().filter { it.id in change.presentIn }
+        dialogs.ask(
+            request = ConfirmationRequest(
+                title = "Move to trash",
+                message = "The file is not in the library. It goes to the trash in the folders that have it.",
+                affected = folders.map { "${it.displayName}: ${change.path}" },
+                confirmLabel = "Move to trash",
+            ),
+        ) {
+            act(label = "Trashing ${change.path}", resolves = change, done = "Moved ${change.path} to the trash") {
+                services.documents.trashNewFile(change = change, confirmed = true)
+            }
+        }
+    }
+
+    override fun trashDuplicateFile(change: DetectedChange.NewFile) {
+        val original = services.library.catalog.value?.documents?.values
+            ?.firstOrNull { it.contentHash == change.contentHash && it.size == change.size } ?: return
+        val folders = session.state.value.folders?.folders.orEmpty().filter { it.id in change.presentIn }
+        dialogs.ask(
+            request = ConfirmationRequest(
+                title = "Move copy to trash",
+                message = "The file has exactly the same size and SHA-256 checksum as ${original.path}. " +
+                    "Right before it goes to the trash it is compared with it byte by byte once more, in each folder.",
+                affected = folders.map { "${it.displayName}: ${change.path}" },
+                confirmLabel = "Move to trash",
+            ),
+        ) {
+            val done = "Moved the copy ${change.path} to the trash"
+            act(label = "Trashing ${change.path}", resolves = change, done = done) {
+                services.documents.trashDuplicateFile(change = change, confirmed = true)
+            }
+        }
+    }
+
+    override fun keepDuplicate(task: OpenTask.ResolveDuplicates, keep: DocumentId) {
+        val documents = services.library.catalog.value?.documents.orEmpty()
+        val kept = documents[keep] ?: return
+        val copies = task.documentIds.filter { it != keep }.mapNotNull { documents[it] }
+        val folders = session.state.value.folders?.folders.orEmpty()
+        dialogs.ask(
+            request = ConfirmationRequest(
+                title = "Keep ${kept.path}",
+                message = "The other copies have exactly the same size and SHA-256 checksum. Right before they go " +
+                    "to the trash in every folder, each is compared byte by byte once more. Their categories, tags " +
+                    "and title move to ${kept.path.fileName} where it has none.",
+                affected = copies.flatMap { copy -> folders.map { "${it.displayName}: ${copy.path}" } },
+                confirmLabel = "Move copies to trash",
+            ),
+        ) {
+            session.perform(label = "Removing copies of ${kept.path}") {
+                val outcome = services.sync.mergeDuplicates(keep = keep, confirmed = true)
+                val done = "Kept ${kept.path}; moved ${copies.size} copies to the trash"
+                session.report(message = OutcomeMessages.of(outcome = outcome, done = done))
+            }
         }
     }
 
@@ -171,39 +236,24 @@ class DashboardViewModel(
         session.retryFailedOperations()
     }
 
+    override fun open(folderId: LibraryFolderId, path: RelativePath) {
+        val folder = session.state.value.folders?.find(id = folderId) ?: return
+        if (!platform.openFile(location = platform.locate(folder = folder.location, path = path))) {
+            session.report(message = UiMessage(text = "No application could open ${path.fileName}", isError = true))
+        }
+    }
+
+    /** Opens a catalogued document from the primary folder, for example while reviewing a suggestion. */
+    fun openDocument(documentId: DocumentId) {
+        val path = services.library.catalog.value?.documents?.get(documentId)?.path ?: return
+        val primary = session.state.value.folders?.primary ?: return
+        open(folderId = primary.id, path = path)
+    }
+
     override fun dismiss(key: TaskKey) {
         session.perform(label = "Dismissing the task") {
             services.sync.dismissTask(key = key)
         }
-    }
-
-    /** Adopts every listed new file, one after the other; can be stopped between two files. */
-    fun adoptAll(changes: List<DetectedChange.NewFile>) {
-        session.perform(label = "Adopting ${changes.size} new files", cancellable = true) {
-            val adopted = session.forEachWithProgress(step = "Adopting", items = changes, name = { it.path.value }) {
-                resolved(change = it, outcome = services.documents.adoptNewFile(change = it))
-            }
-            session.report(message = countMessage(verb = "Adopted", done = adopted, total = changes.size))
-        }
-    }
-
-    /** Restores every listed missing file from a folder that still has it. */
-    fun restoreAll(changes: List<DetectedChange.MissingFile>) {
-        session.perform(label = "Restoring ${changes.size} files") {
-            val restored = session.forEachWithProgress(step = "Restoring", items = changes, name = { it.path.value }) {
-                resolved(change = it, outcome = services.documents.restoreDocument(change = it))
-            }
-            session.report(message = countMessage(verb = "Restored", done = restored, total = changes.size))
-        }
-    }
-
-    /** Forgets [change] when [outcome] resolved it; returns whether it did. */
-    private fun resolved(change: DetectedChange, outcome: OperationOutcome): Boolean {
-        val done = outcome is OperationOutcome.Done
-        if (done) {
-            session.forget(change = change)
-        }
-        return done
     }
 
     private fun act(label: String, resolves: DetectedChange, done: String, action: suspend () -> OperationOutcome) {
@@ -230,17 +280,13 @@ class DashboardViewModel(
         return services.library.catalog.value?.documents?.get(documentId)?.path?.value ?: documentId.value
     }
 
-    private fun countMessage(verb: String, done: Int, total: Int): UiMessage {
-        return UiMessage(text = "$verb $done of $total files", isError = done < total)
-    }
-
     private fun toUiState(
         dashboard: Dashboard?,
         sessionState: SessionState,
         filter: TaskGroup?,
     ): DashboardUiState {
         val context = TaskContext(folders = sessionState.folders, catalog = services.library.catalog.value)
-        val byGroup = dashboard?.tasks.orEmpty().groupBy { TaskGroups.of(task = it) }
+        val byGroup = dashboard?.tasks.orEmpty().groupBy { TaskGroups.of(task = it, context = context) }
         val foreign = (sessionState.status as? LibraryStatus.Open)?.foreignFolders.orEmpty()
         return DashboardUiState(
             folders = dashboard?.folders.orEmpty().map { toFolderStatus(state = it, foreign = foreign) },
@@ -266,32 +312,24 @@ class DashboardViewModel(
 
     private fun toGroupState(group: TaskGroup, tasks: List<OpenTask>, context: TaskContext): TaskGroupState {
         val rows = tasks.map { task ->
+            val files = TaskActions.filesFor(task = task, context = context)
+            // The copies of a duplicates task carry their own Open buttons.
+            val copies = TaskActions.copiesFor(task = task, context = context, handler = this)
             TaskRowState(
                 key = task.key,
                 title = TaskTexts.title(task = task, context = context),
                 detail = TaskTexts.detail(task = task, context = context),
                 buttons = TaskActions.buttonsFor(task = task, context = context, handler = this),
+                opens = if (copies.isEmpty()) TaskActions.opensOf(files = files, handler = this) else emptyList(),
+                preview = files.firstOrNull(),
+                copies = copies,
             )
         }
-        return TaskGroupState(group = group, rows = rows, bulkAction = bulkAction(group = group, tasks = tasks))
-    }
-
-    private fun bulkAction(group: TaskGroup, tasks: List<OpenTask>): ActionButton? {
-        return when (group) {
-            TaskGroup.NEW_FILES -> {
-                val changes = tasks.filterIsInstance<OpenTask.AdoptNewFile>().map { it.change }
-                val readable = changes.filter { it.contentHash != null }
-                ActionButton(label = "Adopt all (${readable.size})") { adoptAll(changes = readable) }
-            }
-
-            TaskGroup.MISSING -> {
-                val changes = tasks.filterIsInstance<OpenTask.RestoreOrDelete>().map { it.change }
-                val restorable = changes.filter { it.presentIn.isNotEmpty() }
-                ActionButton(label = "Restore all (${restorable.size})") { restoreAll(changes = restorable) }
-            }
-
-            else -> null
-        }
+        return TaskGroupState(
+            group = group,
+            rows = rows,
+            bulkActions = bulk.buttonsFor(group = group, tasks = tasks, context = context),
+        )
     }
 
     private fun toFolderStatus(state: FolderState, foreign: Set<LibraryFolderId>): FolderStatus {

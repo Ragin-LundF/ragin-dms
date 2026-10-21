@@ -3,12 +3,15 @@ package dms.ui.platform
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.draganddrop.DragAndDropEvent
 import androidx.compose.ui.draganddrop.awtTransferable
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.toComposeImageBitmap
 import dms.domain.library.FolderLocation
 import dms.domain.library.RelativePath
 import dms.ui.PlatformActions
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.swing.Swing
 import kotlinx.coroutines.withContext
+import org.jetbrains.skia.Image
 import java.awt.Desktop
 import java.awt.FileDialog
 import java.awt.Frame
@@ -61,6 +64,10 @@ class DesktopPlatformActions : PlatformActions {
             return start(command = listOf("xdg-open", location))
         }
         return runCatching { Desktop.getDesktop().open(Path.of(location).toFile()) }.isSuccess
+    }
+
+    override fun decodeImage(bytes: ByteArray): ImageBitmap? {
+        return runCatching { Image.makeFromEncoded(bytes).toComposeImageBitmap() }.getOrNull()
     }
 
     @OptIn(ExperimentalComposeUiApi::class)

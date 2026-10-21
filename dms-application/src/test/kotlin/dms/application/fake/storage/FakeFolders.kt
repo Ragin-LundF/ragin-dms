@@ -161,6 +161,18 @@ class FakeFolders : DocumentStorage, LibraryScanner, CatalogRepository, TextStor
         return StorageResult.Success(value = factsOf(content = content))
     }
 
+    override suspend fun sameContent(
+        folder: LibraryFolder,
+        first: RelativePath,
+        second: RelativePath,
+    ): StorageResult<Boolean> {
+        unreachableFailure(folder = folder)?.let { return it }
+        val folderFiles = filesOf(folderId = folder.id)
+        val firstContent = folderFiles[first] ?: return failure(reason = StorageFailure.NOT_FOUND)
+        val secondContent = folderFiles[second] ?: return failure(reason = StorageFailure.NOT_FOUND)
+        return StorageResult.Success(value = first != second && firstContent == secondContent)
+    }
+
     /** Creation days the test set; files without one have none, like on file systems without them. */
     val creationDays: MutableMap<RelativePath, LocalDate> = mutableMapOf()
 

@@ -15,13 +15,19 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dms.ui.components.ActionButtons
 import dms.ui.components.surface.IconBadge
+import dms.ui.dashboard.duplicate.DuplicateCopies
 import dms.ui.dashboard.model.TaskGroup
 import dms.ui.dashboard.model.TaskRowState
+import dms.ui.preview.FileThumbnail
+import dms.ui.preview.ThumbnailLoader
 import dms.ui.theme.Spacing
 
-/** One open task with the icon of its kind, its description and its actions. */
+/**
+ * One open task with a thumbnail of its file (or the icon of its kind), its description, its actions
+ * and buttons to open the file.
+ */
 @Composable
-fun TaskRowView(row: TaskRowState, group: TaskGroup, busyReason: String?) {
+fun TaskRowView(row: TaskRowState, group: TaskGroup, busyReason: String?, thumbnails: ThumbnailLoader) {
     val colors = MaterialTheme.colorScheme
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -33,14 +39,31 @@ fun TaskRowView(row: TaskRowState, group: TaskGroup, busyReason: String?) {
             verticalAlignment = Alignment.Top,
             horizontalArrangement = Arrangement.spacedBy(space = Spacing.medium),
         ) {
-            IconBadge(icon = group.icon, tint = colors.primary, size = 36.dp)
+            val preview = row.preview
+            if (preview == null) {
+                IconBadge(icon = group.icon, tint = colors.primary, size = 36.dp)
+            } else {
+                FileThumbnail(
+                    folderId = preview.folderId,
+                    path = preview.path,
+                    loader = thumbnails,
+                    onClick = { (row.opens.firstOrNull() ?: row.copies.firstOrNull()?.open)?.onClick?.invoke() },
+                ) {
+                    IconBadge(icon = group.icon, tint = colors.primary, size = 36.dp)
+                }
+            }
             Column(modifier = Modifier.weight(weight = 1f)) {
-                Text(
-                    text = row.title,
-                    style = MaterialTheme.typography.titleSmall,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = row.title,
+                        style = MaterialTheme.typography.titleSmall,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(weight = 1f),
+                    )
+                    // Looking at a file never changes the library, so it stays possible while operations run.
+                    ActionButtons(buttons = row.opens, enabled = true, busyReason = null)
+                }
                 if (row.detail.isNotEmpty()) {
                     Text(
                         text = row.detail,
@@ -50,6 +73,11 @@ fun TaskRowView(row: TaskRowState, group: TaskGroup, busyReason: String?) {
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
+                DuplicateCopies(
+                    copies = row.copies,
+                    busyReason = busyReason,
+                    modifier = Modifier.padding(top = Spacing.small),
+                )
                 ActionButtons(
                     buttons = row.buttons,
                     enabled = busyReason == null,

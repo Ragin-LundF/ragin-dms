@@ -13,6 +13,7 @@ import dms.ui.dashboard.FolderPanel
 import dms.ui.dashboard.model.DashboardUiState
 import dms.ui.dashboard.model.TaskGroup
 import dms.ui.dashboard.task.TaskList
+import dms.ui.preview.ThumbnailLoader
 import dms.ui.theme.Spacing
 
 /** What needs the user: the open tasks, next to the state of the folders and what happened lately. */
@@ -20,6 +21,7 @@ import dms.ui.theme.Spacing
 fun WorkSection(
     state: DashboardUiState,
     busyReason: String?,
+    thumbnails: ThumbnailLoader,
     onFilter: (TaskGroup?) -> Unit,
     onFullView: () -> Unit,
 ) {
@@ -31,6 +33,7 @@ fun WorkSection(
             groups = state.groups,
             filter = state.filter,
             busyReason = busyReason,
+            thumbnails = thumbnails,
             onFilter = onFilter,
             full = false,
             onFullView = onFullView,

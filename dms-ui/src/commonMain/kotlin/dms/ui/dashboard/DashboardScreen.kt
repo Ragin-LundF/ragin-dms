@@ -49,6 +49,7 @@ fun DashboardScreen(
                 groups = state.groups,
                 filter = state.filter,
                 busyReason = busyReason,
+                thumbnails = viewModel.thumbnails,
                 onFilter = viewModel::setFilter,
                 full = true,
                 onFullView = { tasksFull = false },
@@ -68,5 +69,5 @@ fun DashboardScreen(
         }
     }
     DialogHost(controller = viewModel.dialogs)
-    ReviewDialog(controller = viewModel.review)
+    ReviewDialog(controller = viewModel.review, onOpenDocument = viewModel::openDocument)
 }

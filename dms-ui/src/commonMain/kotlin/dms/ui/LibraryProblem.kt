@@ -21,9 +21,12 @@ import dms.ui.theme.Spacing
 @Composable
 fun LibraryProblem(status: LibraryStatus, onRetry: () -> Unit, onOpenSettings: () -> Unit) {
     val text = when (status) {
-        is LibraryStatus.PrimaryFailed ->
-            "The primary folder or its catalog cannot be read (${OutcomeMessages.failure(reason = status.reason)}). " +
+        is LibraryStatus.PrimaryFailed -> {
+            val cause = listOfNotNull(OutcomeMessages.failure(reason = status.reason), status.detail)
+                .joinToString(separator = ": ")
+            "The primary folder or its catalog cannot be read ($cause). " +
                 "Connect the drive and try again, or make another folder the primary in the settings."
+        }
 
         is LibraryStatus.Failed -> "The library could not be opened: ${status.detail ?: "unknown error"}"
         else -> "The library is not open."
