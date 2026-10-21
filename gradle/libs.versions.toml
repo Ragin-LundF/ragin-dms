@@ -56,19 +56,19 @@ jackson = [
     "jackson-module-kotlin",
 ]
 ktor-client = [
-    "ktor-client-core",
     "ktor-client-cio",
     "ktor-client-content-negotiation",
+    "ktor-client-core",
     "ktor-serialization-kotlinx-json",
 ]
 compose-common = [
-    "compose-runtime",
-    "compose-foundation",
-    "compose-ui",
     "compose-components-resources",
-    "compose-material3",
-    "compose-material-icons-extended",
+    "compose-foundation",
     "compose-lifecycle-viewmodel",
+    "compose-material-icons-extended",
+    "compose-material3",
+    "compose-runtime",
+    "compose-ui",
 ]
 
 [plugins]
