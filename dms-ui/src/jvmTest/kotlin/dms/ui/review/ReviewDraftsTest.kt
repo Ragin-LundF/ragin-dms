@@ -3,7 +3,9 @@ package dms.ui.review
 import dms.domain.catalog.Catalog
 import dms.domain.catalog.CatalogRevision
 import dms.domain.catalog.LibraryId
+import dms.domain.classification.ClassificationSuggestion
 import dms.domain.classification.SuggestedCategory
+import dms.domain.document.DocumentId
 import dms.domain.taxonomy.Category
 import dms.domain.taxonomy.CategoryId
 import dms.domain.taxonomy.TagName
@@ -12,6 +14,7 @@ import dms.ui.review.model.ReviewField
 import java.time.LocalDate
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -60,6 +63,35 @@ class ReviewDraftsTest {
         val result = ReviewDrafts.approvalOf(draft = draft, current = current, catalog = catalog)
 
         assertTrue(actual = result.exceptionOrNull()?.message.orEmpty().contains(other = "YYYY-MM-DD"))
+    }
+
+    @Test
+    fun `the suggested file name starts checked only when the settings ask for it`() {
+        val suggestion = ClassificationSuggestion(
+            documentId = DocumentId(value = "a"),
+            model = "sample-model",
+            fileName = "2024-03-15 Sample bill.pdf",
+        )
+
+        val optional = ReviewDrafts.draftOf(suggestion = suggestion, catalog = catalog, acceptFileName = false)
+        val taken = ReviewDrafts.draftOf(suggestion = suggestion, catalog = catalog, acceptFileName = true)
+
+        assertEquals(
+            expected = ReviewField(accepted = false, value = "2024-03-15 Sample bill.pdf"),
+            actual = optional.fileName,
+        )
+        assertTrue(actual = taken.fileName.accepted)
+    }
+
+    @Test
+    fun `categories are offered as sorted paths, and only an unknown one is new`() {
+        val paths = ReviewDrafts.categoryPathsOf(catalog = catalog)
+
+        assertEquals(expected = listOf("Invoices", "Invoices / Energy"), actual = paths)
+        assertFalse(actual = ReviewDrafts.isNewCategory(text = "invoices / energy", paths = paths))
+        assertFalse(actual = ReviewDrafts.isNewCategory(text = "Energy", paths = paths))
+        assertFalse(actual = ReviewDrafts.isNewCategory(text = " ", paths = paths))
+        assertTrue(actual = ReviewDrafts.isNewCategory(text = "Invoices / Water", paths = paths))
     }
 
     private fun draft(fileName: String, accepted: Boolean = true): ReviewDraft {

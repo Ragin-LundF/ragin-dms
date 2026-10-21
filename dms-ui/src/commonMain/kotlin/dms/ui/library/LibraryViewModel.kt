@@ -15,6 +15,7 @@ import dms.ui.PlatformActions
 import dms.ui.components.dialog.DialogController
 import dms.ui.components.model.ConfirmationRequest
 import dms.ui.components.model.TextInputRequest
+import dms.ui.library.drag.model.DragItem
 import dms.ui.library.drag.model.DropTarget
 import dms.ui.library.model.DocumentLayout
 import dms.ui.library.model.DocumentRow
@@ -158,8 +159,29 @@ class LibraryViewModel(
         }
     }
 
-    /** Files [document] where it was dropped: moves it into a folder, or gives it a category or a tag. */
-    fun drop(document: Document, target: DropTarget) {
+    /**
+     * Applies a drop: a document moves into a folder or gets a category or a tag; a category moves into
+     * another category or to the top level.
+     */
+    fun drop(item: DragItem, target: DropTarget) {
+        when (item) {
+            is DragItem.DraggedDocument -> dropDocument(document = item.document, target = target)
+            is DragItem.DraggedCategory -> dropCategory(category = item.category, target = target)
+        }
+    }
+
+    private fun dropCategory(category: Category, target: DropTarget) {
+        val parentId = (target as? DropTarget.Category)?.categoryId
+        val movable = target is DropTarget.Category || target == DropTarget.TopLevelCategory
+        if (!movable || parentId == category.parentId || parentId == category.id) {
+            return
+        }
+        val where = parentId?.let { services.library.catalog.value?.categories?.get(it)?.name } ?: "the top level"
+        val edit = CatalogEdit.MoveCategory(categoryId = category.id, parentId = parentId)
+        edit(edit = edit, done = "Moved ${category.name} to $where")
+    }
+
+    private fun dropDocument(document: Document, target: DropTarget) {
         val name = document.path.fileName
         when (target) {
             is DropTarget.Folder -> if ((document.path.parent ?: RelativePath.ROOT) != target.path) {
@@ -188,6 +210,8 @@ class LibraryViewModel(
                 val edit = CatalogEdit.AddTags(documentId = document.id, tags = setOf(target.tag))
                 edit(edit = edit, done = "Tagged $name with ${target.tag.value}")
             }
+
+            DropTarget.TopLevelCategory -> Unit
         }
     }
 

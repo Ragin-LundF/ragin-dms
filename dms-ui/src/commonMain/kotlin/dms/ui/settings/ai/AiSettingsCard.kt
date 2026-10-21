@@ -52,10 +52,7 @@ fun AiSettingsCard(
                     onSelect = { draft = draft.copy(model = it) },
                 )
             }
-            AiVisionSwitch(
-                checked = draft.preferVisionForPdfs,
-                onCheckedChange = { draft = draft.copy(preferVisionForPdfs = it) },
-            )
+            AiSwitches(draft = draft, onChange = { draft = it })
             AiConnectionLine(connection = connection)
             ActionButtons(
                 buttons = listOf(

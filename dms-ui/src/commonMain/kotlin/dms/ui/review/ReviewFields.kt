@@ -47,10 +47,16 @@ fun ReviewFields(state: ReviewState, controller: ReviewController) {
                 controller.update(draft = draft.copy(correspondent = it))
             }
         }
-        if (suggestion.category != null) {
-            ReviewFieldRow(label = "Category", field = draft.category, current = current.category.value) {
-                controller.update(draft = draft.copy(category = it))
-            }
+        val typed = draft.category.value.trim()
+        val isNew = ReviewDrafts.isNewCategory(text = typed, paths = state.categoryPaths)
+        ReviewFieldRow(
+            label = "Category: pick one or type a new name",
+            field = draft.category,
+            current = current.category.value,
+            options = state.categoryPaths,
+            hint = if (isNew) "\"$typed\" will be created" else null,
+        ) {
+            controller.update(draft = draft.copy(category = it))
         }
         if (suggestion.tags.isNotEmpty()) {
             ReviewFieldRow(label = "Tags to add, comma separated", field = draft.tags, current = current.tags.value) {

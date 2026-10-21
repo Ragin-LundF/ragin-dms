@@ -4,7 +4,7 @@ import dms.domain.library.RelativePath
 import dms.domain.taxonomy.CategoryId
 import dms.domain.taxonomy.TagName
 
-/** Where a dragged document can be dropped, and what the drop does. */
+/** Where a dragged document or category can be dropped, and what the drop does. */
 sealed interface DropTarget {
 
     /** Moves the document into the folder, in every library folder. */
@@ -18,4 +18,7 @@ sealed interface DropTarget {
 
     /** Adds this tag to the document. */
     data class Tag(val tag: TagName) : DropTarget
+
+    /** Makes a dragged category a top-level category. */
+    data object TopLevelCategory : DropTarget
 }

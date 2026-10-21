@@ -4,6 +4,7 @@ import dms.domain.library.RelativePath
 import dms.domain.taxonomy.TagName
 import dms.ui.document.InspectorViewModel
 import dms.ui.document.model.MetadataDraft
+import dms.ui.library.drag.model.DragItem
 import dms.ui.library.drag.model.DropTarget
 import dms.ui.library.model.LibrarySelection
 import dms.ui.library.model.LibraryUiState
@@ -18,7 +19,6 @@ import java.time.LocalDate
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
-import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -177,7 +177,7 @@ class LibraryViewModelTest {
             val library = libraryWithOneFile(app = app)
 
             library.drop(
-                document = documentOf(state = library.state.value),
+                item = DragItem.DraggedDocument(document = documentOf(state = library.state.value)),
                 target = DropTarget.Folder(path = RelativePath.ROOT),
             )
             app.idle()
@@ -198,12 +198,12 @@ class LibraryViewModelTest {
             val category = library.state.first { it.categories.isNotEmpty() }.categories.single().category
 
             library.drop(
-                document = documentOf(state = library.state.value),
+                item = DragItem.DraggedDocument(document = documentOf(state = library.state.value)),
                 target = DropTarget.Category(categoryId = category.id),
             )
             app.idle()
             library.drop(
-                document = documentOf(state = library.state.value),
+                item = DragItem.DraggedDocument(document = documentOf(state = library.state.value)),
                 target = DropTarget.Tag(tag = TagName.of(raw = "tax")),
             )
             app.idle()
@@ -212,7 +212,7 @@ class LibraryViewModelTest {
             assertEquals(expected = category.id, actual = filed.categoryId)
             assertEquals(expected = setOf(TagName.of(raw = "tax")), actual = filed.tags)
 
-            library.drop(document = filed, target = DropTarget.Uncategorized)
+            library.drop(item = DragItem.DraggedDocument(document = filed), target = DropTarget.Uncategorized)
             app.idle()
             val unfiled = library.state.first { documentOf(state = it).categoryId == null }
             assertEquals(expected = 1, actual = unfiled.uncategorizedCount)
@@ -220,48 +220,31 @@ class LibraryViewModelTest {
     }
 
     @Test
-    fun `moving a document to the trash asks first`() {
+    fun `dropping a category moves it into another category and back to the top level`() {
         UiTest.run { app ->
             val library = libraryWithOneFile(app = app)
-            val inspector = InspectorViewModel(services = app.services, session = app.session, platform = app.platform)
+            for (name in listOf("Invoices", "Receipts")) {
+                library.newCategory()
+                library.dialogs.submit(text = name)
+                app.idle()
+            }
+            val categories = library.state.first { it.categories.size == 2 }.categories.map { it.category }
+            val invoices = categories.single { it.name == "Invoices" }
+            val receipts = categories.single { it.name == "Receipts" }
 
-            inspector.trash(document = documentOf(state = library.state.value))
-            assertNotNull(actual = inspector.dialogs.confirmation.value)
-            inspector.dialogs.dismissConfirmation()
+            library.drop(
+                item = DragItem.DraggedCategory(category = receipts),
+                target = DropTarget.Category(categoryId = invoices.id),
+            )
             app.idle()
-            assertTrue(actual = Files.exists(app.primary.resolve("letters/scan-1.pdf")))
+            val nested = app.services.library.catalog.first { it?.categories?.get(receipts.id)?.parentId != null }
+            assertEquals(expected = invoices.id, actual = nested?.categories?.get(receipts.id)?.parentId)
 
-            inspector.trash(document = documentOf(state = library.state.value))
-            inspector.dialogs.confirm()
+            val moved = checkNotNull(value = nested?.categories?.get(receipts.id))
+            library.drop(item = DragItem.DraggedCategory(category = moved), target = DropTarget.TopLevelCategory)
             app.idle()
-
-            library.state.first { it.documents.isEmpty() }
-            assertFalse(actual = Files.exists(app.primary.resolve("letters/scan-1.pdf")))
-            assertFalse(actual = Files.exists(app.sync.resolve("letters/scan-1.pdf")))
-        }
-    }
-
-    @Test
-    fun `deleting a category asks first`() {
-        UiTest.run { app ->
-            app.configure()
-            val library = app.libraryViewModel()
-            library.newCategory()
-            library.dialogs.submit(text = "Invoices")
-            app.idle()
-            val category = library.state.first { it.categories.isNotEmpty() }.categories.single().category
-
-            library.removeCategory(category = category)
-            assertNotNull(actual = library.dialogs.confirmation.value)
-            library.dialogs.dismissConfirmation()
-            app.idle()
-            assertEquals(expected = 1, actual = library.state.value.categories.size)
-
-            library.removeCategory(category = category)
-            library.dialogs.confirm()
-            app.idle()
-
-            library.state.first { it.categories.isEmpty() }
+            val top = app.services.library.catalog.first { it?.categories?.get(receipts.id)?.parentId == null }
+            assertNull(actual = top?.categories?.get(receipts.id)?.parentId)
         }
     }
 

@@ -25,13 +25,16 @@ fun LazyListScope.categoryEntries(
     val selection = state.selection
     val expanded = SidebarGroup.CATEGORIES !in state.collapsedGroups
     item(key = "categories") {
-        SidebarSection(
-            title = "Categories",
-            expanded = expanded,
-            onToggle = { viewModel.toggle(target = ToggleTarget.Group(group = SidebarGroup.CATEGORIES)) },
-            addLabel = "New category",
-            busyReason = busyReason,
-        ) { viewModel.newCategory() }
+        DropTargetArea(drag = drag, target = DropTarget.TopLevelCategory) { hovered ->
+            SidebarSection(
+                title = "Categories",
+                expanded = expanded,
+                onToggle = { viewModel.toggle(target = ToggleTarget.Group(group = SidebarGroup.CATEGORIES)) },
+                addLabel = "New category",
+                busyReason = busyReason,
+                highlighted = hovered,
+            ) { viewModel.newCategory() }
+        }
     }
     if (!expanded) {
         return

@@ -8,6 +8,7 @@ data class AiDraft(
     val model: String,
     val timeoutSeconds: String,
     val preferVisionForPdfs: Boolean,
+    val acceptSuggestedFileNames: Boolean,
 ) {
 
     /** The settings this draft describes, or `null` while a field is not valid. */
@@ -22,6 +23,7 @@ data class AiDraft(
             model = model.trim().ifEmpty { null },
             preferVisionForPdfs = preferVisionForPdfs,
             timeoutSeconds = timeout,
+            acceptSuggestedFileNames = acceptSuggestedFileNames,
         )
     }
 
@@ -33,6 +35,7 @@ data class AiDraft(
                 model = settings.model.orEmpty(),
                 timeoutSeconds = settings.timeoutSeconds.toString(),
                 preferVisionForPdfs = settings.preferVisionForPdfs,
+                acceptSuggestedFileNames = settings.acceptSuggestedFileNames,
             )
         }
     }

@@ -65,6 +65,7 @@ class FileSettingsRepositoryTest {
                     baseUrl = "http://localhost:9999/v1",
                     model = "sample-model",
                     preferVisionForPdfs = true,
+                    acceptSuggestedFileNames = true,
                 ),
             )
             repository.savePreferences(preferences = preferences)

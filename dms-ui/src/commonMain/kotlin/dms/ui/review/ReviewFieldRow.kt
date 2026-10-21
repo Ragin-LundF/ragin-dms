@@ -15,25 +15,42 @@ import androidx.compose.ui.text.style.TextOverflow
 import dms.ui.review.model.ReviewField
 import dms.ui.theme.Spacing
 
-/** One suggested value: take it or not, edit it, and see what the document has now. */
+/**
+ * One suggested value: take it or not, edit it, and see what the document has now. With [options] the
+ * field also offers them to pick from, and [hint] explains the typed value.
+ */
 @Composable
-fun ReviewFieldRow(label: String, field: ReviewField, current: String, onChange: (ReviewField) -> Unit) {
+fun ReviewFieldRow(
+    label: String,
+    field: ReviewField,
+    current: String,
+    options: List<String> = emptyList(),
+    hint: String? = null,
+    onChange: (ReviewField) -> Unit,
+) {
     Row(
         verticalAlignment = Alignment.Top,
         horizontalArrangement = Arrangement.spacedBy(space = Spacing.small),
     ) {
         Checkbox(checked = field.accepted, onCheckedChange = { onChange(field.copy(accepted = it)) })
         Column(modifier = Modifier.weight(weight = 1f)) {
-            OutlinedTextField(
-                value = field.value,
-                onValueChange = { onChange(ReviewField(accepted = true, value = it)) },
-                label = { Text(text = label) },
-                singleLine = true,
-                enabled = true,
-                modifier = Modifier.fillMaxWidth(),
-            )
+            if (options.isEmpty()) {
+                OutlinedTextField(
+                    value = field.value,
+                    onValueChange = { onChange(ReviewField(accepted = true, value = it)) },
+                    label = { Text(text = label) },
+                    singleLine = true,
+                    enabled = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            } else {
+                SuggestingTextField(value = field.value, label = label, options = options) {
+                    onChange(ReviewField(accepted = true, value = it))
+                }
+            }
+            val now = "Now: ${current.ifEmpty { "—" }}"
             Text(
-                text = "Now: ${current.ifEmpty { "—" }}",
+                text = hint?.let { "$now · $it" } ?: now,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,

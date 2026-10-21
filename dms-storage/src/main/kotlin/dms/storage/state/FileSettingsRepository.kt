@@ -48,6 +48,7 @@ class FileSettingsRepository(path: Path) : SettingsRepository {
                     model = settings.ai.model,
                     preferVisionForPdfs = settings.ai.preferVisionForPdfs,
                     timeoutSeconds = settings.ai.timeoutSeconds,
+                    acceptSuggestedFileNames = settings.ai.acceptSuggestedFileNames,
                 ),
             )
         }
@@ -64,6 +65,7 @@ class FileSettingsRepository(path: Path) : SettingsRepository {
                     model = ai.model,
                     preferVisionForPdfs = ai.preferVisionForPdfs,
                     timeoutSeconds = ai.timeoutSeconds,
+                    acceptSuggestedFileNames = ai.acceptSuggestedFileNames,
                 ),
             )
             file.write(value = updated)

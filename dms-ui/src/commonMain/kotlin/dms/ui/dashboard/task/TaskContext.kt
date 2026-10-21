@@ -45,9 +45,15 @@ class TaskContext(
         return ids.sortedBy { it != primaryId }
     }
 
-    /** The catalogued document [change] is a copy of, by size and SHA-256, or `null` if there is none. */
+    /**
+     * The catalogued document [change] is a copy of, by size and SHA-256, or `null` if there is none.
+     * A file at a path the catalog already knows is that document itself, not a copy.
+     */
     fun originalOf(change: DetectedChange.NewFile): Document? {
         val contentHash = change.contentHash ?: return null
+        if (catalog?.findByPath(path = change.path) != null) {
+            return null
+        }
         return catalog?.findByContentHash(contentHash = contentHash)?.firstOrNull { it.size == change.size }
     }
 

@@ -8,4 +8,5 @@ data class AiSettingsDto(
     val model: String? = null,
     val preferVisionForPdfs: Boolean = false,
     val timeoutSeconds: Int = AiSettings.DEFAULT_TIMEOUT_SECONDS,
+    val acceptSuggestedFileNames: Boolean = false,
 )

@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Category
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -13,13 +15,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import dms.domain.document.Document
+import dms.ui.components.surface.IconBadge
 import dms.ui.components.surface.KindBadge
+import dms.ui.library.drag.model.DragItem
 import dms.ui.theme.Spacing
 
-/** The card that follows the pointer while a document is dragged, saying what a drop would do. */
+/** The card that follows the pointer while a document or category is dragged, saying what a drop would do. */
 @Composable
-fun DragPreview(document: Document, action: String?, modifier: Modifier = Modifier) {
+fun DragPreview(item: DragItem, action: String?, modifier: Modifier = Modifier) {
     Surface(
         modifier = modifier.widthIn(max = 320.dp),
         shape = MaterialTheme.shapes.medium,
@@ -32,16 +35,30 @@ fun DragPreview(document: Document, action: String?, modifier: Modifier = Modifi
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(space = Spacing.medium),
         ) {
-            KindBadge(kind = document.kind, size = 32.dp)
+            val title = when (item) {
+                is DragItem.DraggedDocument -> {
+                    KindBadge(kind = item.document.kind, size = 32.dp)
+                    item.document.metadata.title ?: item.document.path.fileName
+                }
+
+                is DragItem.DraggedCategory -> {
+                    IconBadge(icon = Icons.Rounded.Category, tint = MaterialTheme.colorScheme.primary, size = 32.dp)
+                    item.category.name
+                }
+            }
             Column {
                 Text(
-                    text = document.metadata.title ?: document.path.fileName,
+                    text = title,
                     style = MaterialTheme.typography.titleSmall,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(
-                    text = action ?: "Drop on a folder, category or tag",
+                    text = action ?: if (item is DragItem.DraggedCategory) {
+                        "Drop on a category, or on \"Categories\" for the top level"
+                    } else {
+                        "Drop on a folder, category or tag"
+                    },
                     style = MaterialTheme.typography.bodySmall,
                     color = if (action == null) {
                         MaterialTheme.colorScheme.onSurfaceVariant

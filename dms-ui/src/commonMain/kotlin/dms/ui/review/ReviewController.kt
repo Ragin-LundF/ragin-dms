@@ -37,7 +37,12 @@ class ReviewController(
             suggestion = suggestion,
             documentName = document.path.value,
             current = ReviewDrafts.currentOf(document = document, catalog = catalog),
-            draft = ReviewDrafts.draftOf(suggestion = suggestion, catalog = catalog),
+            draft = ReviewDrafts.draftOf(
+                suggestion = suggestion,
+                catalog = catalog,
+                acceptFileName = session.state.value.preferences.ai.acceptSuggestedFileNames,
+            ),
+            categoryPaths = ReviewDrafts.categoryPathsOf(catalog = catalog),
         )
     }
 

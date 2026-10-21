@@ -10,6 +10,7 @@ import java.nio.file.Files
 import java.time.LocalDate
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -34,6 +35,7 @@ class ReviewControllerTest {
             val review = assertNotNull(actual = inspector.review.state.value)
             assertEquals(expected = "Sample bill", actual = review.draft.title.value)
             assertEquals(expected = "2024-03-15 Sample Energy - Bill.png", actual = review.draft.fileName.value)
+            assertFalse(actual = review.draft.fileName.accepted)
             assertTrue(actual = Files.exists(app.primary.resolve("scan-7.png")))
             assertEquals(expected = 1, actual = app.ai.chatRequests)
         }
@@ -49,7 +51,11 @@ class ReviewControllerTest {
             app.idle()
             val draft = assertNotNull(actual = inspector.review.state.value).draft
 
-            inspector.review.update(draft = draft.copy(title = draft.title.copy(value = "Edited bill")))
+            val edited = draft.copy(
+                title = draft.title.copy(value = "Edited bill"),
+                fileName = draft.fileName.copy(accepted = true),
+            )
+            inspector.review.update(draft = edited)
             inspector.review.approve()
             app.idle()
 

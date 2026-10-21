@@ -5,18 +5,19 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
-import dms.domain.document.Document
+import dms.ui.library.drag.model.DragItem
 import dms.ui.library.drag.model.DropTarget
 
 /**
- * The document the user drags inside the library. Drop targets register their bounds in window
- * coordinates; the target under the pointer is [hovered], and releasing over it calls [onDrop].
+ * The document or category the user drags inside the library. Drop targets register their bounds in
+ * window coordinates; the target under the pointer that takes the dragged item is [hovered], and
+ * releasing over it calls [onDrop]. A category only goes into another category or to the top level.
  */
-class DocumentDrag(private val onDrop: (Document, DropTarget) -> Unit) {
+class DocumentDrag(private val onDrop: (DragItem, DropTarget) -> Unit) {
 
     private val targets = mutableMapOf<DropTarget, Rect>()
 
-    var dragged: Document? by mutableStateOf(value = null)
+    var dragged: DragItem? by mutableStateOf(value = null)
         private set
 
     var pointer: Offset by mutableStateOf(value = Offset.Zero)
@@ -33,8 +34,8 @@ class DocumentDrag(private val onDrop: (Document, DropTarget) -> Unit) {
         targets.remove(key = target)
     }
 
-    fun start(document: Document, at: Offset) {
-        dragged = document
+    fun start(item: DragItem, at: Offset) {
+        dragged = item
         pointer = at
         hovered = targetAt(position = at)
     }
@@ -44,13 +45,13 @@ class DocumentDrag(private val onDrop: (Document, DropTarget) -> Unit) {
         hovered = targetAt(position = pointer)
     }
 
-    /** Ends the drag; drops the document if it is over a target. */
+    /** Ends the drag; drops the item if it is over a target that takes it. */
     fun finish() {
-        val document = dragged
+        val item = dragged
         val target = hovered
         cancel()
-        if (document != null && target != null) {
-            onDrop(document, target)
+        if (item != null && target != null) {
+            onDrop(item, target)
         }
     }
 
@@ -60,6 +61,17 @@ class DocumentDrag(private val onDrop: (Document, DropTarget) -> Unit) {
     }
 
     private fun targetAt(position: Offset): DropTarget? {
-        return targets.entries.firstOrNull { (_, bounds) -> bounds.contains(offset = position) }?.key
+        val item = dragged ?: return null
+        return targets.entries.firstOrNull { (target, bounds) ->
+            bounds.contains(offset = position) && takes(item = item, target = target)
+        }?.key
+    }
+
+    private fun takes(item: DragItem, target: DropTarget): Boolean {
+        return when (item) {
+            is DragItem.DraggedDocument -> target != DropTarget.TopLevelCategory
+            is DragItem.DraggedCategory -> target == DropTarget.TopLevelCategory ||
+                (target is DropTarget.Category && target.categoryId != item.category.id)
+        }
     }
 }

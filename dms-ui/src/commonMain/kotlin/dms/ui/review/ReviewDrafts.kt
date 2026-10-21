@@ -19,8 +19,11 @@ object ReviewDrafts {
 
     private const val SEPARATOR = " / "
 
-    /** The suggestion as a draft; a field the AI left empty starts unchecked. */
-    fun draftOf(suggestion: ClassificationSuggestion, catalog: Catalog): ReviewDraft {
+    /**
+     * The suggestion as a draft; a field the AI left empty starts unchecked, and the file name only
+     * starts checked when [acceptFileName] is set.
+     */
+    fun draftOf(suggestion: ClassificationSuggestion, catalog: Catalog, acceptFileName: Boolean): ReviewDraft {
         val tags = suggestion.tags.joinToString(separator = ", ") { it.name.value }
         return ReviewDraft(
             title = field(value = suggestion.title),
@@ -28,7 +31,7 @@ object ReviewDrafts {
             correspondent = field(value = suggestion.correspondent),
             category = field(value = categoryText(category = suggestion.category, catalog = catalog)),
             tags = field(value = tags.ifEmpty { null }),
-            fileName = field(value = suggestion.fileName),
+            fileName = field(value = suggestion.fileName).let { it.copy(accepted = it.accepted && acceptFileName) },
         )
     }
 
@@ -61,6 +64,22 @@ object ReviewDrafts {
                     ?.let { fileNameOf(name = it) }
                     ?.takeIf { it != current.fileName.value },
             )
+        }
+    }
+
+    /** Every category as a path like `Parent / Child`, sorted, to pick from. */
+    fun categoryPathsOf(catalog: Catalog): List<String> {
+        return catalog.categories.values
+            .map { pathOf(category = it, catalog = catalog) }
+            .sortedWith(comparator = String.CASE_INSENSITIVE_ORDER)
+    }
+
+    /** Whether approving [text] creates a category, because no path or name of [paths] matches it. */
+    fun isNewCategory(text: String, paths: List<String>): Boolean {
+        val typed = text.trim()
+        return typed.isNotEmpty() && paths.none { path ->
+            path.equals(typed, ignoreCase = true) ||
+                path.substringAfterLast(delimiter = "/").trim().equals(typed, ignoreCase = true)
         }
     }
 
