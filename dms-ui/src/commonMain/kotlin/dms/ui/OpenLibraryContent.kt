@@ -5,6 +5,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import dms.domain.library.RelativePath
 import dms.ui.dashboard.DashboardScreen
 import dms.ui.dashboard.DashboardViewModel
+import dms.ui.dashboard.TasksScreen
 import dms.ui.document.InspectorViewModel
 import dms.ui.library.LibraryScreen
 import dms.ui.library.LibraryViewModel
@@ -26,9 +27,10 @@ fun OpenLibraryContent(
     onScreenChange: (Screen) -> Unit,
 ) {
     val library = viewModel { LibraryViewModel(services = services, session = session, platform = platform) }
+    val dashboard = viewModel { DashboardViewModel(services = services, session = session, platform = platform) }
     when (screen) {
         Screen.DASHBOARD -> DashboardScreen(
-            viewModel = viewModel { DashboardViewModel(services = services, session = session, platform = platform) },
+            viewModel = dashboard,
             platform = platform,
             onAddFiles = { files -> library.addFiles(locations = files, target = RelativePath.ROOT) },
             onChooseFiles = library::addFilesToTopLevel,
@@ -44,7 +46,10 @@ fun OpenLibraryContent(
                 library.reveal(documentId = documentId)
                 onScreenChange(Screen.LIBRARY)
             },
+            onShowAllTasks = { onScreenChange(Screen.TASKS) },
         )
+
+        Screen.TASKS -> TasksScreen(viewModel = dashboard)
 
         Screen.LIBRARY -> LibraryScreen(
             viewModel = library,

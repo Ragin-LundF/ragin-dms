@@ -35,7 +35,6 @@ fun WorkSection(
             busyReason = busyReason,
             thumbnails = thumbnails,
             onFilter = onFilter,
-            full = false,
             onFullView = onFullView,
             modifier = Modifier.weight(weight = 2f),
         )

@@ -220,6 +220,26 @@ class LibraryViewModelTest {
     }
 
     @Test
+    fun `adding a subcategory from the menu puts it below that category, whatever is selected`() {
+        UiTest.run { app ->
+            val library = libraryWithOneFile(app = app)
+            library.newCategory()
+            library.dialogs.submit(text = "Invoices")
+            app.idle()
+            val invoices = library.state.first { it.categories.isNotEmpty() }.categories.single().category
+            library.select(selection = LibrarySelection.Recent)
+
+            library.newSubcategory(parent = invoices)
+            library.dialogs.submit(text = "Energy")
+            app.idle()
+
+            val catalog = app.services.library.catalog.first { it?.categories?.size == 2 }
+            val energy = catalog?.categories?.values?.single { it.name == "Energy" }
+            assertEquals(expected = invoices.id, actual = energy?.parentId)
+        }
+    }
+
+    @Test
     fun `dropping a category moves it into another category and back to the top level`() {
         UiTest.run { app ->
             val library = libraryWithOneFile(app = app)

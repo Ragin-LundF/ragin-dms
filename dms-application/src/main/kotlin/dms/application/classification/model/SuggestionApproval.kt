@@ -1,6 +1,5 @@
 package dms.application.classification.model
 
-import dms.domain.classification.SuggestedCategory
 import dms.domain.taxonomy.TagName
 import java.time.LocalDate
 
@@ -12,7 +11,7 @@ data class SuggestionApproval(
     val title: String? = null,
     val documentDate: LocalDate? = null,
     val correspondent: String? = null,
-    val category: SuggestedCategory? = null,
+    val category: ApprovedCategory? = null,
     val tags: Set<TagName> = emptySet(),
     val fileName: String? = null,
 )

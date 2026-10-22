@@ -1,5 +1,6 @@
 package dms.ui.review
 
+import dms.application.classification.model.ApprovedCategory
 import dms.application.classification.model.SuggestionApproval
 import dms.domain.catalog.Catalog
 import dms.domain.classification.ClassificationSuggestion
@@ -106,21 +107,21 @@ object ReviewDrafts {
         }
     }
 
-    /** An existing category by path or name, ignoring case; otherwise a new one below the named parent. */
-    private fun categoryOf(text: String, catalog: Catalog): SuggestedCategory {
+    /**
+     * An existing category by path or name, ignoring case; otherwise the typed path, whose missing
+     * levels approving creates.
+     */
+    private fun categoryOf(text: String, catalog: Catalog): ApprovedCategory {
         val existing = catalog.categories.values.firstOrNull { category ->
             pathOf(category = category, catalog = catalog).equals(text, ignoreCase = true) ||
                 category.name.equals(text, ignoreCase = true)
         }
         if (existing != null) {
-            return SuggestedCategory.Existing(categoryId = existing.id)
+            return ApprovedCategory.Existing(categoryId = existing.id)
         }
-        val parentPath = text.substringBeforeLast(delimiter = "/", missingDelimiterValue = "").trim()
-        val parent = catalog.categories.values.firstOrNull {
-            parentPath.isNotEmpty() && pathOf(category = it, catalog = catalog).equals(parentPath, ignoreCase = true)
-        }
-        require(value = parentPath.isEmpty() || parent != null) { "The category \"$parentPath\" does not exist" }
-        return SuggestedCategory.New(name = text.substringAfterLast(delimiter = "/").trim(), parentId = parent?.id)
+        val names = text.split('/').map { it.trim() }
+        require(value = names.none { it.isEmpty() }) { "Every level of the category \"$text\" needs a name" }
+        return ApprovedCategory.Path(names = names)
     }
 
     private fun dateOf(text: String): LocalDate {

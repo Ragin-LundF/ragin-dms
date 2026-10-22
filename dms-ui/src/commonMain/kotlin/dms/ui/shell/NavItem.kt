@@ -16,12 +16,23 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import dms.ui.components.ReasonTooltip
 import dms.ui.model.Screen
 import dms.ui.theme.Spacing
 
-/** One screen in the navigation; the selected one sits on a tinted pill. */
+/**
+ * One screen in the navigation; the selected one sits on a tinted pill. A [compact] item shows only
+ * its icon and names the screen on hover.
+ */
 @Composable
-fun NavItem(screen: Screen, selected: Boolean, onClick: () -> Unit) {
+fun NavItem(screen: Screen, selected: Boolean, compact: Boolean, onClick: () -> Unit) {
+    ReasonTooltip(reason = screen.label.takeIf { compact }, beside = true) {
+        NavItemRow(screen = screen, selected = selected, compact = compact, onClick = onClick)
+    }
+}
+
+@Composable
+private fun NavItemRow(screen: Screen, selected: Boolean, compact: Boolean, onClick: () -> Unit) {
     val colors = MaterialTheme.colorScheme
     Row(
         modifier = Modifier
@@ -31,7 +42,7 @@ fun NavItem(screen: Screen, selected: Boolean, onClick: () -> Unit) {
             .clickable(onClick = onClick)
             .padding(horizontal = Spacing.medium, vertical = Spacing.medium),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(space = Spacing.medium),
+        horizontalArrangement = Arrangement.spacedBy(space = Spacing.medium, alignment = Alignment.CenterHorizontally),
     ) {
         Icon(
             imageVector = screen.icon,
@@ -39,10 +50,13 @@ fun NavItem(screen: Screen, selected: Boolean, onClick: () -> Unit) {
             tint = if (selected) colors.primary else colors.onSurfaceVariant,
             modifier = Modifier.size(size = 22.dp),
         )
-        Text(
-            text = screen.label,
-            style = MaterialTheme.typography.labelLarge,
-            color = if (selected) colors.onPrimaryContainer else colors.onSurfaceVariant,
-        )
+        if (!compact) {
+            Text(
+                text = screen.label,
+                style = MaterialTheme.typography.labelLarge,
+                color = if (selected) colors.onPrimaryContainer else colors.onSurfaceVariant,
+                modifier = Modifier.weight(weight = 1f),
+            )
+        }
     }
 }

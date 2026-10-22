@@ -9,17 +9,24 @@ import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 
-/** Shows [reason] as a tooltip over [content]; without a reason, [content] alone. */
+/**
+ * Shows [reason] as a tooltip above [content], or to its right when [beside]; without a reason,
+ * [content] alone.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ReasonTooltip(reason: String?, content: @Composable () -> Unit) {
+fun ReasonTooltip(
+    reason: String?,
+    beside: Boolean = false,
+    content: @Composable () -> Unit,
+) {
     if (reason == null) {
         content()
         return
     }
     TooltipBox(
         positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
-            positioning = TooltipAnchorPosition.Above,
+            positioning = if (beside) TooltipAnchorPosition.Right else TooltipAnchorPosition.Above,
         ),
         tooltip = { PlainTooltip { Text(text = reason) } },
         state = rememberTooltipState(),

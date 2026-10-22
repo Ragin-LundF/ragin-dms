@@ -49,8 +49,13 @@ fun FrameWindowScope.AppMenuBar(
                 onClick = { onScreenChange(Screen.DASHBOARD) },
             )
             Item(
-                text = Screen.LIBRARY.label,
+                text = Screen.TASKS.label,
                 shortcut = HostOs.shortcut(key = Key.Two),
+                onClick = { onScreenChange(Screen.TASKS) },
+            )
+            Item(
+                text = Screen.LIBRARY.label,
+                shortcut = HostOs.shortcut(key = Key.Three),
                 onClick = { onScreenChange(Screen.LIBRARY) },
             )
             Item(

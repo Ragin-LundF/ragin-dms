@@ -20,7 +20,10 @@ import dms.ui.dashboard.model.TaskGroupState
 import dms.ui.preview.ThumbnailLoader
 import dms.ui.theme.Spacing
 
-/** The open tasks, grouped by kind, with a filter per kind; as a card or, when [full], filling the screen. */
+/**
+ * The open tasks, grouped by kind, with a filter per kind. On the dashboard it offers [onFullView] to
+ * show every task; on the tasks screen, where [onFullView] is `null`, it fills the screen.
+ */
 @Composable
 fun TaskList(
     groups: List<TaskGroupState>,
@@ -28,8 +31,7 @@ fun TaskList(
     busyReason: String?,
     thumbnails: ThumbnailLoader,
     onFilter: (TaskGroup?) -> Unit,
-    full: Boolean,
-    onFullView: () -> Unit,
+    onFullView: (() -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
     val total = groups.sumOf { it.rows.size }
@@ -40,8 +42,7 @@ fun TaskList(
             tint = MaterialTheme.colorScheme.primary,
             subtitle = if (total == 0) "Nothing waits for you" else "$total waiting for your decision",
         ) {
-            val label = if (full) "Back to the dashboard" else "Show all tasks"
-            FullViewButton(label = label, full = full, onClick = onFullView)
+            onFullView?.let { FullViewButton(label = "Show all tasks", onClick = it) }
         }
         if (total == 0) {
             EmptyState(

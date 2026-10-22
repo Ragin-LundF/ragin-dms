@@ -1,10 +1,10 @@
 package dms.ui.review
 
+import dms.application.classification.model.ApprovedCategory
 import dms.domain.catalog.Catalog
 import dms.domain.catalog.CatalogRevision
 import dms.domain.catalog.LibraryId
 import dms.domain.classification.ClassificationSuggestion
-import dms.domain.classification.SuggestedCategory
 import dms.domain.document.DocumentId
 import dms.domain.taxonomy.Category
 import dms.domain.taxonomy.CategoryId
@@ -41,18 +41,28 @@ class ReviewDraftsTest {
         assertNull(actual = approval.fileName)
         assertEquals(expected = LocalDate.parse("2024-03-15"), actual = approval.documentDate)
         assertEquals(expected = setOf(TagName.of(raw = "Tax"), TagName.of(raw = "Home")), actual = approval.tags)
-        assertEquals(expected = SuggestedCategory.Existing(categoryId = energy.id), actual = approval.category)
+        assertEquals(expected = ApprovedCategory.Existing(categoryId = energy.id), actual = approval.category)
     }
 
     @Test
-    fun `a category below an existing parent is created there`() {
+    fun `a typed path that does not exist is approved with every level`() {
         val draft = draft(fileName = "scan-7.pdf")
-            .copy(category = ReviewField(accepted = true, value = "Invoices / Water"))
+            .copy(category = ReviewField(accepted = true, value = "Insurance / Household/ Rent and living"))
 
         val approval = ReviewDrafts.approvalOf(draft = draft, current = current, catalog = catalog).getOrThrow()
 
-        val expected = SuggestedCategory.New(name = "Water", parentId = invoices.id)
+        val expected = ApprovedCategory.Path(names = listOf("Insurance", "Household", "Rent and living"))
         assertEquals(expected = expected, actual = approval.category)
+    }
+
+    @Test
+    fun `a typed path with an empty level is refused with a hint`() {
+        val draft = draft(fileName = "scan-7.pdf")
+            .copy(category = ReviewField(accepted = true, value = "Insurance // Rent"))
+
+        val result = ReviewDrafts.approvalOf(draft = draft, current = current, catalog = catalog)
+
+        assertTrue(actual = result.exceptionOrNull()?.message.orEmpty().contains(other = "needs a name"))
     }
 
     @Test

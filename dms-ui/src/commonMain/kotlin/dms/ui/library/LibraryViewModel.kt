@@ -10,6 +10,7 @@ import dms.domain.document.Document
 import dms.domain.document.DocumentId
 import dms.domain.library.RelativePath
 import dms.domain.taxonomy.Category
+import dms.domain.taxonomy.CategoryId
 import dms.domain.taxonomy.TagName
 import dms.ui.PlatformActions
 import dms.ui.components.dialog.DialogController
@@ -25,6 +26,7 @@ import dms.ui.library.model.LibraryViewState
 import dms.ui.library.model.YearFilter
 import dms.ui.library.search.ContentSearch
 import dms.ui.library.search.model.ContentSearchState
+import dms.ui.library.sidebar.SidebarWidth
 import dms.ui.library.sidebar.model.ToggleTarget
 import dms.ui.service.AppServices
 import dms.ui.session.LibrarySession
@@ -55,6 +57,8 @@ class LibraryViewModel(
     private val view = MutableStateFlow(value = LibraryViewState())
 
     val dialogs: DialogController = DialogController()
+
+    val sidebarWidth: SidebarWidth = SidebarWidth()
 
     val contentSearch: ContentSearch = ContentSearch(
         services = services,
@@ -256,8 +260,16 @@ class LibraryViewModel(
     }
 
     /** Creates a category; below the selected category, if one is selected. */
+    /** A new category below the selected one, or at the top level. */
     fun newCategory() {
-        val parentId = (view.value.selection as? LibrarySelection.Category)?.categoryId
+        addCategory(parentId = (view.value.selection as? LibrarySelection.Category)?.categoryId)
+    }
+
+    fun newSubcategory(parent: Category) {
+        addCategory(parentId = parent.id)
+    }
+
+    private fun addCategory(parentId: CategoryId?) {
         askText(title = "New category", label = "Name", initial = "", confirm = "Create") { name ->
             edit(edit = CatalogEdit.AddCategory(name = name.trim(), parentId = parentId))
         }

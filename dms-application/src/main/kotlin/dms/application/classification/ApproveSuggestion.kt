@@ -1,5 +1,6 @@
 package dms.application.classification
 
+import dms.application.classification.model.ApprovedCategory
 import dms.application.classification.model.SuggestionApproval
 import dms.application.common.ActivityRecorder
 import dms.application.common.LibrarySnapshot
@@ -14,7 +15,6 @@ import dms.domain.catalog.Catalog
 import dms.domain.catalog.CatalogRejection
 import dms.domain.catalog.CatalogUpdate
 import dms.domain.classification.ClassificationSuggestion
-import dms.domain.classification.SuggestedCategory
 import dms.domain.document.ClassificationRecord
 import dms.domain.document.ClassificationSource
 import dms.domain.document.Document
@@ -44,13 +44,14 @@ class ApproveSuggestion(
         val document = library.catalog.documents[documentId] ?: return OperationOutcome.NotFound
         val suggestion = tasks.suggestions().firstOrNull { it.documentId == documentId }
             ?: return OperationOutcome.NotFound
-        val newCategoryId = CategoryId(value = ids.newId())
+        // The ids of the categories a path may create, fixed here so the check and the commit agree.
+        val newCategoryIds = newCategoryIdsFor(category = approval.category)
         // Check the catalog part first, so a refusal does not leave a renamed file behind.
         val check = classify(
             catalog = library.catalog,
             suggestion = suggestion,
             approval = approval,
-            newCategoryId = newCategoryId,
+            newCategoryIds = newCategoryIds,
         )
         if (check is CatalogUpdate.Rejected) {
             return OperationOutcome.Rejected(reason = check.reason)
@@ -60,7 +61,7 @@ class ApproveSuggestion(
             return renamed
         }
         val outcome = store.commit { catalog ->
-            classify(catalog = catalog, suggestion = suggestion, approval = approval, newCategoryId = newCategoryId)
+            classify(catalog = catalog, suggestion = suggestion, approval = approval, newCategoryIds = newCategoryIds)
         }.withPendingFolders(folders = renamed.pendingFolders)
         if (outcome is OperationOutcome.Done) {
             tasks.removeSuggestion(documentId = documentId)
@@ -68,6 +69,11 @@ class ApproveSuggestion(
             activity.record(kind = ActivityKind.SUGGESTION_APPROVED, subject = path.value)
         }
         return outcome
+    }
+
+    private fun newCategoryIdsFor(category: ApprovedCategory?): List<CategoryId> {
+        val levels = (category as? ApprovedCategory.Path)?.names?.size ?: 0
+        return List(size = levels) { CategoryId(value = ids.newId()) }
     }
 
     private suspend fun rename(library: LibrarySnapshot, document: Document, fileName: String?): OperationOutcome {
@@ -82,7 +88,7 @@ class ApproveSuggestion(
         catalog: Catalog,
         suggestion: ClassificationSuggestion,
         approval: SuggestionApproval,
-        newCategoryId: CategoryId,
+        newCategoryIds: List<CategoryId>,
     ): CatalogUpdate {
         val documentId = suggestion.documentId
         val document = catalog.documents[documentId]
@@ -101,40 +107,65 @@ class ApproveSuggestion(
             catalog = catalog,
             documentId = documentId,
             category = approval.category,
-            newId = newCategoryId,
+            newIds = newCategoryIds,
         )
             .andThen { it.updateMetadata(documentId = documentId, metadata = metadata) }
             .andThen { it.setTags(documentId = documentId, newTags = document.tags + approval.tags) }
             .andThen { it.recordClassification(documentId = documentId, record = record) }
     }
 
-    /** A new category whose name already exists at the same place is the existing one. */
     private fun withCategory(
         catalog: Catalog,
         documentId: DocumentId,
-        category: SuggestedCategory?,
-        newId: CategoryId,
+        category: ApprovedCategory?,
+        newIds: List<CategoryId>,
     ): CatalogUpdate {
         return when (category) {
             null -> CatalogUpdate.Applied(catalog = catalog)
-            is SuggestedCategory.Existing -> catalog.assignCategory(
+            is ApprovedCategory.Existing -> catalog.assignCategory(
                 documentId = documentId,
                 categoryId = category.categoryId,
             )
 
-            is SuggestedCategory.New -> {
-                val name = category.name.trim().lowercase(Locale.ROOT)
-                val existing = catalog.categories.values.firstOrNull {
-                    it.parentId == category.parentId && it.name.trim().lowercase(Locale.ROOT) == name
-                }
-                if (existing != null) {
-                    catalog.assignCategory(documentId = documentId, categoryId = existing.id)
-                } else {
-                    val created = Category(id = newId, name = category.name, parentId = category.parentId)
-                    catalog.addCategory(category = created)
-                        .andThen { it.assignCategory(documentId = documentId, categoryId = newId) }
-                }
+            is ApprovedCategory.Path -> withPath(
+                catalog = catalog,
+                documentId = documentId,
+                names = category.names,
+                newIds = newIds,
+            )
+        }
+    }
+
+    /**
+     * Walks [names] from the top level down: a level whose name already exists at that place, ignoring
+     * case, is reused, every missing one is created, and the document gets the last level.
+     */
+    private fun withPath(
+        catalog: Catalog,
+        documentId: DocumentId,
+        names: List<String>,
+        newIds: List<CategoryId>,
+    ): CatalogUpdate {
+        var current = catalog
+        var parentId: CategoryId? = null
+        names.zip(other = newIds).forEach { (name, newId) ->
+            val existing = childNamed(catalog = current, parentId = parentId, name = name)
+            if (existing != null) {
+                parentId = existing.id
+            } else {
+                val created = Category(id = newId, name = name.trim(), parentId = parentId)
+                val added = current.addCategory(category = created)
+                current = (added as? CatalogUpdate.Applied)?.catalog ?: return added
+                parentId = newId
             }
+        }
+        return current.assignCategory(documentId = documentId, categoryId = checkNotNull(value = parentId))
+    }
+
+    private fun childNamed(catalog: Catalog, parentId: CategoryId?, name: String): Category? {
+        val key = name.trim().lowercase(Locale.ROOT)
+        return catalog.categories.values.firstOrNull {
+            it.parentId == parentId && it.name.trim().lowercase(Locale.ROOT) == key
         }
     }
 }

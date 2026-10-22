@@ -36,7 +36,7 @@ fun RecentDocumentsCard(
     val colors = MaterialTheme.colorScheme
     AppCard(modifier = modifier) {
         CardTitle(title = "Recently added", icon = Icons.Rounded.History, tint = colors.primary) {
-            FullViewButton(label = "Show all recently added documents", full = false, onClick = onShowAll)
+            FullViewButton(label = "Show all recently added documents", onClick = onShowAll)
         }
         if (documents.isEmpty()) {
             Text(
