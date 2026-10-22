@@ -1,6 +1,6 @@
 package dms.ui.dashboard
 
-import dms.application.port.state.model.ActivityEntry
+import dms.application.port.state.model.ActivityEntryModel
 import dms.application.port.state.model.ActivityKind
 import java.time.Instant
 import java.time.ZoneId
@@ -15,7 +15,7 @@ object ActivityTexts {
         return TIME.format(instant)
     }
 
-    fun line(entry: ActivityEntry): String {
+    fun line(entry: ActivityEntryModel): String {
         return "${time(instant = entry.at)}  ${verb(kind = entry.kind)}  ${entry.subject}"
     }
 
@@ -31,6 +31,21 @@ object ActivityTexts {
             ActivityKind.SUGGESTION_APPROVED -> "Approved suggestion"
             ActivityKind.CONFLICT_RESOLVED -> "Resolved"
             ActivityKind.SYNCHRONIZED -> "Synchronized"
+            ActivityKind.DOCUMENT_FILED,
+            ActivityKind.RESTRUCTURED,
+            ActivityKind.EXPORTED,
+            ActivityKind.PDF_EDITED,
+            -> organizeVerb(kind = kind)
+        }
+    }
+
+    /** The activities of filing, restructuring, exporting and editing PDFs. */
+    private fun organizeVerb(kind: ActivityKind): String {
+        return when (kind) {
+            ActivityKind.DOCUMENT_FILED -> "Filed"
+            ActivityKind.RESTRUCTURED -> "Restructured"
+            ActivityKind.EXPORTED -> "Exported"
+            else -> "Edited PDF"
         }
     }
 }

@@ -6,11 +6,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
-import dms.domain.document.Document
+import dms.domain.document.model.DocumentModel
 
 /** The title of a document, or its file name, above its path. */
 @Composable
-fun NameCell(document: Document, modifier: Modifier = Modifier) {
+fun NameCell(document: DocumentModel, modifier: Modifier = Modifier) {
     Column(modifier = modifier) {
         Text(
             text = document.metadata.title ?: document.path.fileName,

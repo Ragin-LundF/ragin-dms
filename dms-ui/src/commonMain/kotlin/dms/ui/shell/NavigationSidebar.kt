@@ -11,7 +11,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import dms.ui.model.Screen
-import dms.ui.session.model.SessionState
+import dms.ui.session.model.SessionStateModel
 import dms.ui.theme.Spacing
 
 /**
@@ -21,7 +21,7 @@ import dms.ui.theme.Spacing
 @Composable
 fun NavigationSidebar(
     screen: Screen,
-    sessionState: SessionState,
+    sessionState: SessionStateModel,
     collapsed: Boolean,
     onToggleCollapsed: () -> Unit,
     onScreenChange: (Screen) -> Unit,

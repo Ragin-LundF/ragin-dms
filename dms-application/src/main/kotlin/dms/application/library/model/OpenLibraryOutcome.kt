@@ -1,9 +1,9 @@
 package dms.application.library.model
 
 import dms.application.port.storage.model.StorageResult
-import dms.domain.catalog.Catalog
 import dms.domain.catalog.CatalogMergeConflict
-import dms.domain.library.LibraryFolderId
+import dms.domain.catalog.model.CatalogModel
+import dms.domain.library.model.LibraryFolderIdModel
 
 sealed interface OpenLibraryOutcome {
 
@@ -13,11 +13,11 @@ sealed interface OpenLibraryOutcome {
      * were ignored; [pendingFolders] did not receive the merged catalog yet.
      */
     data class Opened(
-        val catalog: Catalog,
+        val catalog: CatalogModel,
         val mergeConflicts: List<CatalogMergeConflict>,
-        val unreachableFolders: Set<LibraryFolderId>,
-        val foreignFolders: Set<LibraryFolderId>,
-        val pendingFolders: Set<LibraryFolderId>,
+        val unreachableFolders: Set<LibraryFolderIdModel>,
+        val foreignFolders: Set<LibraryFolderIdModel>,
+        val pendingFolders: Set<LibraryFolderIdModel>,
     ) : OpenLibraryOutcome
 
     data object NotConfigured : OpenLibraryOutcome

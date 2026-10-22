@@ -14,11 +14,12 @@ The app runs on macOS, Windows and Linux. Never assume one platform's file syste
 
 | Module | Layer | Holds | May depend on |
 |---|---|---|---|
-| `dms-domain` | Entities | Entities, value objects, domain rules: `Document`, `Catalog`, `Category`, `Tag`, `LibraryFolder`, `DetectedChange`, `OpenTask`, typed ids and paths. | nothing |
+| `dms-domain` | Entities | Entities, value objects, domain rules: `DocumentModel`, `CatalogModel`, `CategoryModel`, `Tag`, `LibraryFolderModel`, `DetectedChange`, `OpenTask`, typed ids and paths. | nothing |
 | `dms-application` | Use cases | Use cases (`AddDocuments`, `CreateFolder`, `SuggestClassification`, …), the `Replicator` that applies every write to all library folders (primary first, journal for failed sync folders), and the **ports** they need (`DocumentStorage`, `CatalogRepository`, `DocumentClassifier`, `DocumentContentReader`, …). | `dms-domain`, kotlinx-coroutines |
 | `dms-storage` | Adapter | File system access in one folder per call, the catalog file (de)serialization, scanning, the `.dms-text/` store, the journal file. Implements storage ports. | `dms-application` |
 | `dms-ai` | Adapter | LLM client for OpenAI-compatible APIs (LM Studio, Ollama, OpenAI), prompts, reading documents as text or page images (PDFBox, Apache POI). Implements `DocumentClassifier` and `DocumentContentReader`. | `dms-application` |
-| `dms-ui` | Frameworks & drivers | Compose Multiplatform desktop UI (single `jvm()` target), view models, theme, and the **composition root** that wires adapters into use cases. | `commonMain`: `dms-domain`, `dms-application`. `jvmMain`: also `dms-storage`, `dms-ai`. |
+| `dms-pdf` | Adapter | Writing PDF files with PDFBox: page tools (rotate, delete, reorder, extract, merge), invisible text layers, embedded metadata (document info and XMP), and the installed OCR program (`ocrmypdf`). Implements `PdfEditor` and `OcrTool`. | `dms-application` |
+| `dms-ui` | Frameworks & drivers | Compose Multiplatform desktop UI (single `jvm()` target), view models, theme, and the **composition root** that wires adapters into use cases. | `commonMain`: `dms-domain`, `dms-application`. `jvmMain`: also `dms-storage`, `dms-ai`, `dms-pdf`. |
 
 ## Dependency rule
 
@@ -27,12 +28,13 @@ Dependencies point inwards only:
 ```text
 dms-ui  ──►  dms-application  ──►  dms-domain
 dms-storage ─┘        ▲
-dms-ai ───────────────┘
+dms-ai ───────────────┤
+dms-pdf ──────────────┘
 ```
 
 - `dms-domain` has **no dependencies** and must keep none: no I/O, no serialization annotations, no coroutines, no logging.
 - `dms-application` knows ports (interfaces), never their implementations. It never imports `java.nio.file`, Jackson, Ktor, or any AI library.
-- Adapters (`dms-storage`, `dms-ai`) never depend on each other and never on `dms-ui`.
+- Adapters (`dms-storage`, `dms-ai`, `dms-pdf`) never depend on each other and never on `dms-ui`.
 - Only the composition root in `dms-ui` `jvmMain` knows concrete adapter classes.
 - A new external library goes into the outermost module that needs it. If a use case seems to need it, add a port instead.
 

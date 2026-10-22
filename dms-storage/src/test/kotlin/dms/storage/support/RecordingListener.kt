@@ -1,8 +1,8 @@
 package dms.storage.support
 
 import dms.application.port.storage.ScanListener
-import dms.domain.change.FileFacts
-import dms.domain.library.RelativePath
+import dms.domain.change.model.FileFactsModel
+import dms.domain.library.model.RelativePathModel
 
 /** Records what a scan reports, as `"<done> <path> <hashed>"` per file; [onFile] runs after each. */
 class RecordingListener(private val onFile: () -> Unit = {}) : ScanListener {
@@ -14,7 +14,7 @@ class RecordingListener(private val onFile: () -> Unit = {}) : ScanListener {
         totals += total
     }
 
-    override fun fileDone(done: Int, path: RelativePath, facts: FileFacts, hashed: Boolean) {
+    override fun fileDone(done: Int, path: RelativePathModel, facts: FileFactsModel, hashed: Boolean) {
         files += "$done ${path.value} $hashed"
         onFile()
     }

@@ -2,6 +2,8 @@ package dms.storage.scan
 
 import dms.storage.catalog.CatalogFiles
 import dms.storage.fs.AtomicFiles
+import dms.storage.index.FileVectorIndex
+import dms.storage.plan.FilePlanStore
 import dms.storage.platform.PlatformTrash
 import dms.storage.text.FileTextStore
 
@@ -17,6 +19,8 @@ object IgnoredEntries {
         "Thumbs.db",
         "desktop.ini",
         FileTextStore.TEXT_FOLDER,
+        FilePlanStore.PLANS_FOLDER,
+        FileVectorIndex.INDEX_FOLDER,
         PlatformTrash.FALLBACK_FOLDER,
     )
 

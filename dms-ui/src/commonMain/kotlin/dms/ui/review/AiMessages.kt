@@ -3,22 +3,22 @@ package dms.ui.review
 import dms.application.assistant.model.AnswerOutcome
 import dms.application.classification.model.SuggestOutcome
 import dms.application.port.ai.model.ClassificationFailure
-import dms.ui.session.model.UiMessage
+import dms.ui.session.model.UiMessageModel
 
 /** The words for what the AI answered, including how to fix a server that does not answer. */
 object AiMessages {
 
-    fun of(outcome: SuggestOutcome, name: String): UiMessage {
+    fun of(outcome: SuggestOutcome, name: String): UiMessageModel {
         return when (outcome) {
-            is SuggestOutcome.Suggested -> UiMessage(text = "The AI suggested a classification for $name")
-            SuggestOutcome.LibraryNotOpen -> UiMessage(text = "No library is open", isError = true)
-            SuggestOutcome.NotFound -> UiMessage(text = "$name is no longer in the library", isError = true)
-            is SuggestOutcome.NotReadable -> UiMessage(
+            is SuggestOutcome.Suggested -> UiMessageModel(text = "The AI suggested a classification for $name")
+            SuggestOutcome.LibraryNotOpen -> UiMessageModel(text = "No library is open", isError = true)
+            SuggestOutcome.NotFound -> UiMessageModel(text = "$name is no longer in the library", isError = true)
+            is SuggestOutcome.NotReadable -> UiMessageModel(
                 text = "$name could not be read for the AI" + (outcome.detail?.let { ": $it" } ?: ""),
                 isError = true,
             )
 
-            is SuggestOutcome.Failed -> UiMessage(text = failure(reason = outcome.reason), isError = true)
+            is SuggestOutcome.Failed -> UiMessageModel(text = failure(reason = outcome.reason), isError = true)
         }
     }
 

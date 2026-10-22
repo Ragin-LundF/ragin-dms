@@ -16,7 +16,7 @@ import dms.ui.components.surface.AppCard
 import dms.ui.components.surface.CardTitle
 import dms.ui.components.surface.EmptyState
 import dms.ui.dashboard.model.TaskGroup
-import dms.ui.dashboard.model.TaskGroupState
+import dms.ui.dashboard.model.TaskGroupStateModel
 import dms.ui.preview.ThumbnailLoader
 import dms.ui.theme.Spacing
 
@@ -26,7 +26,7 @@ import dms.ui.theme.Spacing
  */
 @Composable
 fun TaskList(
-    groups: List<TaskGroupState>,
+    groups: List<TaskGroupStateModel>,
     filter: TaskGroup?,
     busyReason: String?,
     thumbnails: ThumbnailLoader,

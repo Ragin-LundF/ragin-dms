@@ -1,7 +1,7 @@
 package dms.ui.session.model
 
 import dms.application.port.storage.model.StorageFailure
-import dms.domain.library.LibraryFolderId
+import dms.domain.library.model.LibraryFolderIdModel
 
 /** Whether a library is open, and why not. */
 sealed interface LibraryStatus {
@@ -16,8 +16,8 @@ sealed interface LibraryStatus {
      * could not be read when it was opened.
      */
     data class Open(
-        val foreignFolders: Set<LibraryFolderId>,
-        val unreachableFolders: Set<LibraryFolderId>,
+        val foreignFolders: Set<LibraryFolderIdModel>,
+        val unreachableFolders: Set<LibraryFolderIdModel>,
     ) : LibraryStatus
 
     /**

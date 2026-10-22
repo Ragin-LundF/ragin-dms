@@ -18,6 +18,9 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder
     "correspondent",
     "categoryId",
     "tags",
+    "fields",
+    "note",
+    "retention",
     "classification",
 )
 data class DocumentDto(
@@ -32,6 +35,9 @@ data class DocumentDto(
     val categoryId: String? = null,
     val tags: List<String> = emptyList(),
     val classification: ClassificationDto? = null,
+    val fields: Map<String, FieldValueDto> = emptyMap(),
+    val note: String? = null,
+    val retention: RetentionDto? = null,
 ) {
     @get:JsonAnyGetter
     @field:JsonAnySetter

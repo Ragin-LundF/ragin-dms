@@ -64,6 +64,8 @@ fun LibraryScreen(viewModel: LibraryViewModel, inspector: InspectorViewModel, pl
                     onLayout = viewModel::setLayout,
                     onAddFiles = { viewModel.addFiles() },
                     onNewFolder = viewModel::newFolder,
+                    onSaveSmartFolder = viewModel.smartFolders::saveCurrent,
+                    onExport = { viewModel.export.openCurrentView(title = state.title) },
                 )
                 DocumentArea(
                     state = state,

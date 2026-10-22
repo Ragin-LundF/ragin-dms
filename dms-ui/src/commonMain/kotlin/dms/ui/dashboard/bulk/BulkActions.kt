@@ -6,13 +6,13 @@ import dms.application.resolution.model.MoveDecision
 import dms.domain.change.DetectedChange
 import dms.domain.task.OpenTask
 import dms.ui.components.dialog.DialogController
-import dms.ui.components.model.ActionButton
-import dms.ui.components.model.ConfirmationRequest
+import dms.ui.components.model.ActionButtonModel
+import dms.ui.components.model.ConfirmationRequestModel
 import dms.ui.dashboard.model.TaskGroup
 import dms.ui.dashboard.task.TaskContext
 import dms.ui.service.AppServices
 import dms.ui.session.LibrarySession
-import dms.ui.session.model.UiMessage
+import dms.ui.session.model.UiMessageModel
 
 /**
  * The buttons that answer every task of a group at once, one task after the other, and what they do.
@@ -24,32 +24,36 @@ class BulkActions(
     private val dialogs: DialogController,
 ) {
 
-    fun buttonsFor(group: TaskGroup, tasks: List<OpenTask>, context: TaskContext): List<ActionButton> {
+    fun buttonsFor(group: TaskGroup, tasks: List<OpenTask>, context: TaskContext): List<ActionButtonModel> {
         return when (group) {
             TaskGroup.NEW_FILES -> {
                 // Of several new files with the same content only one is adopted; the others become duplicates.
                 val readable = tasks.filterIsInstance<OpenTask.AdoptNewFile>().map { it.change }
                     .filter { it.contentHash != null }
                     .distinctBy { it.contentHash }
-                listOf(ActionButton(label = "Adopt all (${readable.size})") { adoptAll(changes = readable) })
+                listOf(ActionButtonModel(label = "Adopt all (${readable.size})") { adoptAll(changes = readable) })
             }
 
             TaskGroup.MISSING -> {
                 val restorable = tasks.filterIsInstance<OpenTask.RestoreOrDelete>().map { it.change }
                     .filter { it.presentIn.isNotEmpty() }
-                listOf(ActionButton(label = "Restore all (${restorable.size})") { restoreAll(changes = restorable) })
+                listOf(
+                    ActionButtonModel(label = "Restore all (${restorable.size})") { restoreAll(changes = restorable) },
+                )
             }
 
             TaskGroup.MOVED -> {
                 val changes = tasks.filterIsInstance<OpenTask.ConfirmMove>().map { it.change }
-                listOf(ActionButton(label = "Rename all to match (${changes.size})") { renameAll(changes = changes) })
+                listOf(
+                    ActionButtonModel(label = "Rename all to match (${changes.size})") { renameAll(changes = changes) },
+                )
             }
 
             TaskGroup.DUPLICATES -> {
                 val files = tasks.filterIsInstance<OpenTask.AdoptNewFile>().map { it.change }
                 val catalogued = tasks.filterIsInstance<OpenTask.ResolveDuplicates>()
                 val label = "Remove all duplicates (${files.size + catalogued.size})…"
-                val removeAll = ActionButton(label = label) {
+                val removeAll = ActionButtonModel(label = label) {
                     removeAll(files = files, catalogued = catalogued, context = context)
                 }
                 listOf(removeAll)
@@ -103,7 +107,7 @@ class BulkActions(
             copies.filter { it.id != kept.id }.map { "${it.path} (copy of ${kept.path})" }
         }
         dialogs.ask(
-            request = ConfirmationRequest(
+            request = ConfirmationRequestModel(
                 title = "Remove all duplicates",
                 message = "Each file has exactly the same size and SHA-256 checksum as the document named after it, " +
                     "and is compared with it byte by byte once more right before it goes to the trash, in every " +
@@ -153,7 +157,7 @@ class BulkActions(
         return done
     }
 
-    private fun countMessage(verb: String, done: Int, total: Int): UiMessage {
-        return UiMessage(text = "$verb $done of $total files", isError = done < total)
+    private fun countMessage(verb: String, done: Int, total: Int): UiMessageModel {
+        return UiMessageModel(text = "$verb $done of $total files", isError = done < total)
     }
 }

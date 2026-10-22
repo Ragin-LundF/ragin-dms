@@ -1,22 +1,24 @@
 package dms.application.sync
 
+import dms.application.port.index.VectorIndex
+import dms.application.port.plan.PlanStore
 import dms.application.port.storage.CatalogRepository
 import dms.application.port.storage.DocumentStorage
 import dms.application.port.storage.OperationJournal
 import dms.application.port.storage.TextStore
 import dms.application.port.storage.model.CatalogLoad
 import dms.application.port.storage.model.FolderOperation
-import dms.application.port.storage.model.PendingOperation
+import dms.application.port.storage.model.PendingOperationModel
 import dms.application.port.storage.model.StorageFailure
 import dms.application.port.storage.model.StorageResult
 import dms.application.port.system.Clock
 import dms.application.port.system.IdGenerator
 import dms.application.sync.model.Replication
-import dms.domain.catalog.Catalog
-import dms.domain.library.LibraryFolder
-import dms.domain.library.LibraryFolderId
-import dms.domain.library.LibraryFolders
-import dms.domain.library.RelativePath
+import dms.domain.catalog.model.CatalogModel
+import dms.domain.library.model.LibraryFolderIdModel
+import dms.domain.library.model.LibraryFolderModel
+import dms.domain.library.model.LibraryFoldersModel
+import dms.domain.library.model.RelativePathModel
 
 /**
  * Applies changes to every library folder: the primary first, then each sync folder. A failed primary
@@ -27,6 +29,8 @@ class Replicator(
     private val storage: DocumentStorage,
     private val catalogs: CatalogRepository,
     private val texts: TextStore,
+    private val plans: PlanStore,
+    private val index: VectorIndex,
     private val journal: OperationJournal,
     private val clock: Clock,
     private val ids: IdGenerator,
@@ -34,8 +38,8 @@ class Replicator(
 
     /** Runs [onPrimary] on the primary, then brings every sync folder in line with [followUp]. */
     suspend fun <T> replicate(
-        folders: LibraryFolders,
-        onPrimary: suspend (LibraryFolder) -> StorageResult<T>,
+        folders: LibraryFoldersModel,
+        onPrimary: suspend (LibraryFolderModel) -> StorageResult<T>,
         followUp: FolderOperation,
     ): Replication<T> {
         return when (val result = onPrimary(folders.primary)) {
@@ -47,7 +51,7 @@ class Replicator(
         }
     }
 
-    suspend fun saveCatalog(folders: LibraryFolders, catalog: Catalog): Replication<Unit> {
+    suspend fun saveCatalog(folders: LibraryFoldersModel, catalog: CatalogModel): Replication<Unit> {
         return replicate(
             folders = folders,
             onPrimary = { primary -> catalogs.save(folder = primary, catalog = catalog) },
@@ -56,7 +60,7 @@ class Replicator(
     }
 
     /** Moves [path] to the trash in every folder. A folder where it is already gone counts as done. */
-    suspend fun trash(folders: LibraryFolders, path: RelativePath): Replication<Unit> {
+    suspend fun trash(folders: LibraryFoldersModel, path: RelativePathModel): Replication<Unit> {
         return replicate(
             folders = folders,
             onPrimary = { primary -> storage.moveToTrash(folder = primary, path = path).orIfMissing() },
@@ -69,10 +73,10 @@ class Replicator(
      * Failures are recorded in the journal.
      */
     suspend fun distribute(
-        folders: LibraryFolders,
-        targets: List<LibraryFolder>,
+        folders: LibraryFoldersModel,
+        targets: List<LibraryFolderModel>,
         operation: FolderOperation,
-    ): Set<LibraryFolderId> {
+    ): Set<LibraryFolderIdModel> {
         return targets.filter { target ->
             val result = execute(primary = folders.primary, target = target, operation = operation)
             if (result is StorageResult.Failure) {
@@ -84,8 +88,8 @@ class Replicator(
 
     /** Executes one operation against one sync folder, reading whatever it needs from the primary. */
     suspend fun execute(
-        primary: LibraryFolder,
-        target: LibraryFolder,
+        primary: LibraryFolderModel,
+        target: LibraryFolderModel,
         operation: FolderOperation,
     ): StorageResult<Unit> {
         return when (operation) {
@@ -95,14 +99,16 @@ class Replicator(
             is FolderOperation.Move -> storage.move(folder = target, from = operation.from, to = operation.to)
             is FolderOperation.MoveToTrash -> storage.moveToTrash(folder = target, path = operation.path).orIfMissing()
             is FolderOperation.CopyText -> copyText(primary = primary, target = target, operation = operation)
+            is FolderOperation.CopyPlan -> copyPlan(primary = primary, target = target, name = operation.name)
+            is FolderOperation.CopyIndex -> copyIndex(primary = primary, target = target, operation = operation)
             FolderOperation.SaveCatalog -> copyCatalog(primary = primary, target = target)
         }
     }
 
     /** A copy that finds the same content already in place has reached its goal. */
     private suspend fun copy(
-        primary: LibraryFolder,
-        target: LibraryFolder,
+        primary: LibraryFolderModel,
+        target: LibraryFolderModel,
         operation: FolderOperation.CopyFromPrimary,
     ): StorageResult<Unit> {
         val copied = storage.copyFile(
@@ -122,8 +128,8 @@ class Replicator(
     }
 
     private suspend fun copyText(
-        primary: LibraryFolder,
-        target: LibraryFolder,
+        primary: LibraryFolderModel,
+        target: LibraryFolderModel,
         operation: FolderOperation.CopyText,
     ): StorageResult<Unit> {
         val text = texts.read(folder = primary, documentId = operation.documentId)
@@ -131,7 +137,27 @@ class Replicator(
         return texts.write(folder = target, documentId = operation.documentId, text = text)
     }
 
-    private suspend fun copyCatalog(primary: LibraryFolder, target: LibraryFolder): StorageResult<Unit> {
+    private suspend fun copyPlan(
+        primary: LibraryFolderModel,
+        target: LibraryFolderModel,
+        name: String,
+    ): StorageResult<Unit> {
+        val record = plans.read(folder = primary, name = name)
+            ?: return StorageResult.Failure(reason = StorageFailure.NOT_FOUND)
+        return plans.write(folder = target, record = record)
+    }
+
+    private suspend fun copyIndex(
+        primary: LibraryFolderModel,
+        target: LibraryFolderModel,
+        operation: FolderOperation.CopyIndex,
+    ): StorageResult<Unit> {
+        val vectors = index.read(folder = primary, documentId = operation.documentId)
+            ?: return StorageResult.Failure(reason = StorageFailure.NOT_FOUND)
+        return index.write(folder = target, vectors = vectors)
+    }
+
+    private suspend fun copyCatalog(primary: LibraryFolderModel, target: LibraryFolderModel): StorageResult<Unit> {
         return when (val load = catalogs.load(folder = primary)) {
             is CatalogLoad.Found -> catalogs.save(folder = target, catalog = load.catalog)
             CatalogLoad.NotFound -> StorageResult.Failure(reason = StorageFailure.NOT_FOUND)
@@ -139,9 +165,9 @@ class Replicator(
         }
     }
 
-    private suspend fun record(folderId: LibraryFolderId, operation: FolderOperation) {
+    private suspend fun record(folderId: LibraryFolderIdModel, operation: FolderOperation) {
         journal.record(
-            operation = PendingOperation(
+            operation = PendingOperationModel(
                 id = ids.newId(),
                 folderId = folderId,
                 operation = operation,

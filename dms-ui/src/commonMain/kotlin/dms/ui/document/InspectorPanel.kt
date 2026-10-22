@@ -10,22 +10,29 @@ import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import dms.domain.document.Document
-import dms.domain.taxonomy.TagName
+import dms.domain.document.model.DocumentModel
+import dms.domain.taxonomy.model.TagNameModel
 import dms.ui.components.ActionButtons
 import dms.ui.components.SectionHeader
-import dms.ui.components.model.ActionButton
+import dms.ui.components.model.ActionButtonModel
 import dms.ui.components.model.ButtonStyle
-import dms.ui.library.model.CategoryEntry
+import dms.ui.document.details.DetailsSections
+import dms.ui.library.model.CategoryEntryModel
+import dms.ui.pdf.PdfSection
 import dms.ui.theme.Spacing
 
-/** Everything about one document, editable: metadata, category, tags, name and place. */
+/**
+ * Everything about one document, editable: metadata, category, tags, fields, note, links, retention,
+ * name and place.
+ */
 @Composable
 fun InspectorPanel(
-    document: Document,
-    categories: List<CategoryEntry>,
-    allTags: List<TagName>,
+    document: DocumentModel,
+    categories: List<CategoryEntryModel>,
+    allTags: List<TagNameModel>,
     busyReason: String?,
     aiBusyReason: String?,
     viewModel: InspectorViewModel,
@@ -62,10 +69,25 @@ fun InspectorPanel(
                 onAdd = { viewModel.addTag(document = document, raw = it) },
                 onRemove = { viewModel.removeTag(document = document, tag = it) },
             )
+            PdfSection(document = document, busyReason = busyReason, pages = viewModel.pages, actions = viewModel.pdf)
+            val catalog by viewModel.catalog.collectAsState()
+            catalog?.let {
+                DetailsSections(
+                    document = document,
+                    catalog = it,
+                    busyReason = busyReason,
+                    controller = viewModel.details,
+                    onOpenDocument = viewModel::open,
+                )
+            }
             SectionHeader(title = "Remove")
             ActionButtons(
                 buttons = listOf(
-                    ActionButton(label = "Move to trash…", icon = Icons.Rounded.Delete, style = ButtonStyle.TEXT) {
+                    ActionButtonModel(
+                        label = "Move to trash…",
+                        icon = Icons.Rounded.Delete,
+                        style = ButtonStyle.TEXT,
+                    ) {
                         viewModel.trash(document = document)
                     },
                 ),

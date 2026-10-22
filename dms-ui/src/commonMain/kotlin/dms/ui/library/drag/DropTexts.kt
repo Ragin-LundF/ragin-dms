@@ -1,14 +1,14 @@
 package dms.ui.library.drag
 
-import dms.domain.taxonomy.CategoryId
+import dms.domain.taxonomy.model.CategoryIdModel
 import dms.ui.library.drag.model.DragItem
 import dms.ui.library.drag.model.DropTarget
-import dms.ui.library.model.CategoryEntry
+import dms.ui.library.model.CategoryEntryModel
 
 /** What dropping on a target does, in words, for the drag preview. */
 object DropTexts {
 
-    fun action(item: DragItem, target: DropTarget, categories: List<CategoryEntry>): String {
+    fun action(item: DragItem, target: DropTarget, categories: List<CategoryEntryModel>): String {
         if (item is DragItem.DraggedCategory) {
             return when (target) {
                 is DropTarget.Category -> "Move into ${nameOf(categoryId = target.categoryId, categories = categories)}"
@@ -25,7 +25,7 @@ object DropTexts {
         }
     }
 
-    private fun nameOf(categoryId: CategoryId, categories: List<CategoryEntry>): String {
+    private fun nameOf(categoryId: CategoryIdModel, categories: List<CategoryEntryModel>): String {
         return categories.firstOrNull { it.category.id == categoryId }?.category?.name ?: "this category"
     }
 }

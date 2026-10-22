@@ -18,10 +18,24 @@ Fields:
 - fileName: a new file name that follows the library's naming convention, ending in
   ".{{extension}}". Do not use / \ : * ? " < > |.
 - transcription: if you were given page images, all text you can read on them; otherwise null.
+- pages: if you were given page images, the text of each page as one entry, in page order;
+  otherwise an empty list.
 - confidence: how sure you are about the whole suggestion, from 0 to 1.
+- fields: values for the custom fields listed below that the document states, as
+  [{"key": "<key>", "value": "<value>"}]: dates as YYYY-MM-DD, amounts as a number with the
+  currency code (such as "1234.50 EUR"), yes/no as true or false. Leave out what the document does
+  not say; never guess. An empty list if there are no custom fields.
+- targetFolder: only if a folder outline is given below, the folder this document belongs in:
+  one of the listed folders written exactly as listed, or a new subfolder directly below a listed
+  folder or at the top level. Otherwise null.
+- targetFolderIsNew: true if targetFolder is a folder that does not exist yet, otherwise false or
+  null.
+- targetReason: one short line why targetFolder fits, such as "Other bills of this sender are
+  there", or null.
 
 Existing categories: {{categories}}
 Existing tags: {{tags}}
+Custom fields: {{fields}}
 Naming convention: {{convention}}
 Example file names: {{examples}}
 Today is {{today}}.

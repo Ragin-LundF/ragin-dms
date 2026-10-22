@@ -24,12 +24,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
-import dms.domain.document.Document
+import dms.domain.document.model.DocumentModel
 import dms.ui.theme.Spacing
 
 /** Shows the AI's summary of a document while it is written; the text can be selected and copied. */
 @Composable
-fun SummaryDialog(controller: SummaryController, onAsk: (Document) -> Unit) {
+fun SummaryDialog(controller: SummaryController, onAsk: (DocumentModel) -> Unit) {
     val summary by controller.state.collectAsState()
     val state = summary ?: return
     AlertDialog(

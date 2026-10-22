@@ -12,13 +12,13 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import dms.ui.components.model.ActionButton
+import dms.ui.components.model.ActionButtonModel
 import dms.ui.components.model.ButtonStyle
 import dms.ui.theme.Spacing
 
 /** One button in the style the view model chose, with its icon in front of the label. */
 @Composable
-fun StyledButton(button: ActionButton, enabled: Boolean, modifier: Modifier = Modifier) {
+fun StyledButton(button: ActionButtonModel, enabled: Boolean, modifier: Modifier = Modifier) {
     val content: @Composable RowScope.() -> Unit = {
         button.icon?.let { icon ->
             Icon(imageVector = icon, contentDescription = null, modifier = Modifier.size(size = Spacing.icon))

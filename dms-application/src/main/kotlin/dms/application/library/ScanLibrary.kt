@@ -1,18 +1,18 @@
 package dms.application.library
 
-import dms.application.library.model.ScanProgress
-import dms.application.library.model.ScanResult
-import dms.application.library.model.ScannedFile
+import dms.application.library.model.ScanProgressModel
+import dms.application.library.model.ScanResultModel
+import dms.application.library.model.ScannedFileModel
 import dms.application.port.storage.LibraryScanner
 import dms.application.port.storage.ScanListener
 import dms.application.port.storage.model.StorageResult
 import dms.domain.change.ChangeDetector
-import dms.domain.change.FileFacts
-import dms.domain.change.FolderSnapshot
+import dms.domain.change.model.FileFactsModel
+import dms.domain.change.model.FolderSnapshotModel
 import dms.domain.library.FolderRole
-import dms.domain.library.LibraryFolder
-import dms.domain.library.LibraryFolderId
-import dms.domain.library.RelativePath
+import dms.domain.library.model.LibraryFolderIdModel
+import dms.domain.library.model.LibraryFolderModel
+import dms.domain.library.model.RelativePathModel
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
@@ -38,12 +38,15 @@ class ScanLibrary(
      * Returns `null` while no library is open. [onProgress] follows the scan file by file; it is
      * called on the scanning thread.
      */
-    suspend operator fun invoke(addNewFiles: Boolean = false, onProgress: (ScanProgress) -> Unit = {}): ScanResult? {
+    suspend operator fun invoke(
+        addNewFiles: Boolean = false,
+        onProgress: (ScanProgressModel) -> Unit = {},
+    ): ScanResultModel? {
         val folders = store.current()?.folders?.folders ?: return null
-        val snapshots = mutableListOf<FolderSnapshot>()
-        val failures = mutableMapOf<LibraryFolderId, StorageResult.Failure>()
+        val snapshots = mutableListOf<FolderSnapshotModel>()
+        val failures = mutableMapOf<LibraryFolderIdModel, StorageResult.Failure>()
         folders.forEachIndexed { index, folder ->
-            val start = ScanProgress(
+            val start = ScanProgressModel(
                 folderName = folder.displayName,
                 folderNumber = index + 1,
                 folderCount = folders.size,
@@ -57,7 +60,7 @@ class ScanLibrary(
             }
         }
         val catalog = store.current()?.catalog ?: return null
-        return ScanResult(
+        return ScanResultModel(
             changes = ChangeDetector.detect(catalog = catalog, snapshots = snapshots),
             scannedFolders = snapshots.map { it.folderId }.toSet(),
             failedFolders = failures,
@@ -66,14 +69,14 @@ class ScanLibrary(
 
     /** Scans one folder against the newest catalog; while [adding], catalogs new files every few seconds. */
     private suspend fun scanFolder(
-        folder: LibraryFolder,
-        start: ScanProgress,
+        folder: LibraryFolderModel,
+        start: ScanProgressModel,
         adding: Boolean,
-        onProgress: (ScanProgress) -> Unit,
-    ): StorageResult<FolderSnapshot>? {
+        onProgress: (ScanProgressModel) -> Unit,
+    ): StorageResult<FolderSnapshotModel>? {
         val catalog = store.current()?.catalog ?: return null
         val knownPaths = catalog.documents.values.map { it.path }.toSet()
-        val found = ConcurrentLinkedQueue<ScannedFile>()
+        val found = ConcurrentLinkedQueue<ScannedFileModel>()
         val listener = object : ScanListener {
             private var progress = start
 
@@ -82,10 +85,10 @@ class ScanLibrary(
                 onProgress(progress)
             }
 
-            override fun fileDone(done: Int, path: RelativePath, facts: FileFacts, hashed: Boolean) {
+            override fun fileDone(done: Int, path: RelativePathModel, facts: FileFactsModel, hashed: Boolean) {
                 val contentHash = facts.contentHash
                 if (adding && contentHash != null && path !in knownPaths) {
-                    found += ScannedFile(path = path, size = facts.size, contentHash = contentHash)
+                    found += ScannedFileModel(path = path, size = facts.size, contentHash = contentHash)
                 }
                 progress = progress.copy(done = done, current = path, hashed = hashed)
                 onProgress(progress)
@@ -114,7 +117,7 @@ class ScanLibrary(
     }
 
     /** Catalogs what was found so far. Not cancellable, so a catalog write is never cut in half. */
-    private suspend fun addFound(found: ConcurrentLinkedQueue<ScannedFile>) {
+    private suspend fun addFound(found: ConcurrentLinkedQueue<ScannedFileModel>) {
         withContext(context = NonCancellable) {
             val batch = generateSequence { found.poll() }.toList()
             addScannedFiles(files = batch)

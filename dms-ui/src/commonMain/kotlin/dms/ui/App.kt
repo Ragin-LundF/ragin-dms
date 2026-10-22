@@ -28,6 +28,7 @@ fun App(
     }
     LaunchedEffect(key1 = session) {
         session.open()
+        session.watchInbox()
     }
     AppTheme {
         CompositionLocalProvider(LocalViewModelStoreOwner provides owner) {

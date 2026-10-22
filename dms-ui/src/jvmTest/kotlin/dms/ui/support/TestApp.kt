@@ -5,8 +5,8 @@ import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import dms.application.library.model.LibraryCommand
-import dms.application.port.state.model.Preferences
-import dms.domain.library.FolderLocation
+import dms.application.port.state.model.PreferencesModel
+import dms.domain.library.model.FolderLocationModel
 import dms.storage.platform.SystemTrash
 import dms.ui.AppContainer
 import dms.ui.library.LibraryViewModel
@@ -52,18 +52,20 @@ class TestApp(scope: CoroutineScope) {
      * are offered on the dashboard unless [addNewFiles] is set.
      */
     suspend fun configure(withSync: Boolean = true, addNewFiles: Boolean = false) {
-        services.library.settings.savePreferences(preferences = Preferences(addNewFilesWhileScanning = addNewFiles))
+        services.library.settings.savePreferences(
+            preferences = PreferencesModel(addNewFilesWhileScanning = addNewFiles),
+        )
         services.library.configureLibrary(
             command = LibraryCommand.CreatePrimary(
                 displayName = "Primary",
-                location = FolderLocation(value = "$primary"),
+                location = FolderLocationModel(value = "$primary"),
             ),
         )
         if (withSync) {
             services.library.configureLibrary(
                 command = LibraryCommand.AddSyncFolder(
                     displayName = "Sync",
-                    location = FolderLocation(value = "$sync"),
+                    location = FolderLocationModel(value = "$sync"),
                 ),
             )
         }

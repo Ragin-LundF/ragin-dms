@@ -20,7 +20,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dms.ui.components.ReasonTooltip
 import dms.ui.session.model.LibraryStatus
-import dms.ui.session.model.SessionState
+import dms.ui.session.model.SessionStateModel
 import dms.ui.theme.AppColors
 import dms.ui.theme.Spacing
 
@@ -29,7 +29,7 @@ import dms.ui.theme.Spacing
  * shows only the spinner or the status dot and tells the rest on hover.
  */
 @Composable
-fun StatusFooter(sessionState: SessionState, compact: Boolean) {
+fun StatusFooter(sessionState: SessionStateModel, compact: Boolean) {
     val colors = MaterialTheme.colorScheme
     val busy = sessionState.operations.firstOrNull()?.label
     val title = if (busy != null) "Working" else idleTextOf(status = sessionState.status)

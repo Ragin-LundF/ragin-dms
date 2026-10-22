@@ -21,17 +21,17 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
-import dms.domain.taxonomy.CategoryId
-import dms.ui.library.model.CategoryEntry
+import dms.domain.taxonomy.model.CategoryIdModel
+import dms.ui.library.model.CategoryEntryModel
 import dms.ui.theme.Spacing
 
 /** Chooses the category of a document, or none. */
 @Composable
 fun CategoryPicker(
-    selected: CategoryId?,
-    categories: List<CategoryEntry>,
+    selected: CategoryIdModel?,
+    categories: List<CategoryEntryModel>,
     enabled: Boolean,
-    onSelect: (CategoryId?) -> Unit,
+    onSelect: (CategoryIdModel?) -> Unit,
 ) {
     var expanded by remember { mutableStateOf(value = false) }
     val current = categories.firstOrNull { it.category.id == selected }?.category?.name ?: "No category"

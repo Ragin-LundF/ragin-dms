@@ -1,7 +1,7 @@
 package dms.application.sync
 
 import dms.application.TestLibrary
-import dms.application.sync.model.RetryReport
+import dms.application.sync.model.RetryReportModel
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -20,7 +20,7 @@ class RetryFailedOperationsTest {
 
             val report = library.retryFailedOperations()
 
-            assertEquals(expected = RetryReport(succeeded = 2), actual = report)
+            assertEquals(expected = RetryReportModel(succeeded = 2), actual = report)
             assertEquals(
                 expected = "alpha",
                 actual = library.folders.content(folder = library.syncB, path = "letters/a.pdf"),
@@ -42,7 +42,7 @@ class RetryFailedOperationsTest {
 
             val report = library.retryFailedOperations()
 
-            assertEquals(expected = RetryReport(succeeded = 3, dropped = 1), actual = report)
+            assertEquals(expected = RetryReportModel(succeeded = 3, dropped = 1), actual = report)
             assertTrue(actual = library.folders.paths(folder = library.syncB).isEmpty())
             assertTrue(actual = library.journal.pending().isEmpty())
         }
@@ -58,7 +58,7 @@ class RetryFailedOperationsTest {
 
             val report = library.retryFailedOperations()
 
-            assertEquals(expected = RetryReport(stillPending = 2), actual = report)
+            assertEquals(expected = RetryReportModel(stillPending = 2), actual = report)
             assertEquals(expected = 2, actual = library.journal.pending().size)
         }
     }

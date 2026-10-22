@@ -13,12 +13,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import dms.ui.components.chart.model.ChartSlice
+import dms.ui.components.chart.model.ChartSliceModel
 import dms.ui.theme.Spacing
 
 /** One legend line of [DonutChart]: colour dot, name, count and share. */
 @Composable
-fun LegendRow(slice: ChartSlice, share: Int) {
+fun LegendRow(slice: ChartSliceModel, share: Int) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Box(modifier = Modifier.size(size = 10.dp).background(color = slice.color, shape = CircleShape))
         Spacer(modifier = Modifier.width(width = Spacing.small))

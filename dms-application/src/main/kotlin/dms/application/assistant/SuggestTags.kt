@@ -5,11 +5,11 @@ import dms.application.classification.model.SuggestOutcome
 import dms.application.port.ai.model.ClassificationFailure
 import dms.application.port.assistant.DocumentAssistant
 import dms.application.port.assistant.model.AssistantAnswer
-import dms.application.port.assistant.model.AssistantRequest
+import dms.application.port.assistant.model.AssistantRequestModel
 import dms.application.port.state.TaskStore
-import dms.domain.classification.ClassificationSuggestion
-import dms.domain.classification.SuggestedTag
-import dms.domain.document.DocumentId
+import dms.domain.classification.model.ClassificationSuggestionModel
+import dms.domain.classification.model.SuggestedTagModel
+import dms.domain.document.model.DocumentIdModel
 
 /**
  * Lets the AI suggest tags for one document. Tags the document already has are left out. A
@@ -22,14 +22,14 @@ class SuggestTags(
     private val tasks: TaskStore,
 ) {
 
-    suspend operator fun invoke(documentId: DocumentId): SuggestOutcome {
+    suspend operator fun invoke(documentId: DocumentIdModel): SuggestOutcome {
         val read = when (val result = reading.read(documentId = documentId)) {
             is ReadingResult.Read -> result
             ReadingResult.LibraryNotOpen -> return SuggestOutcome.LibraryNotOpen
             ReadingResult.NotFound -> return SuggestOutcome.NotFound
             is ReadingResult.NotReadable -> return SuggestOutcome.NotReadable(detail = result.detail)
         }
-        val request = AssistantRequest(fileName = read.document.path.fileName, content = read.content)
+        val request = AssistantRequestModel(fileName = read.document.path.fileName, content = read.content)
         return when (val answer = assistant.suggestTags(request = request, existingTags = read.catalog.tags)) {
             is AssistantAnswer.Failed -> SuggestOutcome.Failed(reason = answer.reason, detail = answer.detail)
             is AssistantAnswer.Text -> SuggestOutcome.Failed(
@@ -38,13 +38,13 @@ class SuggestTags(
             )
 
             is AssistantAnswer.Tags -> {
-                val suggestion = ClassificationSuggestion(
+                val suggestion = ClassificationSuggestionModel(
                     documentId = documentId,
                     model = answer.model,
                     tags = answer.tags
                         .filter { it !in read.document.tags }
                         .distinct()
-                        .map { SuggestedTag(name = it, isNew = it !in read.catalog.tags) },
+                        .map { SuggestedTagModel(name = it, isNew = it !in read.catalog.tags) },
                 )
                 if (suggestion.tags.isNotEmpty()) {
                     tasks.saveSuggestion(suggestion = suggestion)

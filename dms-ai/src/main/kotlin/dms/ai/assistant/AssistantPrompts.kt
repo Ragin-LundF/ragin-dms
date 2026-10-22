@@ -4,8 +4,8 @@ import dms.ai.prompt.PromptTemplates
 import dms.ai.prompt.PromptTexts
 import dms.ai.prompt.TaxTag
 import dms.application.port.ai.model.DocumentContent
-import dms.application.port.assistant.model.AssistantRequest
-import dms.domain.taxonomy.TagName
+import dms.application.port.assistant.model.AssistantRequestModel
+import dms.domain.taxonomy.model.TagNameModel
 
 /** The prompts of the document assistant, from the templates in `resources/prompts`. */
 object AssistantPrompts {
@@ -16,11 +16,11 @@ object AssistantPrompts {
         return PromptTemplates.fill(name = "summary.md", values = emptyMap())
     }
 
-    fun summaryRequest(request: AssistantRequest): String {
+    fun summaryRequest(request: AssistantRequestModel): String {
         return PromptTemplates.fill(name = "summary-request.md", values = documentValues(request = request))
     }
 
-    fun tags(existingTags: Set<TagName>): String {
+    fun tags(existingTags: Set<TagNameModel>): String {
         val names = existingTags.map { it.value }.sorted()
         val listed = if (names.isEmpty()) "none yet" else names.take(n = MAX_LISTED).joinToString(separator = ", ")
         return PromptTemplates.fill(
@@ -29,12 +29,12 @@ object AssistantPrompts {
         )
     }
 
-    fun tagsRequest(request: AssistantRequest): String {
+    fun tagsRequest(request: AssistantRequestModel): String {
         return PromptTemplates.fill(name = "tags-request.md", values = documentValues(request = request))
     }
 
     /** The system message of a conversation. It holds the document's text; page images go with the first question. */
-    fun chat(request: AssistantRequest): String {
+    fun chat(request: AssistantRequestModel): String {
         val note = if (request.content is DocumentContent.PageImages) {
             "The document is attached as page images to the first question."
         } else {
@@ -46,7 +46,7 @@ object AssistantPrompts {
         )
     }
 
-    private fun documentValues(request: AssistantRequest): Map<String, String> {
+    private fun documentValues(request: AssistantRequestModel): Map<String, String> {
         val text = (request.content as? DocumentContent.Text)?.text
         return mapOf("fileName" to request.fileName, "document" to PromptTexts.documentSection(text = text))
     }

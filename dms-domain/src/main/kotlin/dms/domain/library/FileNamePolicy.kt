@@ -64,6 +64,22 @@ object FileNamePolicy {
             .first { !collidesWithAny(name = it, siblings = siblings) }
     }
 
+    /**
+     * [name] turned into a valid name: forbidden and control characters become `-`, leading dots and
+     * blanks and trailing dots and blanks are removed, reserved names get a trailing `_`, and the
+     * length is cut to [MAX_LENGTH]. A name with nothing usable left becomes `_`.
+     */
+    fun sanitize(name: String): String {
+        val replaced = Normalizer.normalize(name, Normalizer.Form.NFC)
+            .map { if (it in FORBIDDEN_CHARACTERS || isControlCharacter(character = it)) '-' else it }
+            .joinToString(separator = "")
+        val trimmed = replaced.trimStart { it == '.' || it.isWhitespace() }
+            .take(n = MAX_LENGTH)
+            .trimEnd { it == '.' || it.isWhitespace() }
+        val usable = trimmed.ifEmpty { "_" }
+        return if (isReserved(name = usable)) "${usable}_" else usable
+    }
+
     private fun isControlCharacter(character: Char): Boolean {
         return character.code < FIRST_PRINTABLE || character.code == DELETE
     }

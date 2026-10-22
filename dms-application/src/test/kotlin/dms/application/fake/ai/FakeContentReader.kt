@@ -2,8 +2,8 @@ package dms.application.fake.ai
 
 import dms.application.port.ai.DocumentContentReader
 import dms.application.port.ai.model.DocumentContent
-import dms.domain.document.Document
-import dms.domain.library.LibraryFolder
+import dms.domain.document.model.DocumentModel
+import dms.domain.library.model.LibraryFolderModel
 
 /** Reads every document as [content]; [texts] are the text layers by file name. */
 class FakeContentReader : DocumentContentReader {
@@ -13,11 +13,11 @@ class FakeContentReader : DocumentContentReader {
     var textReads: Int = 0
         private set
 
-    override suspend fun read(folder: LibraryFolder, document: Document): DocumentContent {
+    override suspend fun read(folder: LibraryFolderModel, document: DocumentModel): DocumentContent {
         return content
     }
 
-    override suspend fun text(folder: LibraryFolder, document: Document): String? {
+    override suspend fun text(folder: LibraryFolderModel, document: DocumentModel): String? {
         textReads++
         return texts[document.path.fileName]
     }

@@ -4,11 +4,11 @@ import dms.application.library.model.ConfigureLibraryOutcome
 import dms.application.library.model.LibraryCommand
 import dms.application.port.state.SettingsRepository
 import dms.application.port.system.IdGenerator
-import dms.domain.library.FolderLocation
 import dms.domain.library.FolderRole
-import dms.domain.library.LibraryFolder
-import dms.domain.library.LibraryFolderId
-import dms.domain.library.LibraryFolders
+import dms.domain.library.model.FolderLocationModel
+import dms.domain.library.model.LibraryFolderIdModel
+import dms.domain.library.model.LibraryFolderModel
+import dms.domain.library.model.LibraryFoldersModel
 
 /** Sets up the primary folder and adds, removes or promotes sync folders on this device. */
 class ConfigureLibrary(
@@ -37,7 +37,7 @@ class ConfigureLibrary(
     }
 
     private suspend fun createPrimary(
-        current: LibraryFolders?,
+        current: LibraryFoldersModel?,
         command: LibraryCommand.CreatePrimary,
     ): ConfigureLibraryOutcome {
         if (current != null) {
@@ -48,13 +48,13 @@ class ConfigureLibrary(
             location = command.location,
             role = FolderRole.PRIMARY,
         )
-        val folders = LibraryFolders(folders = listOf(primary))
+        val folders = LibraryFoldersModel(folders = listOf(primary))
         settings.saveLibraryFolders(folders = folders)
         return ConfigureLibraryOutcome.Configured(folders = folders)
     }
 
     private fun addSyncFolder(
-        current: LibraryFolders,
+        current: LibraryFoldersModel,
         command: LibraryCommand.AddSyncFolder,
     ): ConfigureLibraryOutcome {
         if (current.contains(location = command.location)) {
@@ -64,7 +64,10 @@ class ConfigureLibrary(
         return ConfigureLibraryOutcome.Configured(folders = current.add(folder = folder))
     }
 
-    private fun removeSyncFolder(current: LibraryFolders, folderId: LibraryFolderId): ConfigureLibraryOutcome {
+    private fun removeSyncFolder(
+        current: LibraryFoldersModel,
+        folderId: LibraryFolderIdModel,
+    ): ConfigureLibraryOutcome {
         if (current.find(id = folderId) == null) {
             return ConfigureLibraryOutcome.UnknownFolder
         }
@@ -74,7 +77,7 @@ class ConfigureLibrary(
         return ConfigureLibraryOutcome.Configured(folders = current.remove(id = folderId))
     }
 
-    private fun choosePrimary(current: LibraryFolders, folderId: LibraryFolderId): ConfigureLibraryOutcome {
+    private fun choosePrimary(current: LibraryFoldersModel, folderId: LibraryFolderIdModel): ConfigureLibraryOutcome {
         if (current.find(id = folderId) == null) {
             return ConfigureLibraryOutcome.UnknownFolder
         }
@@ -83,11 +86,11 @@ class ConfigureLibrary(
 
     private fun newFolder(
         displayName: String,
-        location: FolderLocation,
+        location: FolderLocationModel,
         role: FolderRole,
-    ): LibraryFolder {
-        return LibraryFolder(
-            id = LibraryFolderId(value = ids.newId()),
+    ): LibraryFolderModel {
+        return LibraryFolderModel(
+            id = LibraryFolderIdModel(value = ids.newId()),
             displayName = displayName,
             location = location,
             role = role,

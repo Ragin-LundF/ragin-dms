@@ -10,13 +10,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
-import dms.ui.session.model.OperationProgress
+import dms.ui.session.model.OperationProgressModel
 import dms.ui.theme.Spacing
 import java.util.Locale
 
 /** The running operation in one line, its counts and current item, with a progress bar below. */
 @Composable
-fun ProgressLine(busy: String, progress: OperationProgress?) {
+fun ProgressLine(busy: String, progress: OperationProgressModel?) {
     val colors = MaterialTheme.colorScheme
     Row(
         verticalAlignment = Alignment.CenterVertically,

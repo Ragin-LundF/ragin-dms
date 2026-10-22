@@ -2,9 +2,9 @@ package dms.ui.assistant
 
 import dms.application.assistant.model.AnswerOutcome
 import dms.application.port.assistant.model.ChatRole
-import dms.application.port.assistant.model.ChatTurn
-import dms.domain.document.Document
-import dms.ui.assistant.model.ChatState
+import dms.application.port.assistant.model.ChatTurnModel
+import dms.domain.document.model.DocumentModel
+import dms.ui.assistant.model.ChatStateModel
 import dms.ui.review.AiMessages
 import dms.ui.service.AppServices
 import kotlinx.coroutines.CoroutineScope
@@ -25,15 +25,15 @@ class ChatController(
     private val scope: CoroutineScope,
 ) {
 
-    private val mutableState = MutableStateFlow<ChatState?>(value = null)
+    private val mutableState = MutableStateFlow<ChatStateModel?>(value = null)
     private var job: Job? = null
 
-    val state: StateFlow<ChatState?> = mutableState.asStateFlow()
+    val state: StateFlow<ChatStateModel?> = mutableState.asStateFlow()
 
-    fun open(document: Document) {
+    fun open(document: DocumentModel) {
         if (mutableState.value?.document?.id != document.id) {
             job?.cancel()
-            mutableState.value = ChatState(document = document)
+            mutableState.value = ChatStateModel(document = document)
         }
     }
 
@@ -47,7 +47,7 @@ class ChatController(
         if (text.isEmpty() || chat.waiting) {
             return
         }
-        val asked = chat.turns + ChatTurn(role = ChatRole.USER, text = text)
+        val asked = chat.turns + ChatTurnModel(role = ChatRole.USER, text = text)
         mutableState.value = chat.copy(turns = asked, input = "", waiting = true, problem = null)
         job = scope.launch {
             val outcome = services.ai.askAboutDocument(documentId = chat.document.id, conversation = asked)
@@ -55,7 +55,7 @@ class ChatController(
                 when {
                     current == null -> null
                     outcome is AnswerOutcome.Answered -> current.copy(
-                        turns = asked + ChatTurn(role = ChatRole.ASSISTANT, text = outcome.text),
+                        turns = asked + ChatTurnModel(role = ChatRole.ASSISTANT, text = outcome.text),
                         waiting = false,
                     )
 

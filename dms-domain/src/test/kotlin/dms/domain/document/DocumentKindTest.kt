@@ -1,6 +1,6 @@
 package dms.domain.document
 
-import dms.domain.library.RelativePath
+import dms.domain.library.model.RelativePathModel
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -21,7 +21,11 @@ class DocumentKindTest {
         )
 
         expectations.forEach { (path, kind) ->
-            assertEquals(expected = kind, actual = DocumentKind.of(path = RelativePath.of(raw = path)), message = path)
+            assertEquals(
+                expected = kind,
+                actual = DocumentKind.of(path = RelativePathModel.of(raw = path)),
+                message = path,
+            )
         }
     }
 

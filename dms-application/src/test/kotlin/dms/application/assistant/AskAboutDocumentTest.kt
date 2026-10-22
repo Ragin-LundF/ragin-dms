@@ -4,7 +4,7 @@ import dms.application.TestLibrary
 import dms.application.assistant.model.AnswerOutcome
 import dms.application.port.ai.model.DocumentContent
 import dms.application.port.assistant.model.ChatRole
-import dms.application.port.assistant.model.ChatTurn
+import dms.application.port.assistant.model.ChatTurnModel
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -18,10 +18,10 @@ class AskAboutDocumentTest {
             val library = TestLibrary()
             library.open()
             val document = library.add(path = "inbox/bill.pdf", content = "a")
-            val first = listOf(ChatTurn(role = ChatRole.USER, text = "Who sent it?"))
+            val first = listOf(ChatTurnModel(role = ChatRole.USER, text = "Who sent it?"))
             val second = first + listOf(
-                ChatTurn(role = ChatRole.ASSISTANT, text = "Sample Energy"),
-                ChatTurn(role = ChatRole.USER, text = "When?"),
+                ChatTurnModel(role = ChatRole.ASSISTANT, text = "Sample Energy"),
+                ChatTurnModel(role = ChatRole.USER, text = "When?"),
             )
 
             library.askAboutDocument(documentId = document.id, conversation = first)

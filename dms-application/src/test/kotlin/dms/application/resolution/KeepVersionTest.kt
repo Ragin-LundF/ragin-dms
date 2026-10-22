@@ -3,7 +3,7 @@ package dms.application.resolution
 import dms.application.TestLibrary
 import dms.application.common.OperationOutcome
 import dms.application.fake.storage.FakeFolders
-import dms.domain.library.RelativePath
+import dms.domain.library.model.RelativePathModel
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -12,7 +12,7 @@ import kotlin.test.assertTrue
 
 class KeepVersionTest {
 
-    private val conflicted = RelativePath.of(raw = "notes/n.txt")
+    private val conflicted = RelativePathModel.of(raw = "notes/n.txt")
 
     @Test
     fun `nothing is replaced without confirmation`() {

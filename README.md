@@ -100,11 +100,12 @@ Runs on macOS, Windows and Linux. Built with Kotlin and Compose Multiplatform.
 | `dms-domain` | Entities and domain rules. No dependencies. |
 | `dms-application` | Use cases and ports. |
 | `dms-storage` | File system, catalog file, synchronization of the library folders. |
-| `dms-ai` | OpenAI-compatible LLM client, reading PDFs, images and Office files. |
+| `dms-ai` | OpenAI-compatible LLM client, embeddings, reading PDFs, images and Office files. |
+| `dms-pdf` | Writing PDF files: page tools, text layers, embedded metadata, installed OCR. |
 | `dms-ui` | Compose Multiplatform desktop UI and composition root. |
 
 Dependencies point inwards only: `dms-ui` → `dms-application` → `dms-domain`; the adapters
-`dms-storage` and `dms-ai` implement ports of `dms-application`.
+`dms-storage`, `dms-ai` and `dms-pdf` implement ports of `dms-application`.
 
 The app keeps the state of each device (library folder paths, AI settings, open tasks, activity log,
 scan caches) outside the library, in `~/Library/Application Support/ragin-dms` on macOS, `%APPDATA%\ragin-dms`

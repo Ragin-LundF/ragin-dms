@@ -1,18 +1,18 @@
 package dms.ui.dashboard.stats
 
-import dms.domain.catalog.Catalog
-import dms.domain.catalog.CatalogRevision
-import dms.domain.catalog.LibraryId
-import dms.domain.document.ContentHash
-import dms.domain.document.Document
-import dms.domain.document.DocumentId
+import dms.domain.catalog.model.CatalogModel
+import dms.domain.catalog.model.CatalogRevisionModel
+import dms.domain.catalog.model.LibraryIdModel
 import dms.domain.document.DocumentKind
-import dms.domain.document.DocumentMetadata
-import dms.domain.library.RelativePath
-import dms.domain.taxonomy.Category
-import dms.domain.taxonomy.CategoryId
-import dms.domain.taxonomy.TagName
-import dms.ui.dashboard.stats.model.KindCount
+import dms.domain.document.model.ContentHashModel
+import dms.domain.document.model.DocumentIdModel
+import dms.domain.document.model.DocumentMetadataModel
+import dms.domain.document.model.DocumentModel
+import dms.domain.library.model.RelativePathModel
+import dms.domain.taxonomy.model.CategoryIdModel
+import dms.domain.taxonomy.model.CategoryModel
+import dms.domain.taxonomy.model.TagNameModel
+import dms.ui.dashboard.stats.model.KindCountModel
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
@@ -23,9 +23,9 @@ import kotlin.test.assertEquals
 class LibraryStatisticsTest {
 
     private val now = Instant.parse("2026-06-15T12:00:00Z")
-    private val invoices = Category(id = CategoryId(value = "invoices"), name = "Invoices")
-    private val tax = TagName.of(raw = "tax")
-    private val home = TagName.of(raw = "home")
+    private val invoices = CategoryModel(id = CategoryIdModel(value = "invoices"), name = "Invoices")
+    private val tax = TagNameModel.of(raw = "tax")
+    private val home = TagNameModel.of(raw = "home")
 
     @Test
     fun `no catalog gives empty figures`() {
@@ -46,8 +46,8 @@ class LibraryStatisticsTest {
         assertEquals(expected = 1, actual = stats.uncategorizedCount)
         assertEquals(
             expected = listOf(
-                KindCount(kind = DocumentKind.PDF, count = 2),
-                KindCount(kind = DocumentKind.IMAGE, count = 1),
+                KindCountModel(kind = DocumentKind.PDF, count = 2),
+                KindCountModel(kind = DocumentKind.IMAGE, count = 1),
             ),
             actual = stats.byKind,
         )
@@ -81,12 +81,12 @@ class LibraryStatisticsTest {
         assertEquals(expected = "letters", actual = stats.recent.first().folder)
     }
 
-    private fun sampleCatalog(): Catalog {
+    private fun sampleCatalog(): CatalogModel {
         val documents = listOf(
             document(id = "a", path = "letters/a.pdf", age = Duration.ofDays(5), size = 100).copy(
                 categoryId = invoices.id,
                 tags = setOf(tax),
-                metadata = DocumentMetadata(
+                metadata = DocumentMetadataModel(
                     title = "Sample bill",
                     documentDate = LocalDate.parse("2025-03-01"),
                     correspondent = "Sample Utility",
@@ -97,23 +97,23 @@ class LibraryStatisticsTest {
                 tags = setOf(tax, home),
             ),
             document(id = "c", path = "c.jpg", age = Duration.ofDays(5000), size = 50).copy(
-                metadata = DocumentMetadata(documentDate = LocalDate.parse("2012-05-05")),
+                metadata = DocumentMetadataModel(documentDate = LocalDate.parse("2012-05-05")),
             ),
         )
-        return Catalog(
-            libraryId = LibraryId(value = "library"),
-            revision = CatalogRevision.INITIAL,
+        return CatalogModel(
+            libraryId = LibraryIdModel(value = "library"),
+            revision = CatalogRevisionModel.INITIAL,
             documents = documents.associateBy { it.id },
             categories = mapOf(invoices.id to invoices),
             tags = setOf(tax, home),
         )
     }
 
-    private fun document(id: String, path: String, age: Duration, size: Long): Document {
-        return Document(
-            id = DocumentId(value = id),
-            path = RelativePath.of(raw = path),
-            contentHash = ContentHash(value = id.repeat(n = 64)),
+    private fun document(id: String, path: String, age: Duration, size: Long): DocumentModel {
+        return DocumentModel(
+            id = DocumentIdModel(value = id),
+            path = RelativePathModel.of(raw = path),
+            contentHash = ContentHashModel(value = id.repeat(n = 64)),
             size = size,
             addedAt = now.minus(age),
         )

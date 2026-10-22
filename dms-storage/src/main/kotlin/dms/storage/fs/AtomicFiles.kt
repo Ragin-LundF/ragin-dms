@@ -2,7 +2,7 @@ package dms.storage.fs
 
 import dms.application.port.storage.model.StorageFailure
 import dms.application.port.storage.model.StorageResult
-import dms.domain.change.FileFacts
+import dms.domain.change.model.FileFactsModel
 import java.nio.ByteBuffer
 import java.nio.channels.FileChannel
 import java.nio.file.AtomicMoveNotSupportedException
@@ -24,7 +24,7 @@ object AtomicFiles {
      * Copies [source] to [target], which must not exist, verifies the copy by hash and keeps the
      * modification time.
      */
-    fun copy(source: Path, target: Path): StorageResult<FileFacts> {
+    fun copy(source: Path, target: Path): StorageResult<FileFactsModel> {
         Files.createDirectories(target.parent)
         val temp = tempFileFor(target = target)
         try {
@@ -34,7 +34,7 @@ object AtomicFiles {
             }
             Files.setLastModifiedTime(temp, Files.getLastModifiedTime(source))
             moveIntoPlace(temp = temp, target = target, replace = false)
-            return StorageResult.Success(value = FileFacts(size = Files.size(target), contentHash = sourceHash))
+            return StorageResult.Success(value = FileFactsModel(size = Files.size(target), contentHash = sourceHash))
         } finally {
             Files.deleteIfExists(temp)
         }

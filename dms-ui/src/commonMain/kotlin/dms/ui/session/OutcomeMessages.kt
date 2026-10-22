@@ -3,16 +3,16 @@ package dms.ui.session
 import dms.application.common.OperationOutcome
 import dms.application.library.model.ConfigureLibraryOutcome
 import dms.application.port.storage.model.StorageFailure
-import dms.application.sync.model.RetryReport
+import dms.application.sync.model.RetryReportModel
 import dms.application.sync.model.SyncOutcome
 import dms.domain.catalog.CatalogRejection
 import dms.domain.library.FileNameViolation
-import dms.ui.session.model.UiMessage
+import dms.ui.session.model.UiMessageModel
 
 /** The words for every outcome a use case can return. Use cases return data; only the UI phrases it. */
 object OutcomeMessages {
 
-    fun of(outcome: OperationOutcome, done: String): UiMessage {
+    fun of(outcome: OperationOutcome, done: String): UiMessageModel {
         return when (outcome) {
             is OperationOutcome.Done -> done(text = done, pendingFolders = outcome.pendingFolders.size)
             OperationOutcome.LibraryNotOpen -> problem(text = "No library is open")
@@ -29,7 +29,7 @@ object OutcomeMessages {
         }
     }
 
-    fun sync(outcome: SyncOutcome, done: String): UiMessage {
+    fun sync(outcome: SyncOutcome, done: String): UiMessageModel {
         return when (outcome) {
             SyncOutcome.LibraryNotOpen -> problem(text = "No library is open")
             is SyncOutcome.PrimaryFailed -> problem(
@@ -44,22 +44,22 @@ object OutcomeMessages {
                     report.failedPaths.size.takeIf { it > 0 }?.let { "$it file(s) failed" },
                     report.unreachableFolders.size.takeIf { it > 0 }?.let { "$it folder(s) offline" },
                 )
-                UiMessage(text = "$done: ${parts.joinToString(separator = ", ")}")
+                UiMessageModel(text = "$done: ${parts.joinToString(separator = ", ")}")
             }
         }
     }
 
-    fun retry(report: RetryReport?): UiMessage {
+    fun retry(report: RetryReportModel?): UiMessageModel {
         if (report == null) {
             return problem(text = "No library is open")
         }
         val text = "Retried: ${report.succeeded} done, ${report.dropped} no longer needed, " +
             "${report.stillPending} still pending"
-        return UiMessage(text = text, isError = report.stillPending > 0)
+        return UiMessageModel(text = text, isError = report.stillPending > 0)
     }
 
     /** `null` when the folders were changed; the library is opened again then. */
-    fun configure(outcome: ConfigureLibraryOutcome): UiMessage? {
+    fun configure(outcome: ConfigureLibraryOutcome): UiMessageModel? {
         return when (outcome) {
             is ConfigureLibraryOutcome.Configured -> null
             ConfigureLibraryOutcome.AlreadyConfigured -> problem(text = "A primary folder is already configured")
@@ -96,6 +96,19 @@ object OutcomeMessages {
             CatalogRejection.CATEGORY_HAS_CHILDREN -> "The category still has subcategories"
             CatalogRejection.CATEGORY_CYCLE -> "A category cannot be placed below itself"
             CatalogRejection.TAG_NOT_FOUND -> "The tag no longer exists"
+            CatalogRejection.FIELD_NOT_DEFINED,
+            CatalogRejection.FIELD_TYPE_MISMATCH,
+            CatalogRejection.LINK_NOT_FOUND,
+            -> detailRejection(reason = reason)
+        }
+    }
+
+    /** Refusals of changes to a document's fields and links. */
+    private fun detailRejection(reason: CatalogRejection): String {
+        return when (reason) {
+            CatalogRejection.FIELD_NOT_DEFINED -> "The library has no such field"
+            CatalogRejection.FIELD_TYPE_MISMATCH -> "The value does not fit the field's type"
+            else -> "The documents are not linked"
         }
     }
 
@@ -111,14 +124,14 @@ object OutcomeMessages {
         }
     }
 
-    private fun done(text: String, pendingFolders: Int): UiMessage {
+    private fun done(text: String, pendingFolders: Int): UiMessageModel {
         if (pendingFolders == 0) {
-            return UiMessage(text = text)
+            return UiMessageModel(text = text)
         }
-        return UiMessage(text = "$text; $pendingFolders sync folder(s) get the change when retried")
+        return UiMessageModel(text = "$text; $pendingFolders sync folder(s) get the change when retried")
     }
 
-    private fun problem(text: String): UiMessage {
-        return UiMessage(text = text, isError = true)
+    private fun problem(text: String): UiMessageModel {
+        return UiMessageModel(text = text, isError = true)
     }
 }

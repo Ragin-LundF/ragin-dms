@@ -13,12 +13,16 @@ import androidx.compose.ui.Modifier
 import dms.ui.components.dialog.DialogHost
 import dms.ui.components.layout.ScreenHeader
 import dms.ui.settings.ai.AiSettingsCard
+import dms.ui.settings.library.FieldsCard
+import dms.ui.settings.library.InboxCard
+import dms.ui.settings.library.RulesCard
 import dms.ui.theme.Spacing
 
 /** The library folders of this device, how scans treat new files, and where the AI runs. */
 @Composable
 fun SettingsScreen(viewModel: SettingsViewModel) {
     val state by viewModel.state.collectAsState()
+    val library by viewModel.library.state.collectAsState()
     val busyReason = state.busy?.let { "Wait until \"$it\" finishes" }
     Column(
         modifier = Modifier
@@ -38,6 +42,16 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
                 onAddNewFilesChange = viewModel::setAddNewFilesWhileScanning,
                 onDetectDates = viewModel::detectDates,
             )
+            library.settings?.let { settings ->
+                InboxCard(inbox = settings.layout.inbox, busyReason = busyReason, controller = viewModel.library)
+                FieldsCard(settings = settings, busyReason = busyReason, controller = viewModel.library)
+                RulesCard(
+                    settings = settings,
+                    categoryName = viewModel.library::categoryName,
+                    busyReason = busyReason,
+                    controller = viewModel.library,
+                )
+            }
         }
         AiSettingsCard(
             settings = state.ai,

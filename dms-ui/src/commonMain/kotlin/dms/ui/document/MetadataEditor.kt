@@ -18,14 +18,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import dms.domain.document.Document
-import dms.ui.document.model.MetadataDraft
+import dms.domain.document.model.DocumentModel
+import dms.ui.document.model.MetadataDraftModel
 import dms.ui.theme.Spacing
 
 /** Title, document date and correspondent, saved together. */
 @Composable
-fun MetadataEditor(document: Document, enabled: Boolean, onSave: (MetadataDraft) -> Unit) {
-    val saved = MetadataDraft(
+fun MetadataEditor(document: DocumentModel, enabled: Boolean, onSave: (MetadataDraftModel) -> Unit) {
+    val saved = MetadataDraftModel(
         title = document.metadata.title.orEmpty(),
         documentDate = document.metadata.documentDate?.toString().orEmpty(),
         correspondent = document.metadata.correspondent.orEmpty(),

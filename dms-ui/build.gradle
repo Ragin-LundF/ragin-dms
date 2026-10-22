@@ -33,6 +33,7 @@ kotlin {
                 // Composition root: the only place that knows the adapters.
                 implementation(project(":dms-storage"))
                 implementation(project(":dms-ai"))
+                implementation(project(":dms-pdf"))
                 implementation(compose.desktop.currentOs)
                 implementation(libs.kotlinx.coroutines.swing)
                 implementation(libs.java.keyring)

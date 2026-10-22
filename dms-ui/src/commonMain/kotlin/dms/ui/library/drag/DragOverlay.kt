@@ -5,14 +5,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.unit.round
-import dms.ui.library.model.CategoryEntry
+import dms.ui.library.model.CategoryEntryModel
 
 /**
  * Shows the [DragPreview] next to the pointer while a document or category is dragged; [origin] is
  * the overlay's root position.
  */
 @Composable
-fun DragOverlay(drag: DocumentDrag, origin: Offset, categories: List<CategoryEntry>) {
+fun DragOverlay(drag: DocumentDrag, origin: Offset, categories: List<CategoryEntryModel>) {
     drag.dragged?.let { item ->
         DragPreview(
             item = item,

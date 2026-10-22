@@ -13,8 +13,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
-import dms.domain.library.LibraryFolderId
-import dms.domain.library.RelativePath
+import dms.domain.library.model.LibraryFolderIdModel
+import dms.domain.library.model.RelativePathModel
 
 /**
  * A small picture of the file at [path] in [folderId], loaded in the background; clicking it calls
@@ -22,8 +22,8 @@ import dms.domain.library.RelativePath
  */
 @Composable
 fun FileThumbnail(
-    folderId: LibraryFolderId,
-    path: RelativePath,
+    folderId: LibraryFolderIdModel,
+    path: RelativePathModel,
     loader: ThumbnailLoader,
     onClick: () -> Unit,
     fallback: @Composable () -> Unit,

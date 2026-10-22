@@ -22,12 +22,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.unit.dp
-import dms.ui.components.chart.model.ChartPoint
+import dms.ui.components.chart.model.ChartPointModel
 
 /** One bar of [ColumnChart]: it grows in when shown and shows its value while hovered or when [alwaysLabelled]. */
 @Composable
 fun ColumnBar(
-    point: ChartPoint,
+    point: ChartPointModel,
     fraction: Float,
     color: Color,
     alwaysLabelled: Boolean,

@@ -4,7 +4,7 @@ import dms.application.assistant.model.ReadingResult
 import dms.application.library.CatalogStore
 import dms.application.port.ai.DocumentContentReader
 import dms.application.port.ai.model.DocumentContent
-import dms.domain.document.DocumentId
+import dms.domain.document.model.DocumentIdModel
 
 /** Reads a document of the open library from the primary folder, for the AI. Never changes it. */
 class DocumentReading(
@@ -12,7 +12,7 @@ class DocumentReading(
     private val reader: DocumentContentReader,
 ) {
 
-    suspend fun read(documentId: DocumentId): ReadingResult {
+    suspend fun read(documentId: DocumentIdModel): ReadingResult {
         val library = store.current() ?: return ReadingResult.LibraryNotOpen
         val document = library.catalog.documents[documentId] ?: return ReadingResult.NotFound
         if (!document.kind.readableByAi) {

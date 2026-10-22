@@ -2,9 +2,11 @@ package dms.domain.catalog
 
 import dms.domain.TestData
 import dms.domain.TestData.applied
-import dms.domain.document.DocumentMetadata
-import dms.domain.taxonomy.Category
-import dms.domain.taxonomy.CategoryId
+import dms.domain.catalog.model.CatalogModel
+import dms.domain.catalog.model.LibraryIdModel
+import dms.domain.document.model.DocumentMetadataModel
+import dms.domain.taxonomy.model.CategoryIdModel
+import dms.domain.taxonomy.model.CategoryModel
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -41,9 +43,12 @@ class CatalogMergerTest {
 
     @Test
     fun `the copy with the higher revision wins a differing document`() {
-        val older = base.updateMetadata(documentId = shared.id, metadata = DocumentMetadata(title = "Old")).applied()
+        val older = base.updateMetadata(
+            documentId = shared.id,
+            metadata = DocumentMetadataModel(title = "Old"),
+        ).applied()
         val newer = older
-            .updateMetadata(documentId = shared.id, metadata = DocumentMetadata(title = "New")).applied()
+            .updateMetadata(documentId = shared.id, metadata = DocumentMetadataModel(title = "New")).applied()
 
         val result = CatalogMerger.merge(first = older, second = newer)
 
@@ -67,10 +72,10 @@ class CatalogMergerTest {
 
     @Test
     fun `categories are merged with the newer copy winning`() {
-        val category = Category(id = CategoryId(value = "c"), name = "Letters")
+        val category = CategoryModel(id = CategoryIdModel(value = "c"), name = "Letters")
         val older = base.addCategory(category = category).applied()
         val newer = older.renameCategory(categoryId = category.id, name = "Mail").applied()
-            .addCategory(category = Category(id = CategoryId(value = "n"), name = "New")).applied()
+            .addCategory(category = CategoryModel(id = CategoryIdModel(value = "n"), name = "New")).applied()
 
         val result = CatalogMerger.merge(first = newer, second = older)
 
@@ -81,7 +86,7 @@ class CatalogMergerTest {
 
     @Test
     fun `copies of different libraries cannot be merged`() {
-        val other = Catalog.empty(libraryId = LibraryId(value = "other"))
+        val other = CatalogModel.empty(libraryId = LibraryIdModel(value = "other"))
 
         assertFailsWith<IllegalArgumentException> { CatalogMerger.merge(first = base, second = other) }
     }

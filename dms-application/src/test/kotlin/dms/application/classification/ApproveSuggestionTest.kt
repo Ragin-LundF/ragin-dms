@@ -2,14 +2,22 @@ package dms.application.classification
 
 import dms.application.TestLibrary
 import dms.application.classification.model.ApprovedCategory
-import dms.application.classification.model.SuggestionApproval
+import dms.application.classification.model.SuggestOutcome
+import dms.application.classification.model.SuggestionApprovalModel
 import dms.application.common.OperationOutcome
 import dms.application.fake.ai.FakeClassifier
-import dms.domain.classification.ClassificationSuggestion
+import dms.application.port.ai.model.ClassificationResult
+import dms.domain.classification.model.ClassificationSuggestionModel
 import dms.domain.document.ClassificationSource
-import dms.domain.document.Document
-import dms.domain.taxonomy.TagName
+import dms.domain.document.model.DocumentModel
+import dms.domain.field.FieldPresets
+import dms.domain.field.FieldValue
+import dms.domain.field.model.CurrencyCodeModel
+import dms.domain.field.model.FieldKeyModel
+import dms.domain.settings.model.CatalogSettingsModel
+import dms.domain.taxonomy.model.TagNameModel
 import kotlinx.coroutines.test.runTest
+import java.math.BigDecimal
 import java.time.LocalDate
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -19,11 +27,11 @@ import kotlin.test.assertTrue
 
 class ApproveSuggestionTest {
 
-    private val approval = SuggestionApproval(
+    private val approval = SuggestionApprovalModel(
         title = "Synthetic statement",
         documentDate = LocalDate.of(2024, 2, 15),
         category = ApprovedCategory.Path(names = listOf("Statements")),
-        tags = setOf(TagName.of(raw = "Tax")),
+        tags = setOf(TagNameModel.of(raw = "Tax")),
         fileName = "2024-02 statement.pdf",
     )
 
@@ -43,7 +51,7 @@ class ApproveSuggestionTest {
             assertEquals(expected = "Synthetic statement", actual = approved.metadata.title)
             assertEquals(expected = LocalDate.of(2024, 2, 15), actual = approved.metadata.documentDate)
             assertEquals(expected = "Statements", actual = catalog.categories[approved.categoryId]?.name)
-            assertEquals(expected = setOf(TagName.of(raw = "tax")), actual = approved.tags)
+            assertEquals(expected = setOf(TagNameModel.of(raw = "tax")), actual = approved.tags)
             assertEquals(expected = ClassificationSource.AI, actual = approved.classification?.source)
             assertEquals(expected = FakeClassifier.MODEL, actual = approved.classification?.model)
             library.allFolders.forEach { folder ->
@@ -81,7 +89,7 @@ class ApproveSuggestionTest {
             library.open()
             val first = library.add(path = "inbox/a.pdf", content = "a")
             val second = library.add(path = "inbox/b.pdf", content = "b")
-            val categoryOnly = SuggestionApproval(
+            val categoryOnly = SuggestionApprovalModel(
                 category = ApprovedCategory.Path(names = listOf("Statements")),
             )
             suggestFor(library = library, document = first)
@@ -113,7 +121,7 @@ class ApproveSuggestionTest {
 
             val outcome = library.approveSuggestion(
                 documentId = document.id,
-                approval = SuggestionApproval(category = path),
+                approval = SuggestionApprovalModel(category = path),
             )
 
             val catalog = assertIs<OperationOutcome.Done>(value = outcome).catalog
@@ -141,12 +149,14 @@ class ApproveSuggestionTest {
             suggestFor(library = library, document = second)
             library.approveSuggestion(
                 documentId = first.id,
-                approval = SuggestionApproval(category = ApprovedCategory.Path(names = listOf("Insurance", "Car"))),
+                approval = SuggestionApprovalModel(
+                    category = ApprovedCategory.Path(names = listOf("Insurance", "Car")),
+                ),
             )
             val catalog = assertIs<OperationOutcome.Done>(
                 value = library.approveSuggestion(
                     documentId = second.id,
-                    approval = SuggestionApproval(
+                    approval = SuggestionApprovalModel(
                         category = ApprovedCategory.Path(names = listOf("insurance", "Household", "Rent")),
                     ),
                 ),
@@ -162,9 +172,48 @@ class ApproveSuggestionTest {
         }
     }
 
-    private suspend fun suggestFor(library: TestLibrary, document: Document) {
+    private suspend fun suggestFor(library: TestLibrary, document: DocumentModel) {
         library.tasks.saveSuggestion(
-            suggestion = ClassificationSuggestion(documentId = document.id, model = FakeClassifier.MODEL),
+            suggestion = ClassificationSuggestionModel(documentId = document.id, model = FakeClassifier.MODEL),
         )
+    }
+
+    @Test
+    fun `approved field values join the values the document has`() {
+        runTest {
+            val library = TestLibrary()
+            library.open()
+            library.changeSettings(subject = "fields") { CatalogSettingsModel(fieldDefinitions = FieldPresets.ALL) }
+            val document = library.add(path = "bill.pdf", content = "bill")
+            val amount = FieldValue.Money(amount = BigDecimal("12.50"), currency = CurrencyCodeModel(value = "EUR"))
+            val due = FieldValue.Date(date = LocalDate.of(2024, 3, 31))
+            library.store.commit {
+                it.setFields(documentId = document.id, fields = mapOf(FieldPresets.AMOUNT.key to amount))
+            }
+            library.classifier.result = ClassificationResult.Suggested(
+                suggestion = ClassificationSuggestionModel(
+                    documentId = document.id,
+                    model = FakeClassifier.MODEL,
+                    fields = mapOf(
+                        FieldPresets.DUE_DATE.key to due,
+                        FieldKeyModel(value = "undefined") to FieldValue.Text(text = "dropped"),
+                    ),
+                ),
+            )
+            val suggested = assertIs<SuggestOutcome.Suggested>(
+                value = library.suggestClassification(documentId = document.id),
+            )
+
+            library.approveSuggestion(
+                documentId = document.id,
+                approval = SuggestionApprovalModel(fields = suggested.suggestion.fields),
+            )
+
+            assertEquals(expected = mapOf(FieldPresets.DUE_DATE.key to due), actual = suggested.suggestion.fields)
+            assertEquals(
+                expected = mapOf(FieldPresets.AMOUNT.key to amount, FieldPresets.DUE_DATE.key to due),
+                actual = library.catalog.documents.getValue(key = document.id).fields,
+            )
+        }
     }
 }

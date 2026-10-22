@@ -3,7 +3,7 @@ package dms.application.document
 import dms.application.TestLibrary
 import dms.application.common.OperationOutcome
 import dms.domain.change.DetectedChange
-import dms.domain.library.RelativePath
+import dms.domain.library.model.RelativePathModel
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -29,7 +29,7 @@ class TrashNewFileTest {
             assertIs<OperationOutcome.NotConfirmed>(value = refused)
             assertIs<OperationOutcome.Done>(value = outcome)
             assertEquals(
-                expected = listOf(library.syncA.id to RelativePath.of(raw = "inbox/stray.pdf")),
+                expected = listOf(library.syncA.id to RelativePathModel.of(raw = "inbox/stray.pdf")),
                 actual = library.folders.trashed,
             )
         }

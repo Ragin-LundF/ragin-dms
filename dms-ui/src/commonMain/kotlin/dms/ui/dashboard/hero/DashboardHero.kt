@@ -28,7 +28,7 @@ import androidx.compose.ui.unit.dp
 import dms.ui.components.FileSizes
 import dms.ui.components.layout.SearchField
 import dms.ui.dashboard.ActivityTexts
-import dms.ui.dashboard.model.DashboardUiState
+import dms.ui.dashboard.model.DashboardUiStateModel
 import dms.ui.theme.AppColors
 import dms.ui.theme.Spacing
 import java.time.LocalTime
@@ -36,7 +36,7 @@ import java.time.LocalTime
 /** The gradient header: a greeting, the size of the library, a search over all documents and the main actions. */
 @Composable
 fun DashboardHero(
-    state: DashboardUiState,
+    state: DashboardUiStateModel,
     busyReason: String?,
     onAddFiles: () -> Unit,
     onScan: () -> Unit,

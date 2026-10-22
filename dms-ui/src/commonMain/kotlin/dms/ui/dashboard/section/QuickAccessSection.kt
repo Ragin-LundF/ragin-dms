@@ -7,9 +7,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import dms.domain.document.DocumentId
+import dms.domain.document.model.DocumentIdModel
 import dms.ui.dashboard.RecentDocumentsCard
-import dms.ui.dashboard.stats.model.LibraryStats
+import dms.ui.dashboard.stats.model.LibraryStatsModel
 import dms.ui.dashboard.widgets.CategoryCard
 import dms.ui.dashboard.widgets.TagCloudCard
 import dms.ui.theme.Spacing
@@ -17,8 +17,8 @@ import dms.ui.theme.Spacing
 /** The fastest ways into the library: recent documents, categories and tags. */
 @Composable
 fun QuickAccessSection(
-    stats: LibraryStats,
-    onOpenDocument: (DocumentId) -> Unit,
+    stats: LibraryStatsModel,
+    onOpenDocument: (DocumentIdModel) -> Unit,
     onOpenRecent: () -> Unit,
     onOpenCategory: (String) -> Unit,
     onOpenUncategorized: () -> Unit,

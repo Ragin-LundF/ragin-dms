@@ -1,16 +1,16 @@
 package dms.application.common
 
 import dms.application.port.storage.model.StorageResult
-import dms.domain.catalog.Catalog
 import dms.domain.catalog.CatalogRejection
+import dms.domain.catalog.model.CatalogModel
 import dms.domain.library.FileNameViolation
-import dms.domain.library.LibraryFolderId
+import dms.domain.library.model.LibraryFolderIdModel
 
 /** The outcome shared by the use cases that change files or the catalog. */
 sealed interface OperationOutcome {
 
     /** Adds [folders] to the pending folders of a [Done] outcome; every other outcome stays as it is. */
-    fun withPendingFolders(folders: Set<LibraryFolderId>): OperationOutcome {
+    fun withPendingFolders(folders: Set<LibraryFolderIdModel>): OperationOutcome {
         if (this is Done) {
             return copy(pendingFolders = pendingFolders + folders)
         }
@@ -21,7 +21,7 @@ sealed interface OperationOutcome {
      * The change is in the primary folder and the catalog. [pendingFolders] are sync folders that
      * could not be updated yet; their operations wait in the journal.
      */
-    data class Done(val catalog: Catalog, val pendingFolders: Set<LibraryFolderId>) : OperationOutcome
+    data class Done(val catalog: CatalogModel, val pendingFolders: Set<LibraryFolderIdModel>) : OperationOutcome
 
     /** No library is configured or opened yet. */
     data object LibraryNotOpen : OperationOutcome

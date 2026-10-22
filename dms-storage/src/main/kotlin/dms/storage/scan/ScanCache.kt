@@ -1,9 +1,9 @@
 package dms.storage.scan
 
-import dms.domain.change.FileFacts
-import dms.domain.document.ContentHash
-import dms.domain.document.Document
-import dms.domain.library.RelativePath
+import dms.domain.change.model.FileFactsModel
+import dms.domain.document.model.ContentHashModel
+import dms.domain.document.model.DocumentModel
+import dms.domain.library.model.RelativePathModel
 import dms.storage.scan.dto.ScanCacheDto
 import dms.storage.scan.dto.ScanCacheEntryDto
 import dms.storage.yaml.YamlFile
@@ -25,21 +25,21 @@ class ScanCache private constructor(
      * size, or changed since the last scan; an unchanged catalogued file is trusted.
      */
     fun facts(
-        path: RelativePath,
+        path: RelativePathModel,
         size: Long,
         modified: Long,
-        known: Document?,
-        hash: () -> ContentHash,
-    ): FileFacts {
+        known: DocumentModel?,
+        hash: () -> ContentHashModel,
+    ): FileFactsModel {
         val cached = entries[path.value]
         val unchanged = cached != null && cached.size == size && cached.modified == modified
         val contentHash = when {
-            unchanged -> cached.contentHash?.let { ContentHash.fromHex(hex = it) }
+            unchanged -> cached.contentHash?.let { ContentHashModel.fromHex(hex = it) }
             known == null || known.size != size || cached != null -> hash()
             else -> null
         }
         entries[path.value] = ScanCacheEntryDto(size = size, modified = modified, contentHash = contentHash?.value)
-        return FileFacts(size = size, contentHash = contentHash)
+        return FileFactsModel(size = size, contentHash = contentHash)
     }
 
     /** Saves what is known so far, in the middle of a scan. */
@@ -48,7 +48,7 @@ class ScanCache private constructor(
     }
 
     /** Saves the cache, forgetting files that no longer exist. */
-    fun save(present: Set<RelativePath>) {
+    fun save(present: Set<RelativePathModel>) {
         val keep = present.map { it.value }.toSet()
         entries.keys.retainAll(keep)
         file.write(value = ScanCacheDto(entries = entries.toSortedMap()))

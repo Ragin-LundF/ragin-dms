@@ -18,12 +18,12 @@ import androidx.compose.ui.input.key.isShiftPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
-import dms.ui.assistant.model.ChatState
+import dms.ui.assistant.model.ChatStateModel
 import dms.ui.theme.Spacing
 
 /** The question being typed. Enter sends it, Shift+Enter starts a new line; while the AI answers, Stop. */
 @Composable
-fun ChatInput(state: ChatState, controller: ChatController) {
+fun ChatInput(state: ChatStateModel, controller: ChatController) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(space = Spacing.small),

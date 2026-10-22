@@ -16,7 +16,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import dms.ui.components.model.ActionButton
+import dms.ui.components.model.ActionButtonModel
 import dms.ui.theme.Spacing
 
 /**
@@ -25,7 +25,7 @@ import dms.ui.theme.Spacing
  */
 @Composable
 fun ActionMenu(
-    actions: List<ActionButton>,
+    actions: List<ActionButtonModel>,
     contentDescription: String,
     enabled: Boolean,
     busyReason: String?,

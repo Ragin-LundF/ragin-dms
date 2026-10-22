@@ -1,12 +1,12 @@
 package dms.ai.assistant
 
-import dms.domain.taxonomy.TagName
+import dms.domain.taxonomy.model.TagNameModel
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class TagAnswerParserTest {
 
-    private val existing = setOf(TagName.of(raw = "Steuer"), TagName.of(raw = "Strom"))
+    private val existing = setOf(TagNameModel.of(raw = "Steuer"), TagNameModel.of(raw = "Strom"))
 
     @Test
     fun `a plain comma-separated answer is taken as it is`() {

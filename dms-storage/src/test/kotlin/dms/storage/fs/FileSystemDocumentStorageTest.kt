@@ -1,10 +1,10 @@
 package dms.storage.fs
 
-import dms.application.port.storage.model.ExternalFile
+import dms.application.port.storage.model.ExternalFileModel
 import dms.application.port.storage.model.StorageFailure
 import dms.application.port.storage.model.StorageResult
 import dms.domain.library.FolderRole
-import dms.domain.library.RelativePath
+import dms.domain.library.model.RelativePathModel
 import dms.storage.support.RecordingTrash
 import dms.storage.support.StorageResults
 import dms.storage.support.TestFolders
@@ -43,7 +43,7 @@ class FileSystemDocumentStorageTest {
 
             val result = storage.importFile(
                 folder = primary,
-                source = ExternalFile(location = source.toString()),
+                source = ExternalFileModel(location = source.toString()),
                 target = TestFolders.path(raw = "letters/scan.pdf"),
             )
 
@@ -64,7 +64,7 @@ class FileSystemDocumentStorageTest {
 
             val result = storage.importFile(
                 folder = primary,
-                source = ExternalFile(location = source.toString()),
+                source = ExternalFileModel(location = source.toString()),
                 target = TestFolders.path(raw = "note.pdf"),
             )
 
@@ -78,7 +78,7 @@ class FileSystemDocumentStorageTest {
         runTest {
             val result = storage.importFile(
                 folder = primary,
-                source = ExternalFile(location = temp.resolve("outside/missing.pdf").toString()),
+                source = ExternalFileModel(location = temp.resolve("outside/missing.pdf").toString()),
                 target = TestFolders.path(raw = "missing.pdf"),
             )
 
@@ -128,7 +128,7 @@ class FileSystemDocumentStorageTest {
             TestFolders.write(file = primaryRoot.resolve("café/menu.pdf"), content = "alpha")
 
             val facts = storage.readFacts(folder = primary, path = TestFolders.path(raw = "café/menu.pdf"))
-            val names = storage.listNames(folder = primary, path = RelativePath.ROOT)
+            val names = storage.listNames(folder = primary, path = RelativePathModel.ROOT)
 
             assertIs<StorageResult.Success<*>>(value = facts)
             assertEquals(expected = StorageResult.Success(value = listOf("café")), actual = names)
@@ -149,7 +149,7 @@ class FileSystemDocumentStorageTest {
         runTest {
             val offline = TestFolders.folder(location = temp.resolve("offline"))
 
-            val result = storage.listNames(folder = offline, path = RelativePath.ROOT)
+            val result = storage.listNames(folder = offline, path = RelativePathModel.ROOT)
 
             assertEquals(
                 expected = StorageFailure.FOLDER_UNREACHABLE,

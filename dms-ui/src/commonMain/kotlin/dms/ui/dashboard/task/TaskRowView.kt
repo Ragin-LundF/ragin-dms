@@ -17,7 +17,7 @@ import dms.ui.components.ActionButtons
 import dms.ui.components.surface.IconBadge
 import dms.ui.dashboard.duplicate.DuplicateCopies
 import dms.ui.dashboard.model.TaskGroup
-import dms.ui.dashboard.model.TaskRowState
+import dms.ui.dashboard.model.TaskRowStateModel
 import dms.ui.preview.FileThumbnail
 import dms.ui.preview.ThumbnailLoader
 import dms.ui.theme.Spacing
@@ -27,7 +27,7 @@ import dms.ui.theme.Spacing
  * and buttons to open the file.
  */
 @Composable
-fun TaskRowView(row: TaskRowState, group: TaskGroup, busyReason: String?, thumbnails: ThumbnailLoader) {
+fun TaskRowView(row: TaskRowStateModel, group: TaskGroup, busyReason: String?, thumbnails: ThumbnailLoader) {
     val colors = MaterialTheme.colorScheme
     Surface(
         modifier = Modifier.fillMaxWidth(),

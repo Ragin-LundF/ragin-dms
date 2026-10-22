@@ -1,10 +1,12 @@
 package dms.domain.change
 
-import dms.domain.catalog.Catalog
-import dms.domain.document.Document
-import dms.domain.document.DocumentId
-import dms.domain.library.LibraryFolderId
-import dms.domain.library.RelativePath
+import dms.domain.catalog.model.CatalogModel
+import dms.domain.change.model.FileFactsModel
+import dms.domain.change.model.FolderSnapshotModel
+import dms.domain.document.model.DocumentIdModel
+import dms.domain.document.model.DocumentModel
+import dms.domain.library.model.LibraryFolderIdModel
+import dms.domain.library.model.RelativePathModel
 
 /**
  * Compares the catalog with snapshots of the reachable library folders and reports every difference.
@@ -14,11 +16,11 @@ import dms.domain.library.RelativePath
  */
 object ChangeDetector {
 
-    fun detect(catalog: Catalog, snapshots: List<FolderSnapshot>): List<DetectedChange> {
+    fun detect(catalog: CatalogModel, snapshots: List<FolderSnapshotModel>): List<DetectedChange> {
         val knownPaths = catalog.documents.values.map { it.path }.toSet()
-        val missingIn = mutableMapOf<DocumentId, MutableSet<LibraryFolderId>>()
-        val presentIn = mutableMapOf<DocumentId, MutableSet<LibraryFolderId>>()
-        val untracked = mutableMapOf<RelativePath, MutableMap<LibraryFolderId, FileFacts>>()
+        val missingIn = mutableMapOf<DocumentIdModel, MutableSet<LibraryFolderIdModel>>()
+        val presentIn = mutableMapOf<DocumentIdModel, MutableSet<LibraryFolderIdModel>>()
+        val untracked = mutableMapOf<RelativePathModel, MutableMap<LibraryFolderIdModel, FileFactsModel>>()
         val changes = mutableListOf<DetectedChange>()
 
         snapshots.forEach { snapshot ->
@@ -42,9 +44,9 @@ object ChangeDetector {
 
     /** Compares one document with one folder. A move claims the untracked file it matched. */
     private fun compare(
-        document: Document,
-        snapshot: FolderSnapshot,
-        unclaimed: MutableMap<RelativePath, FileFacts>,
+        document: DocumentModel,
+        snapshot: FolderSnapshotModel,
+        unclaimed: MutableMap<RelativePathModel, FileFactsModel>,
     ): Comparison {
         val facts = snapshot.files[document.path]
         if (facts != null) {
@@ -65,7 +67,11 @@ object ChangeDetector {
         return Comparison.Missing
     }
 
-    private fun modification(document: Document, facts: FileFacts, folderId: LibraryFolderId): DetectedChange? {
+    private fun modification(
+        document: DocumentModel,
+        facts: FileFactsModel,
+        folderId: LibraryFolderIdModel,
+    ): DetectedChange? {
         val changed = if (facts.contentHash != null) {
             facts.contentHash != document.contentHash
         } else {
@@ -84,9 +90,9 @@ object ChangeDetector {
     }
 
     private fun missingFiles(
-        catalog: Catalog,
-        missingIn: Map<DocumentId, Set<LibraryFolderId>>,
-        presentIn: Map<DocumentId, Set<LibraryFolderId>>,
+        catalog: CatalogModel,
+        missingIn: Map<DocumentIdModel, Set<LibraryFolderIdModel>>,
+        presentIn: Map<DocumentIdModel, Set<LibraryFolderIdModel>>,
     ): List<DetectedChange> {
         return missingIn.map { (documentId, folders) ->
             DetectedChange.MissingFile(
@@ -98,7 +104,11 @@ object ChangeDetector {
         }
     }
 
-    private fun untrackedChange(path: RelativePath, factsByFolder: Map<LibraryFolderId, FileFacts>): DetectedChange {
+    private fun untrackedChange(
+        path: RelativePathModel,
+        factsByFolder: Map<LibraryFolderIdModel,
+        FileFactsModel>,
+    ): DetectedChange {
         val hashes = factsByFolder.mapNotNull { (folderId, facts) -> facts.contentHash?.let { folderId to it } }.toMap()
         if (hashes.values.toSet().size > 1) {
             return DetectedChange.ContentConflict(path = path, contentHashes = hashes)
@@ -112,9 +122,9 @@ object ChangeDetector {
         )
     }
 
-    private fun MutableMap<DocumentId, MutableSet<LibraryFolderId>>.addFolder(
-        documentId: DocumentId,
-        folderId: LibraryFolderId,
+    private fun MutableMap<DocumentIdModel, MutableSet<LibraryFolderIdModel>>.addFolder(
+        documentId: DocumentIdModel,
+        folderId: LibraryFolderIdModel,
     ) {
         getOrPut(key = documentId) { mutableSetOf() }.add(element = folderId)
     }

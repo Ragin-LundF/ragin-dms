@@ -12,11 +12,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import dms.ui.assistant.model.ChatState
+import dms.ui.assistant.model.ChatStateModel
 
 /** The title of a conversation, with Start over and Close. */
 @Composable
-fun ChatHeader(state: ChatState, controller: ChatController) {
+fun ChatHeader(state: ChatStateModel, controller: ChatController) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Column(modifier = Modifier.weight(weight = 1f)) {
             Text(text = "Ask AI", style = MaterialTheme.typography.titleLarge)

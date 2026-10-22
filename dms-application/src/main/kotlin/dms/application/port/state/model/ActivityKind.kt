@@ -4,6 +4,7 @@ package dms.application.port.state.model
 enum class ActivityKind {
     DOCUMENT_ADDED,
     DOCUMENT_MOVED,
+    DOCUMENT_FILED,
     DOCUMENT_TRASHED,
     DOCUMENT_RESTORED,
     FOLDER_CREATED,
@@ -12,4 +13,7 @@ enum class ActivityKind {
     SUGGESTION_APPROVED,
     CONFLICT_RESOLVED,
     SYNCHRONIZED,
+    RESTRUCTURED,
+    EXPORTED,
+    PDF_EDITED,
 }

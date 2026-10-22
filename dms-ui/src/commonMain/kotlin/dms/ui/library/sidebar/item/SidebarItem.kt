@@ -22,7 +22,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dms.ui.components.FoldToggle
 import dms.ui.components.surface.CountPill
-import dms.ui.library.sidebar.model.TreeToggle
+import dms.ui.library.sidebar.model.TreeToggleModel
 import dms.ui.theme.Spacing
 
 /**
@@ -38,7 +38,7 @@ fun SidebarItem(
     depth: Int,
     selected: Boolean,
     dropHovered: Boolean,
-    toggle: TreeToggle? = null,
+    toggle: TreeToggleModel? = null,
     menu: (@Composable () -> Unit)? = null,
     onClick: () -> Unit,
 ) {

@@ -2,18 +2,19 @@ package dms.domain.task
 
 import dms.domain.TestData
 import dms.domain.change.DetectedChange
-import dms.domain.library.LibraryFolderId
-import dms.domain.library.RelativePath
+import dms.domain.library.model.LibraryFolderIdModel
+import dms.domain.library.model.RelativePathModel
+import dms.domain.task.model.TaskKeyModel
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 
 class OpenTaskTest {
 
-    private val path = RelativePath.of(raw = "inbox/scan.pdf")
+    private val path = RelativePathModel.of(raw = "inbox/scan.pdf")
     private val newFile = DetectedChange.NewFile(
         path = path,
-        presentIn = setOf(LibraryFolderId(value = "main")),
+        presentIn = setOf(LibraryFolderIdModel(value = "main")),
         size = 1,
         contentHash = TestData.hash(seed = 1),
     )
@@ -30,7 +31,7 @@ class OpenTaskTest {
         val first = OpenTask.forChange(change = newFile)
         val second = OpenTask.forChange(change = newFile.copy(size = 2))
 
-        assertEquals(expected = TaskKey(value = "new:inbox/scan.pdf"), actual = first.key)
+        assertEquals(expected = TaskKeyModel(value = "new:inbox/scan.pdf"), actual = first.key)
         assertEquals(expected = first.key, actual = second.key)
     }
 }

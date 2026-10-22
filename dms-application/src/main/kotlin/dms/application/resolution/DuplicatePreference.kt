@@ -1,6 +1,6 @@
 package dms.application.resolution
 
-import dms.domain.document.Document
+import dms.domain.document.model.DocumentModel
 
 /**
  * Which of several copies of a file to keep by default: the one the user did the most work on
@@ -8,9 +8,9 @@ import dms.domain.document.Document
  */
 object DuplicatePreference {
 
-    fun preferred(copies: Collection<Document>): Document {
+    fun preferred(copies: Collection<DocumentModel>): DocumentModel {
         return copies.sortedWith(
-            comparator = compareByDescending<Document> { it.categoryId != null }
+            comparator = compareByDescending<DocumentModel> { it.categoryId != null }
                 .thenByDescending { it.tags.size }
                 .thenByDescending { it.classification != null }
                 .thenByDescending { it.metadata.title != null }

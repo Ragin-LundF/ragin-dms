@@ -1,13 +1,15 @@
 package dms.ai
 
 import dms.ai.assistant.OpenAiAssistant
+import dms.ai.assistant.OpenAiLibraryAssistant
 import dms.ai.client.ChatTransport
 import dms.ai.client.OpenAiCompatibleClient
+import dms.ai.client.OpenAiEmbeddings
 import dms.ai.read.FileContentReader
 import dms.ai.read.FilePreviewer
-import dms.application.port.state.model.AiSettings
-import dms.domain.library.LibraryFolder
-import dms.domain.library.RelativePath
+import dms.application.port.state.model.AiSettingsModel
+import dms.domain.library.model.LibraryFolderModel
+import dms.domain.library.model.RelativePathModel
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.HttpClientEngine
 import io.ktor.client.engine.cio.CIO
@@ -23,8 +25,8 @@ import java.nio.file.Path
  * file on disk. Tests pass their own [engine]; the default talks HTTP through CIO.
  */
 class AiAdapters(
-    settings: suspend () -> AiSettings,
-    locate: (LibraryFolder, RelativePath) -> Path?,
+    settings: suspend () -> AiSettingsModel,
+    locate: (LibraryFolderModel, RelativePathModel) -> Path?,
     engine: HttpClientEngine? = null,
 ) {
     private val http: HttpClient = HttpClient(engine = engine ?: CIO.create()) {
@@ -40,6 +42,8 @@ class AiAdapters(
 
     val client: OpenAiCompatibleClient = OpenAiCompatibleClient(transport = transport)
     val assistant: OpenAiAssistant = OpenAiAssistant(transport = transport)
+    val libraryAssistant: OpenAiLibraryAssistant = OpenAiLibraryAssistant(transport = transport)
+    val embeddings: OpenAiEmbeddings = OpenAiEmbeddings(http = http, transport = transport, settings = settings)
     val reader: FileContentReader = FileContentReader(locate = locate, settings = settings)
     val previewer: FilePreviewer = FilePreviewer(locate = locate)
 

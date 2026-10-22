@@ -10,12 +10,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import dms.ui.dashboard.model.TaskGroup
-import dms.ui.dashboard.model.TaskGroupState
+import dms.ui.dashboard.model.TaskGroupStateModel
 import dms.ui.theme.Spacing
 
 /** One chip per kind of task, with its count; the selected one filters the list. */
 @Composable
-fun TaskFilterChips(groups: List<TaskGroupState>, filter: TaskGroup?, total: Int, onFilter: (TaskGroup?) -> Unit) {
+fun TaskFilterChips(groups: List<TaskGroupStateModel>, filter: TaskGroup?, total: Int, onFilter: (TaskGroup?) -> Unit) {
     Row(
         modifier = Modifier.horizontalScroll(state = rememberScrollState()).padding(bottom = Spacing.small),
         horizontalArrangement = Arrangement.spacedBy(space = Spacing.small),

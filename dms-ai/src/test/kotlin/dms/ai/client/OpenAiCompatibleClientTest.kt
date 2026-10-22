@@ -6,8 +6,8 @@ import dms.application.port.ai.model.ClassificationFailure
 import dms.application.port.ai.model.ClassificationResult
 import dms.application.port.ai.model.DocumentContent
 import dms.application.port.ai.model.ModelList
-import dms.application.port.ai.model.PageImage
-import dms.application.port.state.model.AiSettings
+import dms.application.port.ai.model.PageImageModel
+import dms.application.port.state.model.AiSettingsModel
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.MockRequestHandleScope
 import io.ktor.client.engine.mock.respond
@@ -31,7 +31,7 @@ import kotlin.test.assertTrue
 
 class OpenAiCompatibleClientTest {
 
-    private val settings = AiSettings(baseUrl = "http://localhost:1234/v1/", model = "sample-model")
+    private val settings = AiSettingsModel(baseUrl = "http://localhost:1234/v1/", model = "sample-model")
     private val sentBodies = mutableListOf<JsonObject>()
 
     @Test
@@ -58,7 +58,7 @@ class OpenAiCompatibleClientTest {
     fun `page images are sent as data URLs after the text`() {
         runTest {
             val client = clientAnswering { json(text = answer(content = "{}")) }
-            val image = PageImage(bytes = byteArrayOf(1, 2, 3), mimeType = "image/jpeg")
+            val image = PageImageModel(bytes = byteArrayOf(1, 2, 3), mimeType = "image/jpeg")
 
             client.suggest(request = Requests.request(content = DocumentContent.PageImages(pages = listOf(image))))
 
@@ -131,7 +131,7 @@ class OpenAiCompatibleClientTest {
     }
 
     private fun clientAnswering(
-        settings: AiSettings = this.settings,
+        settings: AiSettingsModel = this.settings,
         handler: suspend MockRequestHandleScope.(HttpRequestData) -> HttpResponseData,
     ): OpenAiCompatibleClient {
         val engine = MockEngine { request ->

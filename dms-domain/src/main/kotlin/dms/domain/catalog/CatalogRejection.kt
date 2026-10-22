@@ -13,4 +13,7 @@ enum class CatalogRejection {
     CATEGORY_HAS_CHILDREN,
     CATEGORY_CYCLE,
     TAG_NOT_FOUND,
+    FIELD_NOT_DEFINED,
+    FIELD_TYPE_MISMATCH,
+    LINK_NOT_FOUND,
 }

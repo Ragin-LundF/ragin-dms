@@ -2,7 +2,7 @@ package dms.storage.fs
 
 import dms.application.port.storage.model.StorageFailure
 import dms.application.port.storage.model.StorageResult
-import dms.domain.library.RelativePath
+import dms.domain.library.model.RelativePathModel
 import dms.storage.support.RecordingTrash
 import dms.storage.support.StorageResults
 import dms.storage.support.TestFolders
@@ -134,7 +134,7 @@ class FileSystemDocumentStorageMoveTest {
             val facts = StorageResults.valueOf(result = result)
             assertEquals(expected = 5L, actual = facts.size)
             assertEquals(expected = TestFolders.hashOf(content = "alpha"), actual = facts.contentHash)
-            val onFolder = storage.readFacts(folder = folder, path = RelativePath.ROOT)
+            val onFolder = storage.readFacts(folder = folder, path = RelativePathModel.ROOT)
             assertEquals(expected = StorageFailure.NOT_FOUND, actual = StorageResults.failureOf(result = onFolder))
         }
     }

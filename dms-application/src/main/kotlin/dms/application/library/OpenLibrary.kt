@@ -8,13 +8,13 @@ import dms.application.port.storage.model.CatalogLoad
 import dms.application.port.system.IdGenerator
 import dms.application.sync.Replicator
 import dms.application.sync.model.Replication
-import dms.domain.catalog.Catalog
-import dms.domain.catalog.CatalogMergeResult
 import dms.domain.catalog.CatalogMerger
-import dms.domain.catalog.LibraryId
-import dms.domain.library.LibraryFolder
-import dms.domain.library.LibraryFolderId
-import dms.domain.library.LibraryFolders
+import dms.domain.catalog.model.CatalogMergeResultModel
+import dms.domain.catalog.model.CatalogModel
+import dms.domain.catalog.model.LibraryIdModel
+import dms.domain.library.model.LibraryFolderIdModel
+import dms.domain.library.model.LibraryFolderModel
+import dms.domain.library.model.LibraryFoldersModel
 
 /**
  * Opens the library: reads the catalog of every reachable folder, merges all copies (including conflict
@@ -57,7 +57,7 @@ class OpenLibrary(
             emptySet()
         } else {
             // The primary's id wins, so a foreign folder is always a sync folder and can simply be left out.
-            val ownFolders = LibraryFolders(folders = folders.folders - foreign)
+            val ownFolders = LibraryFoldersModel(folders = folders.folders - foreign)
             when (val saved = replicator.saveCatalog(folders = ownFolders, catalog = merge.catalog)) {
                 is Replication.PrimaryFailed -> return OpenLibraryOutcome.PrimaryFailed(failure = saved.failure)
                 is Replication.Done -> saved.pendingFolders
@@ -77,13 +77,17 @@ class OpenLibrary(
     }
 
     /** The primary's library id wins; without any catalog a new library begins. */
-    private fun libraryIdOf(folders: LibraryFolders, found: Map<LibraryFolder, CatalogLoad.Found>): LibraryId {
+    private fun libraryIdOf(
+        folders: LibraryFoldersModel,
+        found: Map<LibraryFolderModel,
+        CatalogLoad.Found>,
+    ): LibraryIdModel {
         val catalog = found[folders.primary]?.catalog ?: found.values.firstOrNull()?.catalog
-        return catalog?.libraryId ?: LibraryId(value = ids.newId())
+        return catalog?.libraryId ?: LibraryIdModel(value = ids.newId())
     }
 
     /** Unreachable folders are left alone; they get the catalog with the next sync or retry. */
-    private fun isOutdated(load: CatalogLoad, merged: Catalog): Boolean {
+    private fun isOutdated(load: CatalogLoad, merged: CatalogModel): Boolean {
         return when (load) {
             CatalogLoad.NotFound -> true
             is CatalogLoad.Found -> load.catalog != merged || load.conflictCopies.isNotEmpty()
@@ -91,18 +95,18 @@ class OpenLibrary(
         }
     }
 
-    private fun mergeAll(libraryId: LibraryId, copies: List<Catalog>): CatalogMergeResult {
-        val first = copies.firstOrNull() ?: Catalog.empty(libraryId = libraryId)
-        val initial = CatalogMergeResult(catalog = first, conflicts = emptyList())
+    private fun mergeAll(libraryId: LibraryIdModel, copies: List<CatalogModel>): CatalogMergeResultModel {
+        val first = copies.firstOrNull() ?: CatalogModel.empty(libraryId = libraryId)
+        val initial = CatalogMergeResultModel(catalog = first, conflicts = emptyList())
         return copies.drop(n = 1).fold(initial = initial) { merged, copy ->
             val result = CatalogMerger.merge(first = merged.catalog, second = copy)
-            CatalogMergeResult(catalog = result.catalog, conflicts = merged.conflicts + result.conflicts)
+            CatalogMergeResultModel(catalog = result.catalog, conflicts = merged.conflicts + result.conflicts)
         }
     }
 
     private suspend fun discardMergedConflictCopies(
-        found: Map<LibraryFolder, CatalogLoad.Found>,
-        pending: Set<LibraryFolderId>,
+        found: Map<LibraryFolderModel, CatalogLoad.Found>,
+        pending: Set<LibraryFolderIdModel>,
     ) {
         found.filter { (folder, load) -> load.conflictCopies.isNotEmpty() && folder.id !in pending }
             .keys

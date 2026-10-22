@@ -1,9 +1,9 @@
 package dms.ui.dashboard
 
 import dms.domain.change.DetectedChange
-import dms.ui.dashboard.model.DashboardUiState
+import dms.ui.dashboard.model.DashboardUiStateModel
 import dms.ui.dashboard.model.TaskGroup
-import dms.ui.dashboard.model.TaskRowState
+import dms.ui.dashboard.model.TaskRowStateModel
 import dms.ui.support.TestApp
 import dms.ui.support.UiTest
 import kotlinx.coroutines.flow.first
@@ -268,11 +268,11 @@ class DashboardViewModelTest {
         app.idle()
     }
 
-    private suspend fun awaitGroup(viewModel: DashboardViewModel, group: TaskGroup): DashboardUiState {
+    private suspend fun awaitGroup(viewModel: DashboardViewModel, group: TaskGroup): DashboardUiStateModel {
         return viewModel.state.first { state -> state.groups.any { it.group == group } }
     }
 
-    private fun rowOf(state: DashboardUiState): TaskRowState {
+    private fun rowOf(state: DashboardUiStateModel): TaskRowStateModel {
         return state.groups.single().rows.single()
     }
 }

@@ -2,13 +2,13 @@ package dms.ui.library.drag
 
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
-import dms.domain.document.ContentHash
-import dms.domain.document.Document
-import dms.domain.document.DocumentId
-import dms.domain.library.RelativePath
-import dms.domain.taxonomy.Category
-import dms.domain.taxonomy.CategoryId
-import dms.domain.taxonomy.TagName
+import dms.domain.document.model.ContentHashModel
+import dms.domain.document.model.DocumentIdModel
+import dms.domain.document.model.DocumentModel
+import dms.domain.library.model.RelativePathModel
+import dms.domain.taxonomy.model.CategoryIdModel
+import dms.domain.taxonomy.model.CategoryModel
+import dms.domain.taxonomy.model.TagNameModel
 import dms.ui.library.drag.model.DragItem
 import dms.ui.library.drag.model.DropTarget
 import java.time.Instant
@@ -18,17 +18,17 @@ import kotlin.test.assertNull
 
 class DocumentDragTest {
 
-    private val document = Document(
-        id = DocumentId(value = "a"),
-        path = RelativePath.of(raw = "letters/a.pdf"),
-        contentHash = ContentHash(value = "a".repeat(n = 64)),
+    private val document = DocumentModel(
+        id = DocumentIdModel(value = "a"),
+        path = RelativePathModel.of(raw = "letters/a.pdf"),
+        contentHash = ContentHashModel(value = "a".repeat(n = 64)),
         size = 1,
         addedAt = Instant.parse("2026-01-01T00:00:00Z"),
     )
     private val dragged = DragItem.DraggedDocument(document = document)
-    private val invoices = Category(id = CategoryId(value = "invoices"), name = "Invoices")
-    private val archive = DropTarget.Folder(path = RelativePath.of(raw = "archive"))
-    private val tax = DropTarget.Tag(tag = TagName.of(raw = "tax"))
+    private val invoices = CategoryModel(id = CategoryIdModel(value = "invoices"), name = "Invoices")
+    private val archive = DropTarget.Folder(path = RelativePathModel.of(raw = "archive"))
+    private val tax = DropTarget.Tag(tag = TagNameModel.of(raw = "tax"))
 
     @Test
     fun `releasing over a target drops the document there`() {
@@ -77,7 +77,7 @@ class DocumentDragTest {
         val drops = mutableListOf<Pair<DragItem, DropTarget>>()
         val drag = draggingWith(drops = drops)
         val own = DropTarget.Category(categoryId = invoices.id)
-        val other = DropTarget.Category(categoryId = CategoryId(value = "taxes"))
+        val other = DropTarget.Category(categoryId = CategoryIdModel(value = "taxes"))
         drag.register(target = own, bounds = Rect(left = 0f, top = 100f, right = 100f, bottom = 150f))
         drag.register(target = other, bounds = Rect(left = 100f, top = 100f, right = 200f, bottom = 150f))
         drag.register(

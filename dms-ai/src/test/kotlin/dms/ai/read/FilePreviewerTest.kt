@@ -1,11 +1,11 @@
 package dms.ai.read
 
 import dms.ai.support.PdfTests
-import dms.domain.library.FolderLocation
 import dms.domain.library.FolderRole
-import dms.domain.library.LibraryFolder
-import dms.domain.library.LibraryFolderId
-import dms.domain.library.RelativePath
+import dms.domain.library.model.FolderLocationModel
+import dms.domain.library.model.LibraryFolderIdModel
+import dms.domain.library.model.LibraryFolderModel
+import dms.domain.library.model.RelativePathModel
 import kotlinx.coroutines.test.runTest
 import org.apache.pdfbox.pdmodel.PDDocument
 import org.apache.pdfbox.pdmodel.PDPage
@@ -25,10 +25,10 @@ import kotlin.test.assertNull
 class FilePreviewerTest {
 
     private val root: Path = Files.createTempDirectory("dms-preview-")
-    private val folder = LibraryFolder(
-        id = LibraryFolderId(value = "primary"),
+    private val folder = LibraryFolderModel(
+        id = LibraryFolderIdModel(value = "primary"),
         displayName = "Primary",
-        location = FolderLocation(value = root.toString()),
+        location = FolderLocationModel(value = root.toString()),
         role = FolderRole.PRIMARY,
     )
     private val previewer = FilePreviewer(locate = { _, path -> root.resolve(path.value).takeIf { Files.exists(it) } })
@@ -46,7 +46,11 @@ class FilePreviewerTest {
                 pdf.save(root.resolve("a.pdf").toFile())
             }
 
-            val thumbnail = previewer.thumbnail(folder = folder, path = RelativePath.of(raw = "a.pdf"), maxSide = 120)
+            val thumbnail = previewer.thumbnail(
+                folder = folder,
+                path = RelativePathModel.of(raw = "a.pdf"),
+                maxSide = 120,
+            )
 
             val image = ImageIO.read(ByteArrayInputStream(assertNotNull(actual = thumbnail).bytes))
             assertEquals(expected = 120, actual = max(image.width, image.height))
@@ -58,7 +62,7 @@ class FilePreviewerTest {
         runTest(timeout = PdfTests.TIMEOUT) {
             val photo = BufferedImage(800, 400, BufferedImage.TYPE_INT_RGB)
             ImageIO.write(photo, "png", root.resolve("photo.png").toFile())
-            val path = RelativePath.of(raw = "photo.png")
+            val path = RelativePathModel.of(raw = "photo.png")
 
             val thumbnail = previewer.thumbnail(folder = folder, path = path, maxSide = 200)
 
@@ -77,7 +81,11 @@ class FilePreviewerTest {
             Files.writeString(root.resolve("broken.pdf"), "not a pdf")
 
             listOf("letter.docx", "missing.pdf", "broken.pdf").forEach { name ->
-                val thumbnail = previewer.thumbnail(folder = folder, path = RelativePath.of(raw = name), maxSide = 100)
+                val thumbnail = previewer.thumbnail(
+                    folder = folder,
+                    path = RelativePathModel.of(raw = name),
+                    maxSide = 100,
+                )
                 assertNull(actual = thumbnail, message = name)
             }
         }

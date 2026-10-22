@@ -14,7 +14,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import dms.ui.components.chart.model.ChartPoint
+import dms.ui.components.chart.model.ChartPointModel
 import dms.ui.components.surface.AppCard
 import dms.ui.components.surface.CardTitle
 import dms.ui.theme.Spacing
@@ -22,7 +22,7 @@ import dms.ui.theme.Spacing
 /** The tags as a cloud: the more documents a tag has, the larger and stronger its chip. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun TagCloudCard(points: List<ChartPoint>, onOpenTag: (String) -> Unit, modifier: Modifier = Modifier) {
+fun TagCloudCard(points: List<ChartPointModel>, onOpenTag: (String) -> Unit, modifier: Modifier = Modifier) {
     val colors = MaterialTheme.colorScheme
     val type = MaterialTheme.typography
     val max = points.maxOfOrNull { it.value }?.takeIf { it > 0 } ?: 1

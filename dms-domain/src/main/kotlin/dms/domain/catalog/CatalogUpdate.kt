@@ -1,10 +1,12 @@
 package dms.domain.catalog
 
-/** The result of a change to a [Catalog]. */
+import dms.domain.catalog.model.CatalogModel
+
+/** The result of a change to a [CatalogModel]. */
 sealed interface CatalogUpdate {
 
     /** Applies [next] to the resulting catalog; a rejection short-circuits and stays a rejection. */
-    fun andThen(next: (Catalog) -> CatalogUpdate): CatalogUpdate {
+    fun andThen(next: (CatalogModel) -> CatalogUpdate): CatalogUpdate {
         return when (this) {
             is Applied -> next(catalog)
             is Rejected -> this
@@ -12,7 +14,7 @@ sealed interface CatalogUpdate {
     }
 
     /** The change was applied; [catalog] carries the next revision. */
-    data class Applied(val catalog: Catalog) : CatalogUpdate
+    data class Applied(val catalog: CatalogModel) : CatalogUpdate
 
     /** The change was refused; the original catalog is unchanged. */
     data class Rejected(val reason: CatalogRejection) : CatalogUpdate

@@ -1,7 +1,7 @@
 package dms.ui.components.dialog
 
-import dms.ui.components.model.ConfirmationRequest
-import dms.ui.components.model.TextInputRequest
+import dms.ui.components.model.ConfirmationRequestModel
+import dms.ui.components.model.TextInputRequestModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -12,20 +12,20 @@ import kotlinx.coroutines.flow.asStateFlow
  */
 class DialogController {
 
-    private val confirmationState = MutableStateFlow<ConfirmationRequest?>(value = null)
-    private val inputState = MutableStateFlow<TextInputRequest?>(value = null)
+    private val confirmationState = MutableStateFlow<ConfirmationRequestModel?>(value = null)
+    private val inputState = MutableStateFlow<TextInputRequestModel?>(value = null)
     private var onConfirm: (() -> Unit)? = null
     private var onSubmit: ((String) -> Unit)? = null
 
-    val confirmation: StateFlow<ConfirmationRequest?> = confirmationState.asStateFlow()
-    val input: StateFlow<TextInputRequest?> = inputState.asStateFlow()
+    val confirmation: StateFlow<ConfirmationRequestModel?> = confirmationState.asStateFlow()
+    val input: StateFlow<TextInputRequestModel?> = inputState.asStateFlow()
 
-    fun ask(request: ConfirmationRequest, action: () -> Unit) {
+    fun ask(request: ConfirmationRequestModel, action: () -> Unit) {
         onConfirm = action
         confirmationState.value = request
     }
 
-    fun askText(request: TextInputRequest, submit: (String) -> Unit) {
+    fun askText(request: TextInputRequestModel, submit: (String) -> Unit) {
         onSubmit = submit
         inputState.value = request
     }

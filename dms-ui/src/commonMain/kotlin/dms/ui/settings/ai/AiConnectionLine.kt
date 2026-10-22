@@ -14,12 +14,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import dms.ui.settings.model.AiConnection
+import dms.ui.settings.model.AiConnectionModel
 import dms.ui.theme.Spacing
 
 /** What the last connection test found, with an icon so the result does not rely on color. */
 @Composable
-fun AiConnectionLine(connection: AiConnection) {
+fun AiConnectionLine(connection: AiConnectionModel) {
     val message = if (connection.checking) "Asking the server for its models…" else connection.message ?: return
     val color = if (connection.isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
     Row(

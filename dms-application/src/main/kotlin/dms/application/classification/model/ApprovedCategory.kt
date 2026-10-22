@@ -1,11 +1,11 @@
 package dms.application.classification.model
 
-import dms.domain.taxonomy.CategoryId
+import dms.domain.taxonomy.model.CategoryIdModel
 
 /** The category the user approved: one the catalog has, or a path of names from the top level. */
 sealed interface ApprovedCategory {
 
-    data class Existing(val categoryId: CategoryId) : ApprovedCategory
+    data class Existing(val categoryId: CategoryIdModel) : ApprovedCategory
 
     /**
      * A category by its [names] from the top level down, like `Insurance / Household / Rent`. A level

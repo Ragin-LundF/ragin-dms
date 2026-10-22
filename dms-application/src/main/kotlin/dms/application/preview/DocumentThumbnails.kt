@@ -2,9 +2,9 @@ package dms.application.preview
 
 import dms.application.library.CatalogStore
 import dms.application.port.ai.DocumentPreviewer
-import dms.application.port.ai.model.PageImage
-import dms.domain.library.LibraryFolderId
-import dms.domain.library.RelativePath
+import dms.application.port.ai.model.PageImageModel
+import dms.domain.library.model.LibraryFolderIdModel
+import dms.domain.library.model.RelativePathModel
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -19,19 +19,19 @@ class DocumentThumbnails(
 ) {
 
     private val mutex = Mutex()
-    private val cache = object : LinkedHashMap<Pair<LibraryFolderId, RelativePath>, PageImage?>(
+    private val cache = object : LinkedHashMap<Pair<LibraryFolderIdModel, RelativePathModel>, PageImageModel?>(
         CAPACITY,
         LOAD_FACTOR,
         true,
     ) {
         override fun removeEldestEntry(
-            eldest: MutableMap.MutableEntry<Pair<LibraryFolderId, RelativePath>, PageImage?>?,
+            eldest: MutableMap.MutableEntry<Pair<LibraryFolderIdModel, RelativePathModel>, PageImageModel?>?,
         ): Boolean {
             return size > CAPACITY
         }
     }
 
-    suspend operator fun invoke(folderId: LibraryFolderId, path: RelativePath): PageImage? {
+    suspend operator fun invoke(folderId: LibraryFolderIdModel, path: RelativePathModel): PageImageModel? {
         val folder = store.current()?.folders?.find(id = folderId) ?: return null
         val key = folderId to path
         return mutex.withLock {

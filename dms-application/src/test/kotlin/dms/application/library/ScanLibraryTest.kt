@@ -1,10 +1,10 @@
 package dms.application.library
 
 import dms.application.TestLibrary
-import dms.application.library.model.ScanProgress
+import dms.application.library.model.ScanProgressModel
 import dms.application.port.state.model.ActivityKind
 import dms.domain.change.DetectedChange
-import dms.domain.library.RelativePath
+import dms.domain.library.model.RelativePathModel
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -20,7 +20,7 @@ class ScanLibraryTest {
             library.open()
             library.folders.put(folder = library.primary, path = "a.pdf", content = "alpha")
             library.folders.put(folder = library.primary, path = "b.pdf", content = "beta")
-            val reported = mutableListOf<ScanProgress>()
+            val reported = mutableListOf<ScanProgressModel>()
 
             library.scanLibrary(onProgress = { reported += it })
 
@@ -28,7 +28,7 @@ class ScanLibraryTest {
             assertEquals(expected = 3, actual = reported.last().folderCount)
             assertEquals(expected = listOf(null, 2, 2, 2), actual = primary.map { it.total })
             assertEquals(expected = listOf(0, 0, 1, 2), actual = primary.map { it.done })
-            assertEquals(expected = RelativePath.of(raw = "b.pdf"), actual = primary.last().current)
+            assertEquals(expected = RelativePathModel.of(raw = "b.pdf"), actual = primary.last().current)
         }
     }
 

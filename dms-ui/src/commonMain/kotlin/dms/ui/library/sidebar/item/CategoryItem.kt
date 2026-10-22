@@ -7,17 +7,17 @@ import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.runtime.Composable
 import dms.ui.components.ActionMenu
-import dms.ui.components.model.ActionButton
+import dms.ui.components.model.ActionButtonModel
 import dms.ui.library.LibraryViewModel
 import dms.ui.library.drag.DocumentDrag
 import dms.ui.library.drag.DraggableItem
 import dms.ui.library.drag.DropTargetArea
 import dms.ui.library.drag.model.DragItem
 import dms.ui.library.drag.model.DropTarget
-import dms.ui.library.model.CategoryEntry
+import dms.ui.library.model.CategoryEntryModel
 import dms.ui.library.model.LibrarySelection
 import dms.ui.library.sidebar.model.ToggleTarget
-import dms.ui.library.sidebar.model.TreeToggle
+import dms.ui.library.sidebar.model.TreeToggleModel
 
 /**
  * One category; documents dropped on it get it, and a category dropped on it moves inside. It can be
@@ -25,7 +25,7 @@ import dms.ui.library.sidebar.model.TreeToggle
  */
 @Composable
 fun CategoryItem(
-    entry: CategoryEntry,
+    entry: CategoryEntryModel,
     selection: LibrarySelection,
     busyReason: String?,
     drag: DocumentDrag,
@@ -33,11 +33,13 @@ fun CategoryItem(
 ) {
     val category = entry.category
     val actions = listOf(
-        ActionButton(label = "Add Subcategory", icon = Icons.Rounded.Add) {
+        ActionButtonModel(label = "Add Subcategory", icon = Icons.Rounded.Add) {
             viewModel.newSubcategory(parent = category)
         },
-        ActionButton(label = "Rename", icon = Icons.Rounded.Edit) { viewModel.renameCategory(category = category) },
-        ActionButton(
+        ActionButtonModel(label = "Rename", icon = Icons.Rounded.Edit) {
+            viewModel.renameCategory(category = category)
+        },
+        ActionButtonModel(
             label = "Delete",
             icon = Icons.Rounded.Delete,
             disabledReason = "Documents still use this category".takeIf { entry.documentCount > 0 },
@@ -52,7 +54,7 @@ fun CategoryItem(
                 depth = entry.depth,
                 selected = selection == LibrarySelection.Category(categoryId = category.id),
                 dropHovered = hovered,
-                toggle = TreeToggle(
+                toggle = TreeToggleModel(
                     expanded = entry.expanded.takeIf { entry.hasChildren },
                     onToggle = { viewModel.toggle(target = ToggleTarget.Category(categoryId = category.id)) },
                 ),

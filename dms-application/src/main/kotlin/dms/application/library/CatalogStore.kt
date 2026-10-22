@@ -1,14 +1,14 @@
 package dms.application.library
 
-import dms.application.common.LibrarySnapshot
 import dms.application.common.OperationOutcome
+import dms.application.common.model.LibrarySnapshotModel
 import dms.application.port.state.SettingsRepository
 import dms.application.sync.Replicator
 import dms.application.sync.model.Replication
-import dms.domain.catalog.Catalog
 import dms.domain.catalog.CatalogUpdate
-import dms.domain.library.LibraryFolderId
-import dms.domain.library.LibraryFolders
+import dms.domain.catalog.model.CatalogModel
+import dms.domain.library.model.LibraryFolderIdModel
+import dms.domain.library.model.LibraryFoldersModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -28,45 +28,50 @@ class CatalogStore(
 ) {
 
     private val mutex = Mutex()
-    private val state = MutableStateFlow<Catalog?>(value = null)
-    private var foreignFolders: Set<LibraryFolderId> = emptySet()
+    private val state = MutableStateFlow<CatalogModel?>(value = null)
+    private var foreignFolders: Set<LibraryFolderIdModel> = emptySet()
 
     /** The catalog of the open library, or `null` while none is open. */
-    val catalog: StateFlow<Catalog?> = state.asStateFlow()
+    val catalog: StateFlow<CatalogModel?> = state.asStateFlow()
 
     /**
      * The folders and the catalog, or `null` while no library is open. Folders that hold another
      * library are left out, so no use case ever writes to them.
      */
-    suspend fun current(): LibrarySnapshot? {
+    suspend fun current(): LibrarySnapshotModel? {
         val configured = settings.loadLibraryFolders() ?: return null
         val catalog = state.value ?: return null
         // The primary's library id always wins, so a foreign folder is never the primary.
-        val folders = LibraryFolders(folders = configured.folders.filterNot { it.id in foreignFolders })
-        return LibrarySnapshot(folders = folders, catalog = catalog)
+        val folders = LibraryFoldersModel(folders = configured.folders.filterNot { it.id in foreignFolders })
+        return LibrarySnapshotModel(folders = folders, catalog = catalog)
     }
 
     /**
      * Makes [catalog] the open catalog without saving it; used when a library is opened.
      * [foreign] are folders holding another library, excluded until the library is opened again.
      */
-    fun publish(catalog: Catalog, foreign: Set<LibraryFolderId> = emptySet()) {
+    fun publish(catalog: CatalogModel, foreign: Set<LibraryFolderIdModel> = emptySet()) {
         foreignFolders = foreign
         state.value = catalog
     }
 
     /** Applies [edit] to the current catalog and saves the result to every library folder. */
-    suspend fun commit(edit: (Catalog) -> CatalogUpdate): OperationOutcome {
+    suspend fun commit(edit: (CatalogModel) -> CatalogUpdate): OperationOutcome {
         return mutex.withLock {
             val snapshot = current() ?: return@withLock OperationOutcome.LibraryNotOpen
             when (val update = edit(snapshot.catalog)) {
                 is CatalogUpdate.Rejected -> OperationOutcome.Rejected(reason = update.reason)
-                is CatalogUpdate.Applied -> save(snapshot = snapshot, catalog = update.catalog)
+                // An edit that changed nothing writes nothing.
+                is CatalogUpdate.Applied -> if (update.catalog == snapshot.catalog) {
+                    OperationOutcome.Done(catalog = snapshot.catalog, pendingFolders = emptySet())
+                } else {
+                    save(snapshot = snapshot, catalog = update.catalog)
+                }
             }
         }
     }
 
-    private suspend fun save(snapshot: LibrarySnapshot, catalog: Catalog): OperationOutcome {
+    private suspend fun save(snapshot: LibrarySnapshotModel, catalog: CatalogModel): OperationOutcome {
         return when (val replication = replicator.saveCatalog(folders = snapshot.folders, catalog = catalog)) {
             is Replication.PrimaryFailed -> OperationOutcome.StorageFailed(failure = replication.failure)
             is Replication.Done -> {

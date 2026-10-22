@@ -7,35 +7,39 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import dms.domain.document.DocumentId
-import dms.domain.library.RelativePath
-import dms.domain.taxonomy.CategoryId
-import dms.domain.taxonomy.TagName
+import dms.domain.document.model.DocumentIdModel
+import dms.domain.library.model.RelativePathModel
+import dms.domain.taxonomy.model.CategoryIdModel
+import dms.domain.taxonomy.model.TagNameModel
 import dms.ui.dashboard.DashboardViewModel
 import dms.ui.dashboard.hero.DashboardHero
-import dms.ui.dashboard.model.DashboardUiState
+import dms.ui.dashboard.model.DashboardUiStateModel
 import dms.ui.dashboard.widgets.StatRow
 import dms.ui.library.model.LibrarySelection
-import dms.ui.library.model.YearFilter
+import dms.ui.library.model.YearFilterModel
 import dms.ui.theme.Spacing
 
 /**
- * The dashboard's sections one below the other: the main actions, the headline figures, quick
- * access, the work that waits, and the charts. Clicks open the library at what was clicked.
+ * The dashboard's sections one below the other: the main actions, the headline figures, the inbox,
+ * quick access, the work that waits, and the charts. Clicks open the library at what was clicked.
  */
 @Composable
 fun DashboardOverview(
-    state: DashboardUiState,
+    state: DashboardUiStateModel,
     busyReason: String?,
     viewModel: DashboardViewModel,
     onChooseFiles: () -> Unit,
     onOpen: (LibrarySelection, String) -> Unit,
-    onOpenYear: (YearFilter) -> Unit,
-    onOpenDocument: (DocumentId) -> Unit,
+    onOpenYear: (YearFilterModel) -> Unit,
+    onOpenDocument: (DocumentIdModel) -> Unit,
     onShowAllTasks: () -> Unit,
+    onOpenInbox: () -> Unit,
 ) {
-    val everything = LibrarySelection.Folder(path = RelativePath.ROOT)
+    val everything = LibrarySelection.Folder(path = RelativePathModel.ROOT)
+    val scans by viewModel.organize.scans.collectAsState()
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -55,13 +59,23 @@ fun DashboardOverview(
             onSearch = { query -> onOpen(everything, query) },
         )
         StatRow(state = state, onOpenUncategorized = { onOpen(LibrarySelection.Uncategorized, "") })
+        OrganizeSection(
+            state = state,
+            onOpenInbox = onOpenInbox,
+            onAnalyzeInbox = viewModel::analyzeInbox,
+            onOpenDocument = onOpenDocument,
+            onExportCalendar = viewModel.organize::exportCalendar,
+            scans = scans,
+            onFindScans = viewModel.organize::findScans,
+            onMakeSearchable = viewModel.organize::makeScansSearchable,
+        )
         QuickAccessSection(
             stats = state.stats,
             onOpenDocument = onOpenDocument,
             onOpenRecent = { onOpen(LibrarySelection.Recent, "") },
-            onOpenCategory = { id -> onOpen(LibrarySelection.Category(categoryId = CategoryId(value = id)), "") },
+            onOpenCategory = { id -> onOpen(LibrarySelection.Category(categoryId = CategoryIdModel(value = id)), "") },
             onOpenUncategorized = { onOpen(LibrarySelection.Uncategorized, "") },
-            onOpenTag = { tag -> onOpen(LibrarySelection.Tag(tag = TagName.of(raw = tag)), "") },
+            onOpenTag = { tag -> onOpen(LibrarySelection.Tag(tag = TagNameModel.of(raw = tag)), "") },
         )
         WorkSection(
             state = state,
@@ -73,7 +87,7 @@ fun DashboardOverview(
         InsightsSection(
             stats = state.stats,
             onSearch = { query -> onOpen(everything, query) },
-            onOpenYear = { id -> YearFilter.parse(text = id)?.let(onOpenYear) },
+            onOpenYear = { id -> YearFilterModel.parse(text = id)?.let(onOpenYear) },
         )
     }
 }

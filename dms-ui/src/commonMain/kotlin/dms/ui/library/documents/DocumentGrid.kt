@@ -8,19 +8,19 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import dms.domain.document.DocumentId
+import dms.domain.document.model.DocumentIdModel
 import dms.ui.library.drag.DocumentDrag
 import dms.ui.library.drag.DraggableDocument
-import dms.ui.library.model.DocumentRow
+import dms.ui.library.model.DocumentRowModel
 import dms.ui.theme.Spacing
 
 /** The documents as a grid of cards; each card can be dragged onto the sidebar. */
 @Composable
 fun DocumentGrid(
-    rows: List<DocumentRow>,
-    inspected: DocumentId?,
+    rows: List<DocumentRowModel>,
+    inspected: DocumentIdModel?,
     drag: DocumentDrag,
-    onInspect: (DocumentId) -> Unit,
+    onInspect: (DocumentIdModel) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     LazyVerticalGrid(

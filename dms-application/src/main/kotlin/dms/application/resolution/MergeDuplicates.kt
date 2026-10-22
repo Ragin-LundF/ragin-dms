@@ -7,12 +7,12 @@ import dms.application.port.state.TaskStore
 import dms.application.port.state.model.ActivityKind
 import dms.application.port.storage.DocumentStorage
 import dms.application.port.storage.model.StorageResult
-import dms.domain.catalog.Catalog
 import dms.domain.catalog.CatalogUpdate
-import dms.domain.document.Document
-import dms.domain.document.DocumentId
-import dms.domain.document.DocumentMetadata
-import dms.domain.library.LibraryFolder
+import dms.domain.catalog.model.CatalogModel
+import dms.domain.document.model.DocumentIdModel
+import dms.domain.document.model.DocumentMetadataModel
+import dms.domain.document.model.DocumentModel
+import dms.domain.library.model.LibraryFolderModel
 
 /**
  * Keeps one of several catalogued copies of a file. The others go to the system trash in every
@@ -31,7 +31,7 @@ class MergeDuplicates(
     private val activity: ActivityRecorder,
 ) {
 
-    suspend operator fun invoke(keep: DocumentId, confirmed: Boolean): OperationOutcome {
+    suspend operator fun invoke(keep: DocumentIdModel, confirmed: Boolean): OperationOutcome {
         if (!confirmed) {
             return OperationOutcome.NotConfirmed
         }
@@ -62,13 +62,13 @@ class MergeDuplicates(
         return outcome
     }
 
-    private suspend fun identical(folder: LibraryFolder, kept: Document, copy: Document): Boolean {
+    private suspend fun identical(folder: LibraryFolderModel, kept: DocumentModel, copy: DocumentModel): Boolean {
         val same = storage.sameContent(folder = folder, first = kept.path, second = copy.path)
         return (same as? StorageResult.Success)?.value == true
     }
 
-    private fun merged(catalog: Catalog, kept: Document, copies: List<Document>): CatalogUpdate {
-        val metadata = DocumentMetadata(
+    private fun merged(catalog: CatalogModel, kept: DocumentModel, copies: List<DocumentModel>): CatalogUpdate {
+        val metadata = DocumentMetadataModel(
             title = kept.metadata.title ?: copies.firstNotNullOfOrNull { it.metadata.title },
             documentDate = kept.metadata.documentDate ?: copies.firstNotNullOfOrNull { it.metadata.documentDate },
             correspondent = kept.metadata.correspondent ?: copies.firstNotNullOfOrNull { it.metadata.correspondent },

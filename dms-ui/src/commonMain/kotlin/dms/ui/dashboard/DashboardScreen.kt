@@ -5,13 +5,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import dms.domain.document.DocumentId
+import dms.domain.document.model.DocumentIdModel
 import dms.ui.PlatformActions
 import dms.ui.components.dialog.DialogHost
 import dms.ui.components.layout.FileDropZone
 import dms.ui.dashboard.section.DashboardOverview
 import dms.ui.library.model.LibrarySelection
-import dms.ui.library.model.YearFilter
+import dms.ui.library.model.YearFilterModel
 import dms.ui.review.ReviewDialog
 
 /**
@@ -26,9 +26,10 @@ fun DashboardScreen(
     onAddFiles: (List<String>) -> Unit,
     onChooseFiles: () -> Unit,
     onOpen: (LibrarySelection, String) -> Unit,
-    onOpenYear: (YearFilter) -> Unit,
-    onOpenDocument: (DocumentId) -> Unit,
+    onOpenYear: (YearFilterModel) -> Unit,
+    onOpenDocument: (DocumentIdModel) -> Unit,
     onShowAllTasks: () -> Unit,
+    onOpenInbox: () -> Unit,
 ) {
     val state by viewModel.state.collectAsState()
     val busyReason = state.busy?.let { "Wait until \"$it\" finishes" }
@@ -47,6 +48,7 @@ fun DashboardScreen(
             onOpenYear = onOpenYear,
             onOpenDocument = onOpenDocument,
             onShowAllTasks = onShowAllTasks,
+            onOpenInbox = onOpenInbox,
         )
     }
     DialogHost(controller = viewModel.dialogs)

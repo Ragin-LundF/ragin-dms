@@ -1,6 +1,6 @@
 package dms.ui.review
 
-import dms.domain.document.Document
+import dms.domain.document.model.DocumentModel
 import dms.ui.document.InspectorViewModel
 import dms.ui.support.SampleImages
 import dms.ui.support.TestApp
@@ -86,7 +86,7 @@ class ReviewControllerTest {
         }
     }
 
-    private suspend fun libraryWithOneImage(app: TestApp): Document {
+    private suspend fun libraryWithOneImage(app: TestApp): DocumentModel {
         app.configure()
         val library = app.libraryViewModel()
         val source = SampleImages.write(file = app.root.resolve("outside/scan-7.png"))

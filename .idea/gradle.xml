@@ -11,6 +11,7 @@
             <option value="$PROJECT_DIR$/dms-ai" />
             <option value="$PROJECT_DIR$/dms-application" />
             <option value="$PROJECT_DIR$/dms-domain" />
+            <option value="$PROJECT_DIR$/dms-pdf" />
             <option value="$PROJECT_DIR$/dms-storage" />
             <option value="$PROJECT_DIR$/dms-ui" />
           </set>

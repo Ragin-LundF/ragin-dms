@@ -9,14 +9,14 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import dms.ui.components.chart.BarList
-import dms.ui.components.chart.model.ChartPoint
+import dms.ui.components.chart.model.ChartPointModel
 import dms.ui.components.surface.AppCard
 import dms.ui.components.surface.CardTitle
 
 /** The largest categories and the uncategorized documents; a click opens them in the library. */
 @Composable
 fun CategoryCard(
-    points: List<ChartPoint>,
+    points: List<ChartPointModel>,
     uncategorizedCount: Int,
     onOpenCategory: (String) -> Unit,
     onOpenUncategorized: () -> Unit,
@@ -30,7 +30,7 @@ fun CategoryCard(
             tint = colors.tertiary,
             subtitle = "Click one to open its documents",
         )
-        val uncategorized = ChartPoint(id = "", label = "Uncategorized", value = uncategorizedCount)
+        val uncategorized = ChartPointModel(id = "", label = "Uncategorized", value = uncategorizedCount)
         val all = points + listOfNotNull(uncategorized.takeIf { uncategorizedCount > 0 })
         if (all.isEmpty()) {
             Text(

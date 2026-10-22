@@ -2,8 +2,8 @@ package dms.ui
 
 import androidx.compose.ui.draganddrop.DragAndDropEvent
 import androidx.compose.ui.graphics.ImageBitmap
-import dms.domain.library.FolderLocation
-import dms.domain.library.RelativePath
+import dms.domain.library.model.FolderLocationModel
+import dms.domain.library.model.RelativePathModel
 
 /** What the UI needs from the operating system. Implemented in `jvmMain`, faked in tests. */
 interface PlatformActions {
@@ -18,7 +18,7 @@ interface PlatformActions {
     suspend fun chooseFiles(title: String): List<String>
 
     /** The absolute location of [path] inside the library folder at [folder]. */
-    fun locate(folder: FolderLocation, path: RelativePath): String
+    fun locate(folder: FolderLocationModel, path: RelativePathModel): String
 
     /** Returns `false` if the file manager could not be opened. */
     fun showInFileManager(location: String): Boolean

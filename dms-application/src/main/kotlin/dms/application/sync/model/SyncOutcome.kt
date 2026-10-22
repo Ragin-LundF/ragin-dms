@@ -4,7 +4,7 @@ import dms.application.port.storage.model.StorageResult
 
 sealed interface SyncOutcome {
 
-    data class Completed(val report: SyncReport) : SyncOutcome
+    data class Completed(val report: SyncReportModel) : SyncOutcome
 
     data object LibraryNotOpen : SyncOutcome
 

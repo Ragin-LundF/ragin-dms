@@ -7,7 +7,7 @@ import dms.application.port.state.TaskStore
 import dms.application.port.state.model.ActivityKind
 import dms.application.sync.Replicator
 import dms.application.sync.model.Replication
-import dms.domain.document.DocumentId
+import dms.domain.document.model.DocumentIdModel
 
 /**
  * Moves a document to the system trash in every library folder and removes it from the catalog.
@@ -20,7 +20,7 @@ class TrashDocument(
     private val activity: ActivityRecorder,
 ) {
 
-    suspend operator fun invoke(documentId: DocumentId, confirmed: Boolean): OperationOutcome {
+    suspend operator fun invoke(documentId: DocumentIdModel, confirmed: Boolean): OperationOutcome {
         if (!confirmed) {
             return OperationOutcome.NotConfirmed
         }

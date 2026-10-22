@@ -12,7 +12,7 @@ import dms.application.sync.Replicator
 import dms.application.sync.model.Replication
 import dms.domain.catalog.CatalogUpdate
 import dms.domain.library.FileNamePolicy
-import dms.domain.library.RelativePath
+import dms.domain.library.model.RelativePathModel
 
 /**
  * Moves or renames a folder with everything in it, in every library folder, and moves the paths of
@@ -26,7 +26,7 @@ class MoveFolder(
     private val activity: ActivityRecorder,
 ) {
 
-    suspend operator fun invoke(from: RelativePath, to: RelativePath): OperationOutcome {
+    suspend operator fun invoke(from: RelativePathModel, to: RelativePathModel): OperationOutcome {
         val library = store.current() ?: return OperationOutcome.LibraryNotOpen
         val violation = FileNamePolicy.check(name = to.fileName)
         if (violation != null) {

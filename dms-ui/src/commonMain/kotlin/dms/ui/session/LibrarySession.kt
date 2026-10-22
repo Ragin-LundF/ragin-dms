@@ -2,21 +2,28 @@ package dms.ui.session
 
 import dms.application.common.OperationOutcome
 import dms.application.library.model.OpenLibraryOutcome
-import dms.application.library.model.ScanResult
-import dms.application.port.state.model.Preferences
+import dms.application.library.model.ScanResultModel
+import dms.application.port.state.model.PreferencesModel
 import dms.domain.change.DetectedChange
 import dms.ui.service.AppServices
 import dms.ui.session.model.LibraryStatus
 import dms.ui.session.model.OperationLane
-import dms.ui.session.model.OperationProgress
-import dms.ui.session.model.RunningOperation
-import dms.ui.session.model.SessionState
-import dms.ui.session.model.UiMessage
+import dms.ui.session.model.OperationProgressModel
+import dms.ui.session.model.RunningOperationModel
+import dms.ui.session.model.SessionStateModel
+import dms.ui.session.model.UiMessageModel
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.Duration
@@ -34,17 +41,17 @@ class LibrarySession(
     private val scope: CoroutineScope,
 ) {
 
-    private val mutableState = MutableStateFlow(value = SessionState())
-    private val mutableProgress = MutableStateFlow<Map<OperationLane, OperationProgress>>(value = emptyMap())
+    private val mutableState = MutableStateFlow(value = SessionStateModel())
+    private val mutableProgress = MutableStateFlow<Map<OperationLane, OperationProgressModel>>(value = emptyMap())
     private val running = ConcurrentHashMap<OperationLane, Job>()
 
-    val state: StateFlow<SessionState> = mutableState.asStateFlow()
+    val state: StateFlow<SessionStateModel> = mutableState.asStateFlow()
 
     /**
      * How far the running operations are, by lane. Kept apart from [state], because it changes with
      * every file and screens that only need [state] should not recompute that often.
      */
-    val progress: StateFlow<Map<OperationLane, OperationProgress>> = mutableProgress.asStateFlow()
+    val progress: StateFlow<Map<OperationLane, OperationProgressModel>> = mutableProgress.asStateFlow()
 
     val log: SessionLog = SessionLog(clock = services.library.clock)
 
@@ -79,7 +86,7 @@ class LibrarySession(
     }
 
     /** Saves the preferences of this device; the one writer of them. */
-    fun updatePreferences(change: (Preferences) -> Preferences) {
+    fun updatePreferences(change: (PreferencesModel) -> PreferencesModel) {
         perform(label = "Saving the preferences") {
             val preferences = change(mutableState.value.preferences)
             services.library.settings.savePreferences(preferences = preferences)
@@ -91,7 +98,7 @@ class LibrarySession(
     fun detectDocumentDates() {
         perform(label = "Detecting document dates") {
             val dated = services.library.detectDocumentDates()
-            report(message = UiMessage(text = "Found a date for $dated documents"))
+            report(message = UiMessageModel(text = "Found a date for $dated documents"))
         }
     }
 
@@ -128,7 +135,7 @@ class LibrarySession(
         cancellable: Boolean = false,
         block: suspend () -> Unit,
     ): Boolean {
-        val operation = RunningOperation(label = label, lane = lane, cancellable = cancellable)
+        val operation = RunningOperationModel(label = label, lane = lane, cancellable = cancellable)
         if (!claim(operation = operation)) {
             return false
         }
@@ -142,7 +149,7 @@ class LibrarySession(
      * Adds [operation] to the running ones unless its lane is busy. Retries when another lane changed
      * the state at the same moment, so a busy AI run never makes a library operation fail to start.
      */
-    private fun claim(operation: RunningOperation): Boolean {
+    private fun claim(operation: RunningOperationModel): Boolean {
         while (true) {
             val current = mutableState.value
             if (current.busyIn(lane = operation.lane) != null) {
@@ -166,7 +173,7 @@ class LibrarySession(
             }
             if (failure != null) {
                 val detail = failure.message ?: failure::class.simpleName
-                report(message = UiMessage(text = "$label failed: $detail", isError = true))
+                report(message = UiMessageModel(text = "$label failed: $detail", isError = true))
             } else {
                 val seconds = Duration.between(started, services.library.clock.now()).toMillis() / MILLIS
                 log.info(text = "$label: finished in ${"%.1f".format(Locale.ROOT, seconds)} s")
@@ -175,10 +182,10 @@ class LibrarySession(
     }
 
     /** Frees the session after an operation; runs even when it was cancelled before it started. */
-    private fun finish(operation: RunningOperation, cancelled: Boolean) {
+    private fun finish(operation: RunningOperationModel, cancelled: Boolean) {
         if (cancelled) {
             log.info(text = "${operation.label}: cancelled")
-            report(message = UiMessage(text = "${operation.label}: cancelled"))
+            report(message = UiMessageModel(text = "${operation.label}: cancelled"))
         }
         running.remove(operation.lane)
         mutableProgress.update { it - operation.lane }
@@ -197,7 +204,7 @@ class LibrarySession(
      * Shows how far the operation running in [lane] is. Call inside [perform]; it is cleared when the
      * operation ends.
      */
-    fun progress(progress: OperationProgress, lane: OperationLane = OperationLane.LIBRARY) {
+    fun progress(progress: OperationProgressModel, lane: OperationLane = OperationLane.LIBRARY) {
         mutableProgress.update { it + (lane to progress) }
     }
 
@@ -213,7 +220,9 @@ class LibrarySession(
     ): Int {
         var succeeded = 0
         items.forEachIndexed { index, item ->
-            progress(progress = OperationProgress(step = step, done = index, total = items.size, detail = name(item)))
+            progress(
+                progress = OperationProgressModel(step = step, done = index, total = items.size, detail = name(item)),
+            )
             if (action(item)) {
                 succeeded++
                 log.info(text = "$step: ${name(item)}")
@@ -262,12 +271,73 @@ class LibrarySession(
         mutableState.update { it.copy(lastScan = result, lastScanAt = now) }
         log.info(text = "Scan finished: ${result.changes.size} open changes")
         result.failedFolders.keys.forEach { log.error(text = "Folder could not be scanned: ${it.value}") }
+        collectInbox(result = result)
         if (adding) {
             adoptNewFiles(result = result)
         }
     }
 
-    private suspend fun adoptNewFiles(result: ScanResult) {
+    /**
+     * Catalogs what arrived in the inbox of any folder and, with "Analyze automatically" on, lets the
+     * AI suggest metadata for it in the background. Call inside [perform].
+     */
+    private suspend fun collectInbox(result: ScanResultModel) {
+        val collected = services.organize.collectInbox(scan = result)
+        collected.forEach { forget(change = it) }
+        if (collected.isEmpty()) {
+            return
+        }
+        log.info(text = "Inbox: ${collected.size} new documents")
+        val inbox = services.library.catalog.value?.settings?.layout?.inbox ?: return
+        if (inbox.autoAnalyze && inbox.aiAnalysis) {
+            analyzeInbox()
+        }
+    }
+
+    /** Lets the AI suggest metadata for every inbox document without one, in the AI lane. */
+    fun analyzeInbox() {
+        val inbox = services.library.catalog.value?.settings?.layout?.inbox ?: return
+        perform(label = "Analyzing the inbox", lane = OperationLane.AI, cancellable = true) {
+            services.ai.classifyAllNew(scope = inbox.path).collect { progress ->
+                val step = OperationProgressModel(
+                    step = "Analyzing the inbox",
+                    done = progress.done,
+                    total = progress.total,
+                )
+                progress(progress = step, lane = OperationLane.AI)
+                changed()
+            }
+        }
+    }
+
+    /**
+     * Scans a few seconds after something changed in the inbox of any folder, while the inbox is on.
+     * Only a hint: the scan decides what changed. Call once when the session starts.
+     */
+    @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
+    fun watchInbox() {
+        scope.launch {
+            services.library.catalog
+                .map { catalog -> catalog?.settings?.layout?.inbox?.takeIf { it.enabled }?.path }
+                .distinctUntilChanged()
+                .flatMapLatest { path ->
+                    val folders = state.value.folders?.folders.orEmpty()
+                    if (path == null || folders.isEmpty()) {
+                        emptyFlow()
+                    } else {
+                        services.organize.folderWatcher.changes(folders = folders, path = path)
+                    }
+                }
+                .debounce(timeoutMillis = INBOX_DEBOUNCE_MILLIS)
+                .collect {
+                    if (state.value.status is LibraryStatus.Open) {
+                        scan()
+                    }
+                }
+        }
+    }
+
+    private suspend fun adoptNewFiles(result: ScanResultModel) {
         // A copy of a catalogued document, or of another new file, would only become a second document.
         val known = services.library.catalog.value?.documents?.values.orEmpty().map { it.contentHash }.toSet()
         val newFiles = result.changes.filterIsInstance<DetectedChange.NewFile>()
@@ -292,7 +362,7 @@ class LibrarySession(
         }
     }
 
-    fun report(message: UiMessage) {
+    fun report(message: UiMessageModel) {
         mutableState.update { it.copy(message = message) }
     }
 
@@ -302,5 +372,6 @@ class LibrarySession(
 
     private companion object {
         const val MILLIS = 1_000.0
+        const val INBOX_DEBOUNCE_MILLIS = 3_000L
     }
 }

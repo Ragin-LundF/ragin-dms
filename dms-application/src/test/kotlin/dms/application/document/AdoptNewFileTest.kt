@@ -4,7 +4,7 @@ import dms.application.TestLibrary
 import dms.application.common.OperationOutcome
 import dms.application.fake.storage.FakeFolders
 import dms.domain.change.DetectedChange
-import dms.domain.library.RelativePath
+import dms.domain.library.model.RelativePathModel
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -32,7 +32,7 @@ class AdoptNewFileTest {
                 )
             }
             val document = assertNotNull(
-                actual = library.catalog.findByPath(path = RelativePath.of(raw = "inbox/scan.pdf")),
+                actual = library.catalog.findByPath(path = RelativePathModel.of(raw = "inbox/scan.pdf")),
             )
             assertEquals(expected = FakeFolders.hashOf(content = "scan"), actual = document.contentHash)
         }

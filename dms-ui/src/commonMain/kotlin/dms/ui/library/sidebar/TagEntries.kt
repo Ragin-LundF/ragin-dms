@@ -4,14 +4,14 @@ import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import dms.ui.library.LibraryViewModel
 import dms.ui.library.drag.DocumentDrag
-import dms.ui.library.model.LibraryUiState
+import dms.ui.library.model.LibraryUiStateModel
 import dms.ui.library.sidebar.item.TagItem
 import dms.ui.library.sidebar.model.SidebarGroup
 import dms.ui.library.sidebar.model.ToggleTarget
 
 /** The tag section of the sidebar, which folds; each tag is a drop target. */
 fun LazyListScope.tagEntries(
-    state: LibraryUiState,
+    state: LibraryUiStateModel,
     busyReason: String?,
     drag: DocumentDrag,
     viewModel: LibraryViewModel,

@@ -2,11 +2,13 @@ package dms.domain.catalog
 
 import dms.domain.TestData
 import dms.domain.TestData.applied
-import dms.domain.document.DocumentId
-import dms.domain.document.DocumentMetadata
-import dms.domain.library.RelativePath
-import dms.domain.taxonomy.CategoryId
-import dms.domain.taxonomy.TagName
+import dms.domain.catalog.model.CatalogModel
+import dms.domain.catalog.model.CatalogRevisionModel
+import dms.domain.document.model.DocumentIdModel
+import dms.domain.document.model.DocumentMetadataModel
+import dms.domain.library.model.RelativePathModel
+import dms.domain.taxonomy.model.CategoryIdModel
+import dms.domain.taxonomy.model.TagNameModel
 import java.time.LocalDate
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -22,7 +24,7 @@ class CatalogDocumentTest {
     fun `every applied change increments the revision`() {
         val catalog = TestData.catalogWith(invoice, contract)
 
-        assertEquals(expected = CatalogRevision(value = 2), actual = catalog.revision)
+        assertEquals(expected = CatalogRevisionModel(value = 2), actual = catalog.revision)
     }
 
     @Test
@@ -31,7 +33,7 @@ class CatalogDocumentTest {
 
         assertEquals(
             expected = CatalogUpdate.Rejected(reason = CatalogRejection.DOCUMENT_ALREADY_EXISTS),
-            actual = catalog.addDocument(document = invoice.copy(path = RelativePath.of(raw = "other.pdf"))),
+            actual = catalog.addDocument(document = invoice.copy(path = RelativePathModel.of(raw = "other.pdf"))),
         )
         assertEquals(
             expected = CatalogUpdate.Rejected(reason = CatalogRejection.PATH_ALREADY_USED),
@@ -41,11 +43,11 @@ class CatalogDocumentTest {
 
     @Test
     fun `a document with an unknown category is rejected`() {
-        val document = invoice.copy(categoryId = CategoryId(value = "missing"))
+        val document = invoice.copy(categoryId = CategoryIdModel(value = "missing"))
 
         assertEquals(
             expected = CatalogUpdate.Rejected(reason = CatalogRejection.CATEGORY_NOT_FOUND),
-            actual = Catalog.empty(libraryId = TestData.LIBRARY_ID).addDocument(document = document),
+            actual = CatalogModel.empty(libraryId = TestData.LIBRARY_ID).addDocument(document = document),
         )
     }
 
@@ -61,7 +63,7 @@ class CatalogDocumentTest {
 
     @Test
     fun `moving a document changes its path and keeps its id`() {
-        val newPath = RelativePath.of(raw = "archive/invoice.pdf")
+        val newPath = RelativePathModel.of(raw = "archive/invoice.pdf")
 
         val moved = TestData.catalogWith(invoice).moveDocument(documentId = invoice.id, newPath = newPath).applied()
 
@@ -74,8 +76,8 @@ class CatalogDocumentTest {
         val catalog = TestData.catalogWith(invoice, contract, notes)
 
         val moved = catalog.moveFolder(
-            from = RelativePath.of(raw = "projects/alpha"),
-            to = RelativePath.of(raw = "archive/alpha"),
+            from = RelativePathModel.of(raw = "projects/alpha"),
+            to = RelativePathModel.of(raw = "archive/alpha"),
         ).applied()
 
         assertEquals(
@@ -86,31 +88,34 @@ class CatalogDocumentTest {
 
     @Test
     fun `moving a folder into itself or onto occupied paths is rejected`() {
-        val catalog = TestData.catalogWith(invoice, notes.copy(path = RelativePath.of(raw = "archive/invoice.pdf")))
-        val alpha = RelativePath.of(raw = "projects/alpha")
+        val catalog = TestData.catalogWith(
+            invoice,
+            notes.copy(path = RelativePathModel.of(raw = "archive/invoice.pdf")),
+        )
+        val alpha = RelativePathModel.of(raw = "projects/alpha")
 
         assertEquals(
             expected = CatalogUpdate.Rejected(reason = CatalogRejection.INVALID_FOLDER_MOVE),
-            actual = catalog.moveFolder(from = alpha, to = RelativePath.of(raw = "projects/alpha/sub")),
+            actual = catalog.moveFolder(from = alpha, to = RelativePathModel.of(raw = "projects/alpha/sub")),
         )
         assertEquals(
             expected = CatalogUpdate.Rejected(reason = CatalogRejection.INVALID_FOLDER_MOVE),
-            actual = catalog.moveFolder(from = RelativePath.ROOT, to = alpha),
+            actual = catalog.moveFolder(from = RelativePathModel.ROOT, to = alpha),
         )
         assertEquals(
             expected = CatalogUpdate.Rejected(reason = CatalogRejection.PATH_ALREADY_USED),
-            actual = catalog.moveFolder(from = alpha, to = RelativePath.of(raw = "archive")),
+            actual = catalog.moveFolder(from = alpha, to = RelativePathModel.of(raw = "archive")),
         )
     }
 
     @Test
     fun `changes to an unknown document are rejected`() {
         val catalog = TestData.catalogWith(invoice)
-        val unknown = DocumentId(value = "unknown")
+        val unknown = DocumentIdModel(value = "unknown")
 
         assertEquals(
             expected = CatalogUpdate.Rejected(reason = CatalogRejection.DOCUMENT_NOT_FOUND),
-            actual = catalog.updateMetadata(documentId = unknown, metadata = DocumentMetadata.EMPTY),
+            actual = catalog.updateMetadata(documentId = unknown, metadata = DocumentMetadataModel.EMPTY),
         )
         assertEquals(
             expected = CatalogUpdate.Rejected(reason = CatalogRejection.DOCUMENT_NOT_FOUND),
@@ -120,7 +125,7 @@ class CatalogDocumentTest {
 
     @Test
     fun `metadata and content updates replace the stored values`() {
-        val metadata = DocumentMetadata(title = "Example invoice", documentDate = LocalDate.of(2024, 1, 15))
+        val metadata = DocumentMetadataModel(title = "Example invoice", documentDate = LocalDate.of(2024, 1, 15))
         val catalog = TestData.catalogWith(invoice)
             .updateMetadata(documentId = invoice.id, metadata = metadata).applied()
             .updateContent(documentId = invoice.id, contentHash = TestData.hash(seed = 42), size = 7).applied()
@@ -134,8 +139,11 @@ class CatalogDocumentTest {
     @Test
     fun `setting tags registers new tags with the catalog's existing spelling`() {
         val catalog = TestData.catalogWith(invoice, contract)
-            .setTags(documentId = invoice.id, newTags = setOf(TagName.of(raw = "Tax"))).applied()
-            .setTags(documentId = contract.id, newTags = setOf(TagName.of(raw = "tax"), TagName.of(raw = "Car")))
+            .setTags(documentId = invoice.id, newTags = setOf(TagNameModel.of(raw = "Tax"))).applied()
+            .setTags(
+                documentId = contract.id,
+                newTags = setOf(TagNameModel.of(raw = "tax"), TagNameModel.of(raw = "Car")),
+            )
             .applied()
 
         assertEquals(expected = listOf("Car", "Tax"), actual = catalog.tags.map { it.value }.sorted())
@@ -149,7 +157,7 @@ class CatalogDocumentTest {
     fun `chained updates stop at the first rejection`() {
         val catalog = TestData.catalogWith(invoice)
 
-        val chained = catalog.removeDocument(documentId = DocumentId(value = "unknown"))
+        val chained = catalog.removeDocument(documentId = DocumentIdModel(value = "unknown"))
             .andThen { it.removeDocument(documentId = invoice.id) }
 
         assertEquals(expected = CatalogUpdate.Rejected(reason = CatalogRejection.DOCUMENT_NOT_FOUND), actual = chained)
@@ -159,14 +167,14 @@ class CatalogDocumentTest {
     fun `documents inside a folder include nested folders`() {
         val catalog = TestData.catalogWith(invoice, contract, notes)
 
-        val inside = catalog.documentsInside(folder = RelativePath.of(raw = "projects/alpha"))
+        val inside = catalog.documentsInside(folder = RelativePathModel.of(raw = "projects/alpha"))
 
         assertEquals(expected = setOf(invoice.id, contract.id), actual = inside.map { it.id }.toSet())
     }
 
     @Test
     fun `documents can be found by content hash`() {
-        val copy = contract.copy(id = DocumentId(value = "copy"), path = RelativePath.of(raw = "copy.pdf"))
+        val copy = contract.copy(id = DocumentIdModel(value = "copy"), path = RelativePathModel.of(raw = "copy.pdf"))
         val catalog = TestData.catalogWith(invoice, contract, copy)
 
         assertEquals(

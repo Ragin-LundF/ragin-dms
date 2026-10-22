@@ -9,12 +9,12 @@ import dms.application.port.state.SettingsRepository
 import dms.application.port.system.Clock
 import dms.application.preview.DocumentThumbnails
 import dms.application.search.SearchContents
-import dms.domain.catalog.Catalog
+import dms.domain.catalog.model.CatalogModel
 import kotlinx.coroutines.flow.StateFlow
 
 /** Opening, configuring, scanning and searching the library, and the catalog of the open library. */
 class LibraryServices(
-    val catalog: StateFlow<Catalog?>,
+    val catalog: StateFlow<CatalogModel?>,
     val settings: SettingsRepository,
     val clock: Clock,
     val configureLibrary: ConfigureLibrary,

@@ -18,15 +18,15 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import dms.ui.components.chart.model.ChartPoint
+import dms.ui.components.chart.model.ChartPointModel
 import dms.ui.theme.Spacing
 
 /** A ranked list: each entry with its count and a thin bar of its size; a click opens the entry. */
 @Composable
 fun BarList(
-    points: List<ChartPoint>,
+    points: List<ChartPointModel>,
     color: Color,
-    onClick: (ChartPoint) -> Unit,
+    onClick: (ChartPointModel) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val max = points.maxOfOrNull { it.value }?.takeIf { it > 0 } ?: 1

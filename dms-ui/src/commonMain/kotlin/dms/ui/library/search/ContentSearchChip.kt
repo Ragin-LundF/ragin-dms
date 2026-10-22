@@ -10,12 +10,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import dms.ui.library.search.model.ContentSearchState
+import dms.ui.library.search.model.ContentSearchStateModel
 import dms.ui.theme.Spacing
 
 /** Switches searching the text of the documents on or off; spins while a search runs. */
 @Composable
-fun ContentSearchChip(state: ContentSearchState, onEnable: (Boolean) -> Unit) {
+fun ContentSearchChip(state: ContentSearchStateModel, onEnable: (Boolean) -> Unit) {
     FilterChip(
         selected = state.enabled,
         onClick = { onEnable(!state.enabled) },

@@ -2,7 +2,7 @@ package dms.application.resolution
 
 import dms.application.TestLibrary
 import dms.application.common.OperationOutcome
-import dms.domain.library.RelativePath
+import dms.domain.library.model.RelativePathModel
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -19,7 +19,7 @@ class KeepBothVersionsTest {
             library.folders.put(folder = library.syncA, path = "notes/n.txt", content = "two")
 
             val outcome = library.keepBothVersions(
-                path = RelativePath.of(raw = "notes/n.txt"),
+                path = RelativePathModel.of(raw = "notes/n.txt"),
                 folderId = library.syncA.id,
             )
 

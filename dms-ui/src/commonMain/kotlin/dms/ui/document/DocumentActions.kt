@@ -8,9 +8,9 @@ import androidx.compose.material.icons.rounded.FolderOpen
 import androidx.compose.material.icons.rounded.MoveDown
 import androidx.compose.material.icons.rounded.NewLabel
 import androidx.compose.runtime.Composable
-import dms.domain.document.Document
+import dms.domain.document.model.DocumentModel
 import dms.ui.components.ActionButtons
-import dms.ui.components.model.ActionButton
+import dms.ui.components.model.ActionButtonModel
 import dms.ui.components.model.ButtonStyle
 
 /**
@@ -19,13 +19,18 @@ import dms.ui.components.model.ButtonStyle
  * which wait for a busy library ([busyReason]).
  */
 @Composable
-fun DocumentActions(document: Document, busyReason: String?, aiBusyReason: String?, viewModel: InspectorViewModel) {
+fun DocumentActions(
+    document: DocumentModel,
+    busyReason: String?,
+    aiBusyReason: String?,
+    viewModel: InspectorViewModel,
+) {
     ActionButtons(
         buttons = listOf(
-            ActionButton(label = "Open", icon = Icons.Rounded.FileOpen, style = ButtonStyle.FILLED) {
+            ActionButtonModel(label = "Open", icon = Icons.Rounded.FileOpen, style = ButtonStyle.FILLED) {
                 viewModel.open(document = document)
             },
-            ActionButton(
+            ActionButtonModel(
                 label = "Show in ${viewModel.fileManagerName}",
                 icon = Icons.Rounded.FolderOpen,
                 style = ButtonStyle.TONAL,
@@ -38,25 +43,25 @@ fun DocumentActions(document: Document, busyReason: String?, aiBusyReason: Strin
     AiReadingActions(document = document, unreadable = unreadable, viewModel = viewModel)
     ActionButtons(
         buttons = listOf(
-            ActionButton(
+            ActionButtonModel(
                 label = "Tag with AI",
                 icon = Icons.Rounded.NewLabel,
                 style = ButtonStyle.TONAL,
                 disabledReason = unreadable ?: aiBusyReason,
             ) { viewModel.tagWithAi(document = document) },
-            ActionButton(
+            ActionButtonModel(
                 label = "Classify with AI",
                 icon = Icons.Rounded.AutoAwesome,
                 style = ButtonStyle.TONAL,
                 disabledReason = unreadable ?: aiBusyReason,
             ) { viewModel.classifyWithAi(document = document) },
-            ActionButton(
+            ActionButtonModel(
                 label = "Rename…",
                 icon = Icons.Rounded.DriveFileRenameOutline,
                 style = ButtonStyle.TEXT,
                 disabledReason = busyReason,
             ) { viewModel.rename(document = document) },
-            ActionButton(
+            ActionButtonModel(
                 label = "Move…",
                 icon = Icons.Rounded.MoveDown,
                 style = ButtonStyle.TEXT,

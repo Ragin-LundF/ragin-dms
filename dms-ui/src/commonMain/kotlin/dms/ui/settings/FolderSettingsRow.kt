@@ -18,16 +18,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import dms.ui.components.ActionButtons
-import dms.ui.components.model.ActionButton
+import dms.ui.components.model.ActionButtonModel
 import dms.ui.components.model.ButtonStyle
 import dms.ui.components.surface.IconBadge
 import dms.ui.components.surface.LabelChip
-import dms.ui.settings.model.FolderRow
+import dms.ui.settings.model.FolderRowModel
 import dms.ui.theme.Spacing
 
 /** One library folder with its role and the actions it allows. */
 @Composable
-fun FolderSettingsRow(row: FolderRow, busyReason: String?, onMakePrimary: () -> Unit, onRemove: () -> Unit) {
+fun FolderSettingsRow(row: FolderRowModel, busyReason: String?, onMakePrimary: () -> Unit, onRemove: () -> Unit) {
     val colors = MaterialTheme.colorScheme
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -66,13 +66,13 @@ fun FolderSettingsRow(row: FolderRow, busyReason: String?, onMakePrimary: () -> 
             if (!row.isPrimary) {
                 ActionButtons(
                     buttons = listOf(
-                        ActionButton(
+                        ActionButtonModel(
                             label = "Make primary",
                             icon = Icons.Rounded.Star,
                             style = ButtonStyle.TEXT,
                             onClick = onMakePrimary,
                         ),
-                        ActionButton(
+                        ActionButtonModel(
                             label = "Remove",
                             icon = Icons.Rounded.Delete,
                             style = ButtonStyle.TEXT,

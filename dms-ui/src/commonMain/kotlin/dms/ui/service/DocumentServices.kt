@@ -1,8 +1,11 @@
 package dms.ui.service
 
+import dms.application.catalog.ChangeSettings
 import dms.application.catalog.EditCatalog
+import dms.application.deadline.SettleRetention
 import dms.application.document.AddDocuments
 import dms.application.document.AdoptNewFile
+import dms.application.document.EditDocumentDetails
 import dms.application.document.MoveDocument
 import dms.application.document.RestoreDocument
 import dms.application.document.TrashDocument
@@ -11,7 +14,7 @@ import dms.application.document.TrashNewFile
 import dms.application.folder.CreateFolder
 import dms.application.folder.MoveFolder
 
-/** Use cases that change documents, folders and their categorization. */
+/** Use cases that change documents, folders, their categorization and details, and the library settings. */
 class DocumentServices(
     val addDocuments: AddDocuments,
     val adoptNewFile: AdoptNewFile,
@@ -23,4 +26,7 @@ class DocumentServices(
     val createFolder: CreateFolder,
     val moveFolder: MoveFolder,
     val editCatalog: EditCatalog,
+    val changeSettings: ChangeSettings,
+    val editDocumentDetails: EditDocumentDetails,
+    val settleRetention: SettleRetention,
 )

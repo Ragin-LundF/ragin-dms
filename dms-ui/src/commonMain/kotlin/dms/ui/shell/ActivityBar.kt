@@ -20,8 +20,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import dms.ui.session.model.OperationLane
-import dms.ui.session.model.OperationProgress
-import dms.ui.session.model.RunningOperation
+import dms.ui.session.model.OperationProgressModel
+import dms.ui.session.model.RunningOperationModel
 import dms.ui.theme.Spacing
 
 /**
@@ -30,8 +30,8 @@ import dms.ui.theme.Spacing
  */
 @Composable
 fun ActivityBar(
-    operations: List<RunningOperation>,
-    progress: Map<OperationLane, OperationProgress>,
+    operations: List<RunningOperationModel>,
+    progress: Map<OperationLane, OperationProgressModel>,
     logVisible: Boolean,
     onCancel: (OperationLane) -> Unit,
     onToggleLog: () -> Unit,

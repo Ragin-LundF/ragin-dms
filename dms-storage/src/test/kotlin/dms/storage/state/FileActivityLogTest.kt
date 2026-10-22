@@ -1,6 +1,6 @@
 package dms.storage.state
 
-import dms.application.port.state.model.ActivityEntry
+import dms.application.port.state.model.ActivityEntryModel
 import dms.application.port.state.model.ActivityKind
 import kotlinx.coroutines.test.runTest
 import java.nio.file.Files
@@ -54,7 +54,7 @@ class FileActivityLogTest {
 
             assertEquals(
                 expected = listOf(
-                    ActivityEntry(
+                    ActivityEntryModel(
                         at = Instant.parse("2024-05-01T07:00:00Z"),
                         kind = ActivityKind.DOCUMENT_ADDED,
                         subject = "b.pdf",
@@ -65,8 +65,8 @@ class FileActivityLogTest {
         }
     }
 
-    private fun entry(minute: Int, subject: String): ActivityEntry {
-        return ActivityEntry(
+    private fun entry(minute: Int, subject: String): ActivityEntryModel {
+        return ActivityEntryModel(
             at = Instant.parse("2024-05-01T08:00:00Z").plusSeconds(minute * 60L),
             kind = ActivityKind.DOCUMENT_ADDED,
             subject = subject,

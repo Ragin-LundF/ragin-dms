@@ -3,22 +3,22 @@ package dms.ai.assistant
 import dms.ai.client.AnswerText
 import dms.ai.client.ChatRequestBuilder
 import dms.ai.client.ChatTransport
-import dms.ai.client.model.ChatMessage
+import dms.ai.client.model.ChatMessageModel
 import dms.ai.client.model.ChatReply
 import dms.application.port.ai.model.ClassificationFailure
 import dms.application.port.ai.model.DocumentContent
 import dms.application.port.assistant.DocumentAssistant
 import dms.application.port.assistant.model.AssistantAnswer
-import dms.application.port.assistant.model.AssistantRequest
+import dms.application.port.assistant.model.AssistantRequestModel
 import dms.application.port.assistant.model.ChatRole
-import dms.application.port.assistant.model.ChatTurn
-import dms.domain.taxonomy.TagName
+import dms.application.port.assistant.model.ChatTurnModel
+import dms.domain.taxonomy.model.TagNameModel
 import kotlinx.serialization.json.JsonPrimitive
 
 /** The document assistant on any server with the OpenAI chat completions API. */
 class OpenAiAssistant(private val transport: ChatTransport) : DocumentAssistant {
 
-    override suspend fun summarize(request: AssistantRequest): AssistantAnswer {
+    override suspend fun summarize(request: AssistantRequestModel): AssistantAnswer {
         val messages = listOf(
             system(text = AssistantPrompts.summary()),
             user(text = AssistantPrompts.summaryRequest(request = request), request = request),
@@ -26,7 +26,7 @@ class OpenAiAssistant(private val transport: ChatTransport) : DocumentAssistant 
         return textOf(reply = send(request = request, temperature = SUMMARY_TEMPERATURE, messages = messages))
     }
 
-    override suspend fun suggestTags(request: AssistantRequest, existingTags: Set<TagName>): AssistantAnswer {
+    override suspend fun suggestTags(request: AssistantRequestModel, existingTags: Set<TagNameModel>): AssistantAnswer {
         val messages = listOf(
             system(text = AssistantPrompts.tags(existingTags = existingTags)),
             user(text = AssistantPrompts.tagsRequest(request = request), request = request),
@@ -47,13 +47,13 @@ class OpenAiAssistant(private val transport: ChatTransport) : DocumentAssistant 
         }
     }
 
-    override suspend fun answer(request: AssistantRequest, conversation: List<ChatTurn>): AssistantAnswer {
+    override suspend fun answer(request: AssistantRequestModel, conversation: List<ChatTurnModel>): AssistantAnswer {
         val firstQuestion = conversation.indexOfFirst { it.role == ChatRole.USER }
         val turns = conversation.mapIndexed { index, turn ->
             if (index == firstQuestion) {
                 user(text = turn.text, request = request)
             } else {
-                ChatMessage(role = roleOf(turn = turn), content = JsonPrimitive(value = turn.text))
+                ChatMessageModel(role = roleOf(turn = turn), content = JsonPrimitive(value = turn.text))
             }
         }
         val messages = listOf(system(text = AssistantPrompts.chat(request = request))) + turns
@@ -61,9 +61,9 @@ class OpenAiAssistant(private val transport: ChatTransport) : DocumentAssistant 
     }
 
     private suspend fun send(
-        request: AssistantRequest,
+        request: AssistantRequestModel,
         temperature: Double,
-        messages: List<ChatMessage>,
+        messages: List<ChatMessageModel>,
     ): ChatReply {
         return transport.complete(hasImages = request.content is DocumentContent.PageImages) { model ->
             ChatRequestBuilder.chat(model = model, temperature = temperature, messages = messages)
@@ -81,18 +81,18 @@ class OpenAiAssistant(private val transport: ChatTransport) : DocumentAssistant 
         }
     }
 
-    private fun roleOf(turn: ChatTurn): String {
+    private fun roleOf(turn: ChatTurnModel): String {
         return if (turn.role == ChatRole.ASSISTANT) "assistant" else "user"
     }
 
-    private fun system(text: String): ChatMessage {
-        return ChatMessage(role = "system", content = JsonPrimitive(value = text))
+    private fun system(text: String): ChatMessageModel {
+        return ChatMessageModel(role = "system", content = JsonPrimitive(value = text))
     }
 
     /** A user message; the document's page images go with it when the document was read as images. */
-    private fun user(text: String, request: AssistantRequest): ChatMessage {
+    private fun user(text: String, request: AssistantRequestModel): ChatMessageModel {
         val images = (request.content as? DocumentContent.PageImages)?.pages.orEmpty()
-        return ChatMessage(role = "user", content = ChatRequestBuilder.content(text = text, images = images))
+        return ChatMessageModel(role = "user", content = ChatRequestBuilder.content(text = text, images = images))
     }
 
     private companion object {

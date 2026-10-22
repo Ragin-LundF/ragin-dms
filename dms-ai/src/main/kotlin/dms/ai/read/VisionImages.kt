@@ -1,6 +1,6 @@
 package dms.ai.read
 
-import dms.application.port.ai.model.PageImage
+import dms.application.port.ai.model.PageImageModel
 import java.awt.Color
 import java.awt.RenderingHints
 import java.awt.image.BufferedImage
@@ -17,7 +17,7 @@ object VisionImages {
     const val MAX_SIDE: Int = 1600
     private const val QUALITY = 0.85f
 
-    fun of(image: BufferedImage, maxSide: Int = MAX_SIDE): PageImage {
+    fun of(image: BufferedImage, maxSide: Int = MAX_SIDE): PageImageModel {
         val scale = minOf(1.0, maxSide.toDouble() / max(image.width, image.height))
         val width = max(1, (image.width * scale).roundToInt())
         val height = max(1, (image.height * scale).roundToInt())
@@ -32,7 +32,7 @@ object VisionImages {
         } finally {
             graphics.dispose()
         }
-        return PageImage(bytes = jpegOf(image = target), mimeType = "image/jpeg")
+        return PageImageModel(bytes = jpegOf(image = target), mimeType = "image/jpeg")
     }
 
     private fun jpegOf(image: BufferedImage): ByteArray {

@@ -20,6 +20,8 @@ object SuggestionSchema {
         "correspondent",
         "fileName",
         "transcription",
+        "targetFolder",
+        "targetReason",
     )
 
     val schema: JsonObject = buildJsonObject {
@@ -38,15 +40,47 @@ object SuggestionSchema {
                 put(key = "type", value = "array")
                 putJsonObject(key = "items") { put(key = "type", value = "string") }
             }
+            putJsonObject(key = "pages") {
+                put(key = "type", value = "array")
+                putJsonObject(key = "items") { put(key = "type", value = "string") }
+            }
             putJsonObject(key = "confidence") {
                 putJsonArray(key = "type") {
                     add(value = "number")
                     add(value = "null")
                 }
             }
+            putJsonObject(key = "fields") {
+                put(key = "type", value = "array")
+                putJsonObject(key = "items") {
+                    put(key = "type", value = "object")
+                    put(key = "additionalProperties", value = false)
+                    putJsonObject(key = "properties") {
+                        putJsonObject(key = "key") { put(key = "type", value = "string") }
+                        putJsonObject(key = "value") {
+                            putJsonArray(key = "type") {
+                                add(value = "string")
+                                add(value = "null")
+                            }
+                        }
+                    }
+                    putJsonArray(key = "required") {
+                        add(value = "key")
+                        add(value = "value")
+                    }
+                }
+            }
+            putJsonObject(key = "targetFolderIsNew") {
+                putJsonArray(key = "type") {
+                    add(value = "boolean")
+                    add(value = "null")
+                }
+            }
         }
         putJsonArray(key = "required") {
-            (NULLABLE_TEXT + listOf("tags", "confidence")).forEach { add(value = it) }
+            (NULLABLE_TEXT + listOf("tags", "confidence", "targetFolderIsNew", "fields", "pages")).forEach {
+                add(value = it)
+            }
         }
     }
 }

@@ -9,7 +9,7 @@ import dms.ui.library.drag.DocumentDrag
 import dms.ui.library.drag.DropTargetArea
 import dms.ui.library.drag.model.DropTarget
 import dms.ui.library.model.LibrarySelection
-import dms.ui.library.model.LibraryUiState
+import dms.ui.library.model.LibraryUiStateModel
 import dms.ui.library.sidebar.item.CategoryItem
 import dms.ui.library.sidebar.item.SidebarItem
 import dms.ui.library.sidebar.model.SidebarGroup
@@ -17,7 +17,7 @@ import dms.ui.library.sidebar.model.ToggleTarget
 
 /** The category section of the sidebar: "Uncategorized" and the category tree, which folds. */
 fun LazyListScope.categoryEntries(
-    state: LibraryUiState,
+    state: LibraryUiStateModel,
     busyReason: String?,
     drag: DocumentDrag,
     viewModel: LibraryViewModel,

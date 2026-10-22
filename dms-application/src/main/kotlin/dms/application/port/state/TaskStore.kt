@@ -1,9 +1,9 @@
 package dms.application.port.state
 
 import dms.domain.catalog.CatalogMergeConflict
-import dms.domain.classification.ClassificationSuggestion
-import dms.domain.document.DocumentId
-import dms.domain.task.TaskKey
+import dms.domain.classification.model.ClassificationSuggestionModel
+import dms.domain.document.model.DocumentIdModel
+import dms.domain.task.model.TaskKeyModel
 
 /**
  * Local state behind the dashboard that is not part of the catalog: pending AI suggestions, the
@@ -11,17 +11,17 @@ import dms.domain.task.TaskKey
  */
 interface TaskStore {
 
-    suspend fun saveSuggestion(suggestion: ClassificationSuggestion)
+    suspend fun saveSuggestion(suggestion: ClassificationSuggestionModel)
 
-    suspend fun suggestions(): List<ClassificationSuggestion>
+    suspend fun suggestions(): List<ClassificationSuggestionModel>
 
-    suspend fun removeSuggestion(documentId: DocumentId)
+    suspend fun removeSuggestion(documentId: DocumentIdModel)
 
     suspend fun replaceMergeConflicts(conflicts: List<CatalogMergeConflict>)
 
     suspend fun mergeConflicts(): List<CatalogMergeConflict>
 
-    suspend fun dismiss(key: TaskKey)
+    suspend fun dismiss(key: TaskKeyModel)
 
-    suspend fun dismissedKeys(): Set<TaskKey>
+    suspend fun dismissedKeys(): Set<TaskKeyModel>
 }

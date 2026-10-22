@@ -1,10 +1,10 @@
 package dms.application.sync
 
 import dms.application.TestLibrary
-import dms.application.sync.model.SyncAction
 import dms.application.sync.model.SyncActionKind
+import dms.application.sync.model.SyncActionModel
 import dms.application.sync.model.SyncOutcome
-import dms.domain.library.RelativePath
+import dms.domain.library.model.RelativePathModel
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -21,7 +21,7 @@ class SyncFromPrimaryTest {
             val moved = library.add(path = "letters/b.pdf", content = "beta")
             library.folders.unreachable += library.syncA.id
             library.add(path = "letters/a.pdf", content = "alpha")
-            library.moveDocument(documentId = moved.id, newPath = RelativePath.of(raw = "archive/b.pdf"))
+            library.moveDocument(documentId = moved.id, newPath = RelativePathModel.of(raw = "archive/b.pdf"))
             library.folders.unreachable -= library.syncA.id
             library.folders.put(folder = library.syncA, path = "only-here.txt", content = "own")
             library.folders.put(folder = library.primary, path = "notes/n.txt", content = "one")
@@ -34,9 +34,9 @@ class SyncFromPrimaryTest {
             val copiedToSyncA = action(library = library, kind = SyncActionKind.COPIED, path = "letters/a.pdf")
             assertTrue(actual = movedInSyncA in report.actions)
             assertTrue(actual = copiedToSyncA in report.actions)
-            assertEquals(expected = listOf(RelativePath.of(raw = "notes/n.txt")), actual = report.conflicts)
+            assertEquals(expected = listOf(RelativePathModel.of(raw = "notes/n.txt")), actual = report.conflicts)
             assertEquals(
-                expected = listOf(RelativePath.of(raw = "only-here.txt")),
+                expected = listOf(RelativePathModel.of(raw = "only-here.txt")),
                 actual = report.leftAlone[library.syncA.id],
             )
             assertEquals(
@@ -64,7 +64,7 @@ class SyncFromPrimaryTest {
         }
     }
 
-    private fun action(library: TestLibrary, kind: SyncActionKind, path: String): SyncAction {
-        return SyncAction(folderId = library.syncA.id, kind = kind, path = RelativePath.of(raw = path))
+    private fun action(library: TestLibrary, kind: SyncActionKind, path: String): SyncActionModel {
+        return SyncActionModel(folderId = library.syncA.id, kind = kind, path = RelativePathModel.of(raw = path))
     }
 }

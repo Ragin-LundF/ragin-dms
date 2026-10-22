@@ -2,15 +2,15 @@ package dms.ai.read
 
 import dms.ai.support.PdfTests
 import dms.application.port.ai.model.DocumentContent
-import dms.application.port.state.model.AiSettings
-import dms.domain.document.ContentHash
-import dms.domain.document.Document
-import dms.domain.document.DocumentId
-import dms.domain.library.FolderLocation
+import dms.application.port.state.model.AiSettingsModel
+import dms.domain.document.model.ContentHashModel
+import dms.domain.document.model.DocumentIdModel
+import dms.domain.document.model.DocumentModel
 import dms.domain.library.FolderRole
-import dms.domain.library.LibraryFolder
-import dms.domain.library.LibraryFolderId
-import dms.domain.library.RelativePath
+import dms.domain.library.model.FolderLocationModel
+import dms.domain.library.model.LibraryFolderIdModel
+import dms.domain.library.model.LibraryFolderModel
+import dms.domain.library.model.RelativePathModel
 import kotlinx.coroutines.test.runTest
 import org.apache.pdfbox.pdmodel.PDDocument
 import org.apache.pdfbox.pdmodel.PDPage
@@ -33,13 +33,13 @@ import kotlin.test.assertTrue
 class FileContentReaderTest {
 
     private val root: Path = Files.createTempDirectory("dms-ai-")
-    private val folder = LibraryFolder(
-        id = LibraryFolderId(value = "primary"),
+    private val folder = LibraryFolderModel(
+        id = LibraryFolderIdModel(value = "primary"),
         displayName = "Primary",
-        location = FolderLocation(value = root.toString()),
+        location = FolderLocationModel(value = root.toString()),
         role = FolderRole.PRIMARY,
     )
-    private var settings = AiSettings()
+    private var settings = AiSettingsModel()
     private val reader = FileContentReader(
         locate = { _, path -> root.resolve(path.value).takeIf { Files.exists(it) } },
         settings = { settings },
@@ -84,7 +84,7 @@ class FileContentReaderTest {
             writePdf(name = "scan.pdf", text = null)
             writePdf(name = "text.pdf", text = sampleText)
             val scan = reader.read(folder = folder, document = document(name = "scan.pdf"))
-            settings = AiSettings(preferVisionForPdfs = true)
+            settings = AiSettingsModel(preferVisionForPdfs = true)
             val preferred = reader.read(folder = folder, document = document(name = "text.pdf"))
 
             val page = assertIs<DocumentContent.PageImages>(value = scan).pages.single()
@@ -157,11 +157,11 @@ class FileContentReaderTest {
         }
     }
 
-    private fun document(name: String): Document {
-        return Document(
-            id = DocumentId(value = name),
-            path = RelativePath.of(raw = name),
-            contentHash = ContentHash(value = "a".repeat(n = 64)),
+    private fun document(name: String): DocumentModel {
+        return DocumentModel(
+            id = DocumentIdModel(value = name),
+            path = RelativePathModel.of(raw = name),
+            contentHash = ContentHashModel(value = "a".repeat(n = 64)),
             size = 1,
             addedAt = Instant.parse("2026-01-01T00:00:00Z"),
         )

@@ -2,6 +2,81 @@
 
 All notable changes to ragin-dms are listed here.
 
+## 1.1.0 - 2026-10-22
+
+### Inbox
+
+- An optional inbox folder inside your library, switched on in the settings. Drop new documents into
+  it on any computer and they show up in the app, even when they arrive in one of the additional
+  folders.
+- For each document choose: let the AI analyze it, or move it to a folder yourself, without any AI.
+- The AI can also suggest the folder a document belongs in, with a short reason, including a new
+  subfolder. You approve the folder together with the other values.
+- Optionally analyze new inbox documents automatically.
+- An "Inbox" page and an inbox card on the dashboard with "Analyze all".
+
+### Restructure your folders
+
+- Sort documents into folders by a pattern, such as category and year, for the whole library, one
+  folder or a smart folder.
+- See every planned move before anything happens, leave out folders you want to keep, and apply the
+  rest in one go, with progress.
+- Every restructure can be reversed later. Folders left empty can be moved to the trash.
+- The dashboard points out folders with many loose files.
+
+### Custom fields and deadlines
+
+- Add your own fields to documents, such as amount, due date, cancellation date, contract end or
+  warranty, with ready-made standard fields to start with.
+- The AI fills in the fields it finds in a document, for you to approve.
+- Upcoming deadlines appear on the dashboard in good time, and an "Upcoming" card lists the next
+  dates. Export them as a calendar file.
+- Retention periods are entirely up to you: set a keep-until date on a document or a period on a
+  category. When it ends, the dashboard asks whether to move the document to the trash or to keep it.
+
+### Notes and linked documents
+
+- Write a note on any document. Notes are found by the search.
+- Link documents that belong together, such as an invoice and its reminder.
+
+### Smart folders
+
+- Save any view of the library as a smart folder, with the number of documents it holds.
+- Ready-made smart folders for untagged and uncategorized documents, this year's tax documents and
+  what is due in the next 30 days.
+
+### Rules
+
+- The app learns from the documents you approved and proposes rules, such as "documents from this
+  sender are invoices". Accept or reject each proposal.
+- Rules fill in category, tags and other values without the AI, and the review shows which rule a
+  value came from.
+- Create a rule from a document with one click, and switch rules on or off in the settings.
+
+### Export
+
+- Export documents, for example for your tax adviser, into a folder or a ZIP file, with an overview
+  as a spreadsheet and a web page.
+- Export the current view, a smart folder, a tax year or everything from one sender. Your library
+  stays untouched.
+
+### PDF tools
+
+- Rotate, remove and reorder the pages of a PDF, and split it into several documents.
+- Merge several PDFs into one.
+- Make scanned PDFs searchable, using the text the AI read or an installed OCR program.
+- Optionally write title, sender, category, tags and date into the PDF files, so other applications
+  see them too.
+- Replaced versions of a file always go to the trash first.
+
+### Ask your library
+
+- Ask questions about all your documents and get answers with the documents they come from.
+- Ask within the whole library or one smart folder.
+- See related documents for every document.
+- Everything runs on your own local AI. The search index is kept with your library and synced to all
+  its folders.
+
 ## 1.0.0 - 2026-10-21
 
 The first release of ragin-dms: a desktop document management system that works directly on your

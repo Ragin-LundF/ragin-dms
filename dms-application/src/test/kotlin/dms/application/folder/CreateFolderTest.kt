@@ -2,7 +2,7 @@ package dms.application.folder
 
 import dms.application.TestLibrary
 import dms.application.common.OperationOutcome
-import dms.domain.library.RelativePath
+import dms.domain.library.model.RelativePathModel
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -17,7 +17,7 @@ class CreateFolderTest {
             val library = TestLibrary()
             library.open()
 
-            assertIs<OperationOutcome.Done>(value = library.createFolder(path = RelativePath.of(raw = "archive")))
+            assertIs<OperationOutcome.Done>(value = library.createFolder(path = RelativePathModel.of(raw = "archive")))
 
             library.allFolders.forEach { folder ->
                 assertTrue(actual = library.folders.hasDirectory(folder = folder, path = "archive"))
@@ -30,9 +30,9 @@ class CreateFolderTest {
         runTest {
             val library = TestLibrary()
             library.open()
-            library.createFolder(path = RelativePath.of(raw = "archive"))
+            library.createFolder(path = RelativePathModel.of(raw = "archive"))
 
-            val outcome = library.createFolder(path = RelativePath.of(raw = "Archive"))
+            val outcome = library.createFolder(path = RelativePathModel.of(raw = "Archive"))
 
             assertEquals(expected = OperationOutcome.NameTaken, actual = outcome)
         }

@@ -5,7 +5,7 @@ import dms.application.common.OperationOutcome
 import dms.application.fake.storage.FakeFolders
 import dms.application.port.storage.model.StorageFailure
 import dms.domain.library.FileNameViolation
-import dms.domain.library.RelativePath
+import dms.domain.library.model.RelativePathModel
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -14,7 +14,7 @@ import kotlin.test.assertTrue
 
 class AddDocumentsTest {
 
-    private val letters = RelativePath.of(raw = "letters")
+    private val letters = RelativePathModel.of(raw = "letters")
 
     @Test
     fun `a file is copied into every folder and catalogued`() {
@@ -45,7 +45,7 @@ class AddDocumentsTest {
 
             val added = library.addDocuments(files = listOf(source), targetFolder = letters).single()
 
-            assertEquals(expected = RelativePath.of(raw = "letters/A (2).pdf"), actual = added.path)
+            assertEquals(expected = RelativePathModel.of(raw = "letters/A (2).pdf"), actual = added.path)
             assertEquals(
                 expected = "alpha",
                 actual = library.folders.content(folder = library.syncA, path = "letters/a.pdf"),

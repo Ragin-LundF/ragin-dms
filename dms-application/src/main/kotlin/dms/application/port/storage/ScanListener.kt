@@ -1,7 +1,7 @@
 package dms.application.port.storage
 
-import dms.domain.change.FileFacts
-import dms.domain.library.RelativePath
+import dms.domain.change.model.FileFactsModel
+import dms.domain.library.model.RelativePathModel
 
 /**
  * Follows the scan of one folder. A scan first lists the folder, then reads the files one by one;
@@ -18,7 +18,7 @@ interface ScanListener {
      * [done] files are read; the last was [path] with [facts]. [hashed] tells whether its content was
      * read in this scan rather than taken from the scan cache.
      */
-    fun fileDone(done: Int, path: RelativePath, facts: FileFacts, hashed: Boolean) {
+    fun fileDone(done: Int, path: RelativePathModel, facts: FileFactsModel, hashed: Boolean) {
         // Nothing to do by default.
     }
 

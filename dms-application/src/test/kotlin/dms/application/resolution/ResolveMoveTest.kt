@@ -4,7 +4,7 @@ import dms.application.TestLibrary
 import dms.application.common.OperationOutcome
 import dms.application.resolution.model.MoveDecision
 import dms.domain.change.DetectedChange
-import dms.domain.library.RelativePath
+import dms.domain.library.model.RelativePathModel
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -13,7 +13,7 @@ import kotlin.test.assertNotNull
 
 class ResolveMoveTest {
 
-    private val moved = RelativePath.of(raw = "archive/a.pdf")
+    private val moved = RelativePathModel.of(raw = "archive/a.pdf")
 
     @Test
     fun `an applied move reaches every folder and the catalog`() {

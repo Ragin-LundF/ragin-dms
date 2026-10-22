@@ -16,7 +16,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import dms.ui.components.FileSizes
-import dms.ui.dashboard.model.DashboardUiState
+import dms.ui.dashboard.model.DashboardUiStateModel
 import dms.ui.theme.AppColors
 import dms.ui.theme.Spacing
 import java.util.Locale
@@ -24,7 +24,7 @@ import kotlin.math.roundToInt
 
 /** The four headline figures: documents, storage, how much is organized, and what waits for a decision. */
 @Composable
-fun StatRow(state: DashboardUiState, onOpenUncategorized: () -> Unit) {
+fun StatRow(state: DashboardUiStateModel, onOpenUncategorized: () -> Unit) {
     val stats = state.stats
     val colors = MaterialTheme.colorScheme
     Row(

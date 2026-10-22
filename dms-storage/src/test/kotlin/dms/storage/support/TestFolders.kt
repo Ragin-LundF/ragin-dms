@@ -1,11 +1,11 @@
 package dms.storage.support
 
-import dms.domain.document.ContentHash
-import dms.domain.library.FolderLocation
+import dms.domain.document.model.ContentHashModel
 import dms.domain.library.FolderRole
-import dms.domain.library.LibraryFolder
-import dms.domain.library.LibraryFolderId
-import dms.domain.library.RelativePath
+import dms.domain.library.model.FolderLocationModel
+import dms.domain.library.model.LibraryFolderIdModel
+import dms.domain.library.model.LibraryFolderModel
+import dms.domain.library.model.RelativePathModel
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
@@ -15,11 +15,11 @@ import java.util.HexFormat
 /** Library folders and files on a temporary directory, with synthetic names only. */
 object TestFolders {
 
-    fun folder(location: Path, id: String = "primary", role: FolderRole = FolderRole.PRIMARY): LibraryFolder {
-        return LibraryFolder(
-            id = LibraryFolderId(value = id),
+    fun folder(location: Path, id: String = "primary", role: FolderRole = FolderRole.PRIMARY): LibraryFolderModel {
+        return LibraryFolderModel(
+            id = LibraryFolderIdModel(value = id),
             displayName = id,
-            location = FolderLocation(value = location.toString()),
+            location = FolderLocationModel(value = location.toString()),
             role = role,
         )
     }
@@ -34,13 +34,13 @@ object TestFolders {
         return Files.readString(file)
     }
 
-    fun path(raw: String): RelativePath {
-        return RelativePath.of(raw = raw)
+    fun path(raw: String): RelativePathModel {
+        return RelativePathModel.of(raw = raw)
     }
 
-    fun hashOf(content: String): ContentHash {
+    fun hashOf(content: String): ContentHashModel {
         val digest = MessageDigest.getInstance("SHA-256").digest(content.toByteArray(StandardCharsets.UTF_8))
-        return ContentHash(value = HexFormat.of().formatHex(digest))
+        return ContentHashModel(value = HexFormat.of().formatHex(digest))
     }
 
     /** Names of the entries directly inside [directory], as stored on disk. */

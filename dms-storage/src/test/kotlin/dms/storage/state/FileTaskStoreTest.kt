@@ -1,12 +1,12 @@
 package dms.storage.state
 
-import dms.domain.classification.ClassificationSuggestion
 import dms.domain.classification.SuggestedCategory
-import dms.domain.classification.SuggestedTag
-import dms.domain.document.DocumentId
-import dms.domain.taxonomy.CategoryId
-import dms.domain.taxonomy.TagName
-import dms.domain.task.TaskKey
+import dms.domain.classification.model.ClassificationSuggestionModel
+import dms.domain.classification.model.SuggestedTagModel
+import dms.domain.document.model.DocumentIdModel
+import dms.domain.task.model.TaskKeyModel
+import dms.domain.taxonomy.model.CategoryIdModel
+import dms.domain.taxonomy.model.TagNameModel
 import kotlinx.coroutines.test.runTest
 import java.nio.file.Files
 import java.nio.file.Path
@@ -28,14 +28,14 @@ class FileTaskStoreTest {
     @Test
     fun `suggestions survive a restart with every field`() {
         runTest {
-            val full = ClassificationSuggestion(
-                documentId = DocumentId(value = "doc-1"),
+            val full = ClassificationSuggestionModel(
+                documentId = DocumentIdModel(value = "doc-1"),
                 model = "test-model",
                 title = "Sample invoice",
-                category = SuggestedCategory.New(name = "Invoices", parentId = CategoryId(value = "cat-1")),
+                category = SuggestedCategory.New(name = "Invoices", parentId = CategoryIdModel(value = "cat-1")),
                 tags = listOf(
-                    SuggestedTag(name = TagName.of(raw = "Tax"), isNew = false),
-                    SuggestedTag(name = TagName.of(raw = "2024"), isNew = true),
+                    SuggestedTagModel(name = TagNameModel.of(raw = "Tax"), isNew = false),
+                    SuggestedTagModel(name = TagNameModel.of(raw = "2024"), isNew = true),
                 ),
                 documentDate = LocalDate.parse("2023-12-24"),
                 correspondent = "Example Supplier",
@@ -43,10 +43,10 @@ class FileTaskStoreTest {
                 transcription = "Line one\nLine two",
                 confidence = 0.75,
             )
-            val existing = ClassificationSuggestion(
-                documentId = DocumentId(value = "doc-2"),
+            val existing = ClassificationSuggestionModel(
+                documentId = DocumentIdModel(value = "doc-2"),
                 model = "test-model",
-                category = SuggestedCategory.Existing(categoryId = CategoryId(value = "cat-1")),
+                category = SuggestedCategory.Existing(categoryId = CategoryIdModel(value = "cat-1")),
             )
             val store = FileTaskStore(path = path)
 
@@ -61,14 +61,14 @@ class FileTaskStoreTest {
     fun `a new suggestion replaces the previous one of the same document`() {
         runTest {
             val store = FileTaskStore(path = path)
-            val first = ClassificationSuggestion(documentId = DocumentId(value = "doc-1"), model = "a")
-            val second = ClassificationSuggestion(documentId = DocumentId(value = "doc-1"), model = "b")
-            val other = ClassificationSuggestion(documentId = DocumentId(value = "doc-2"), model = "a")
+            val first = ClassificationSuggestionModel(documentId = DocumentIdModel(value = "doc-1"), model = "a")
+            val second = ClassificationSuggestionModel(documentId = DocumentIdModel(value = "doc-1"), model = "b")
+            val other = ClassificationSuggestionModel(documentId = DocumentIdModel(value = "doc-2"), model = "a")
 
             store.saveSuggestion(suggestion = first)
             store.saveSuggestion(suggestion = other)
             store.saveSuggestion(suggestion = second)
-            store.removeSuggestion(documentId = DocumentId(value = "doc-2"))
+            store.removeSuggestion(documentId = DocumentIdModel(value = "doc-2"))
 
             assertEquals(expected = listOf(second), actual = FileTaskStore(path = path).suggestions())
         }
@@ -79,12 +79,12 @@ class FileTaskStoreTest {
         runTest {
             val store = FileTaskStore(path = path)
 
-            store.dismiss(key = TaskKey(value = "new-file:a.pdf"))
-            store.dismiss(key = TaskKey(value = "new-file:a.pdf"))
-            store.dismiss(key = TaskKey(value = "missing:b.pdf"))
+            store.dismiss(key = TaskKeyModel(value = "new-file:a.pdf"))
+            store.dismiss(key = TaskKeyModel(value = "new-file:a.pdf"))
+            store.dismiss(key = TaskKeyModel(value = "missing:b.pdf"))
 
             assertEquals(
-                expected = setOf(TaskKey(value = "new-file:a.pdf"), TaskKey(value = "missing:b.pdf")),
+                expected = setOf(TaskKeyModel(value = "new-file:a.pdf"), TaskKeyModel(value = "missing:b.pdf")),
                 actual = FileTaskStore(path = path).dismissedKeys(),
             )
         }

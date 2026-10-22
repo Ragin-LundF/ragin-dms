@@ -11,14 +11,17 @@ import androidx.compose.ui.Modifier
 import dms.ui.library.LibraryViewModel
 import dms.ui.library.drag.DocumentDrag
 import dms.ui.library.model.LibrarySelection
-import dms.ui.library.model.LibraryUiState
+import dms.ui.library.model.LibraryUiStateModel
 import dms.ui.library.sidebar.item.SidebarItem
 import dms.ui.theme.Spacing
 
-/** Recently added, folders, categories and tags; the selected entry decides which documents the list shows. */
+/**
+ * Recently added, smart folders, folders, categories and tags; the selected entry decides which
+ * documents the list shows.
+ */
 @Composable
 fun LibrarySidebar(
-    state: LibraryUiState,
+    state: LibraryUiStateModel,
     busyReason: String?,
     drag: DocumentDrag,
     viewModel: LibraryViewModel,
@@ -36,6 +39,7 @@ fun LibrarySidebar(
                     dropHovered = false,
                 ) { viewModel.select(selection = LibrarySelection.Recent) }
             }
+            smartFolderEntries(state = state, busyReason = busyReason, viewModel = viewModel)
             folderEntries(state = state, busyReason = busyReason, drag = drag, viewModel = viewModel)
             categoryEntries(state = state, busyReason = busyReason, drag = drag, viewModel = viewModel)
             tagEntries(state = state, busyReason = busyReason, drag = drag, viewModel = viewModel)

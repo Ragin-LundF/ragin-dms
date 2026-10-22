@@ -16,12 +16,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import dms.ui.library.model.YearFilter
+import dms.ui.library.model.YearFilterModel
 import dms.ui.theme.Spacing
 
 /** Filters the documents by year: of the document date, or of when a document without one was added. */
 @Composable
-fun YearMenu(years: List<Int>, selected: YearFilter?, onSelect: (YearFilter?) -> Unit) {
+fun YearMenu(years: List<Int>, selected: YearFilterModel?, onSelect: (YearFilterModel?) -> Unit) {
     var open by remember { mutableStateOf(value = false) }
     Box {
         FilterChip(
@@ -50,7 +50,7 @@ fun YearMenu(years: List<Int>, selected: YearFilter?, onSelect: (YearFilter?) ->
                     text = { Text(text = year.toString()) },
                     onClick = {
                         open = false
-                        onSelect(YearFilter(year = year))
+                        onSelect(YearFilterModel(year = year))
                     },
                 )
             }

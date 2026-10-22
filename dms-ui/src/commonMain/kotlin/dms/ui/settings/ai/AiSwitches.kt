@@ -1,11 +1,11 @@
 package dms.ui.settings.ai
 
 import androidx.compose.runtime.Composable
-import dms.ui.settings.ai.model.AiDraft
+import dms.ui.settings.ai.model.AiDraftModel
 
 /** The switches of the AI settings: how PDFs are read, and whether a review takes the suggested file name. */
 @Composable
-fun AiSwitches(draft: AiDraft, onChange: (AiDraft) -> Unit) {
+fun AiSwitches(draft: AiDraftModel, onChange: (AiDraftModel) -> Unit) {
     AiVisionSwitch(
         checked = draft.preferVisionForPdfs,
         onCheckedChange = { onChange(draft.copy(preferVisionForPdfs = it)) },

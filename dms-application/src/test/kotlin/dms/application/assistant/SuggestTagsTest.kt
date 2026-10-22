@@ -5,7 +5,7 @@ import dms.application.catalog.model.CatalogEdit
 import dms.application.classification.model.SuggestOutcome
 import dms.application.fake.ai.FakeAssistant
 import dms.application.port.assistant.model.AssistantAnswer
-import dms.domain.taxonomy.TagName
+import dms.domain.taxonomy.model.TagNameModel
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -14,8 +14,8 @@ import kotlin.test.assertTrue
 
 class SuggestTagsTest {
 
-    private val tax = TagName.of(raw = "Tax")
-    private val energy = TagName.of(raw = "Energy")
+    private val tax = TagNameModel.of(raw = "Tax")
+    private val energy = TagNameModel.of(raw = "Energy")
 
     @Test
     fun `suggested tags wait for review, without the ones the document has`() {

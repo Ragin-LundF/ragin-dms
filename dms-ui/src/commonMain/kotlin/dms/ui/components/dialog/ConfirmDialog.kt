@@ -12,12 +12,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import dms.ui.components.model.ConfirmationRequest
+import dms.ui.components.model.ConfirmationRequestModel
 import dms.ui.theme.Spacing
 
 /** Asks before a destructive action and lists everything it affects. */
 @Composable
-fun ConfirmDialog(request: ConfirmationRequest, onConfirm: () -> Unit, onDismiss: () -> Unit) {
+fun ConfirmDialog(request: ConfirmationRequestModel, onConfirm: () -> Unit, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(text = request.title) },

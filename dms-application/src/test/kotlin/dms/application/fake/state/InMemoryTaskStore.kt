@@ -2,25 +2,25 @@ package dms.application.fake.state
 
 import dms.application.port.state.TaskStore
 import dms.domain.catalog.CatalogMergeConflict
-import dms.domain.classification.ClassificationSuggestion
-import dms.domain.document.DocumentId
-import dms.domain.task.TaskKey
+import dms.domain.classification.model.ClassificationSuggestionModel
+import dms.domain.document.model.DocumentIdModel
+import dms.domain.task.model.TaskKeyModel
 
 class InMemoryTaskStore : TaskStore {
 
-    private val suggestions = mutableMapOf<DocumentId, ClassificationSuggestion>()
+    private val suggestions = mutableMapOf<DocumentIdModel, ClassificationSuggestionModel>()
     private var conflicts = listOf<CatalogMergeConflict>()
-    private val dismissed = mutableSetOf<TaskKey>()
+    private val dismissed = mutableSetOf<TaskKeyModel>()
 
-    override suspend fun saveSuggestion(suggestion: ClassificationSuggestion) {
+    override suspend fun saveSuggestion(suggestion: ClassificationSuggestionModel) {
         suggestions[suggestion.documentId] = suggestion
     }
 
-    override suspend fun suggestions(): List<ClassificationSuggestion> {
+    override suspend fun suggestions(): List<ClassificationSuggestionModel> {
         return suggestions.values.toList()
     }
 
-    override suspend fun removeSuggestion(documentId: DocumentId) {
+    override suspend fun removeSuggestion(documentId: DocumentIdModel) {
         suggestions.remove(key = documentId)
     }
 
@@ -32,11 +32,11 @@ class InMemoryTaskStore : TaskStore {
         return conflicts
     }
 
-    override suspend fun dismiss(key: TaskKey) {
+    override suspend fun dismiss(key: TaskKeyModel) {
         dismissed += key
     }
 
-    override suspend fun dismissedKeys(): Set<TaskKey> {
+    override suspend fun dismissedKeys(): Set<TaskKeyModel> {
         return dismissed.toSet()
     }
 }

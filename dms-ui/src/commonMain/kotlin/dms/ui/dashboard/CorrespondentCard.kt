@@ -9,13 +9,13 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import dms.ui.components.chart.BarList
-import dms.ui.components.chart.model.ChartPoint
+import dms.ui.components.chart.model.ChartPointModel
 import dms.ui.components.surface.AppCard
 import dms.ui.components.surface.CardTitle
 
 /** Who the documents come from; a click finds that correspondent's documents. */
 @Composable
-fun CorrespondentCard(points: List<ChartPoint>, onSearch: (String) -> Unit, modifier: Modifier = Modifier) {
+fun CorrespondentCard(points: List<ChartPointModel>, onSearch: (String) -> Unit, modifier: Modifier = Modifier) {
     val colors = MaterialTheme.colorScheme
     AppCard(modifier = modifier) {
         CardTitle(title = "Correspondents", icon = Icons.Rounded.Business, tint = colors.primary)

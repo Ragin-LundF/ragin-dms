@@ -1,7 +1,7 @@
 package dms.storage.state
 
 import dms.application.port.state.ActivityLog
-import dms.application.port.state.model.ActivityEntry
+import dms.application.port.state.model.ActivityEntryModel
 import dms.application.port.state.model.ActivityKind
 import dms.storage.state.dto.ActivityEntryDto
 import dms.storage.state.dto.ActivityLogDto
@@ -22,7 +22,7 @@ class FileActivityLog(
     private val file = YamlFile(path = path, type = ActivityLogDto::class.java)
     private val mutex = Mutex()
 
-    override suspend fun record(entry: ActivityEntry) {
+    override suspend fun record(entry: ActivityEntryModel) {
         mutex.withLock {
             withContext(context = Dispatchers.IO) {
                 val dto = ActivityEntryDto(at = entry.at.toString(), kind = entry.kind.name, subject = entry.subject)
@@ -32,7 +32,7 @@ class FileActivityLog(
         }
     }
 
-    override suspend fun recent(limit: Int): List<ActivityEntry> {
+    override suspend fun recent(limit: Int): List<ActivityEntryModel> {
         return mutex.withLock {
             withContext(context = Dispatchers.IO) {
                 file.read()?.entries.orEmpty()
@@ -43,9 +43,9 @@ class FileActivityLog(
     }
 
     /** Entries of a kind this version does not know are skipped. */
-    private fun toDomain(dto: ActivityEntryDto): ActivityEntry? {
+    private fun toDomain(dto: ActivityEntryDto): ActivityEntryModel? {
         val kind = ActivityKind.entries.firstOrNull { it.name == dto.kind } ?: return null
-        return ActivityEntry(at = Instant.parse(dto.at), kind = kind, subject = dto.subject)
+        return ActivityEntryModel(at = Instant.parse(dto.at), kind = kind, subject = dto.subject)
     }
 
     private companion object {

@@ -1,13 +1,13 @@
 package dms.storage.scan
 
 import dms.application.port.storage.model.StorageFailure
-import dms.domain.catalog.Catalog
 import dms.domain.catalog.CatalogUpdate
-import dms.domain.catalog.LibraryId
-import dms.domain.change.FileFacts
-import dms.domain.document.Document
-import dms.domain.document.DocumentId
-import dms.domain.library.RelativePath
+import dms.domain.catalog.model.CatalogModel
+import dms.domain.catalog.model.LibraryIdModel
+import dms.domain.change.model.FileFactsModel
+import dms.domain.document.model.DocumentIdModel
+import dms.domain.document.model.DocumentModel
+import dms.domain.library.model.RelativePathModel
 import dms.storage.support.RecordingListener
 import dms.storage.support.StorageResults
 import dms.storage.support.TestFolders
@@ -29,7 +29,7 @@ class FileSystemLibraryScannerTest {
     private val root: Path = Files.createDirectories(temp.resolve("library"))
     private val folder = TestFolders.folder(location = root)
     private val scanner = FileSystemLibraryScanner(cacheDirectory = temp.resolve("cache"))
-    private val empty = Catalog.empty(libraryId = LibraryId(value = "library-1"))
+    private val empty = CatalogModel.empty(libraryId = LibraryIdModel(value = "library-1"))
 
     @AfterTest
     fun deleteTemp() {
@@ -46,6 +46,8 @@ class FileSystemLibraryScannerTest {
                 "dms-catalog.yaml",
                 "dms-catalog 2.yaml",
                 ".dms-text/doc-1.txt",
+                ".dms-plans/20261022-080000.yaml",
+                ".dms-index/doc-1.vec",
                 ".dms-trash/1/old.pdf",
                 "letters/.dms-tmp-123",
                 "letters/a.pdf",
@@ -65,7 +67,7 @@ class FileSystemLibraryScannerTest {
             val files = scan(catalog = empty)
 
             assertEquals(
-                expected = FileFacts(size = 5, contentHash = TestFolders.hashOf(content = "alpha")),
+                expected = FileFactsModel(size = 5, contentHash = TestFolders.hashOf(content = "alpha")),
                 actual = files[TestFolders.path(raw = "a.pdf")],
             )
         }
@@ -80,7 +82,7 @@ class FileSystemLibraryScannerTest {
             val files = scan(catalog = catalogWith(path = "a.pdf", content = "alpha"))
 
             assertEquals(
-                expected = FileFacts(size = 5, contentHash = null),
+                expected = FileFactsModel(size = 5, contentHash = null),
                 actual = files[TestFolders.path(raw = "a.pdf")],
             )
         }
@@ -128,7 +130,7 @@ class FileSystemLibraryScannerTest {
             val files = scan(catalog = catalogWith(path = "remote.pdf", content = "alpha"))
 
             assertEquals(
-                expected = FileFacts(size = 5, contentHash = null),
+                expected = FileFactsModel(size = 5, contentHash = null),
                 actual = files[TestFolders.path(raw = "remote.pdf")],
             )
             assertEquals(
@@ -199,13 +201,13 @@ class FileSystemLibraryScannerTest {
         }
     }
 
-    private suspend fun scan(catalog: Catalog): Map<RelativePath, FileFacts> {
+    private suspend fun scan(catalog: CatalogModel): Map<RelativePathModel, FileFactsModel> {
         return StorageResults.valueOf(result = scanner.scan(folder = folder, catalog = catalog)).files
     }
 
-    private fun catalogWith(path: String, content: String): Catalog {
-        val document = Document(
-            id = DocumentId(value = "doc-1"),
+    private fun catalogWith(path: String, content: String): CatalogModel {
+        val document = DocumentModel(
+            id = DocumentIdModel(value = "doc-1"),
             path = TestFolders.path(raw = path),
             contentHash = TestFolders.hashOf(content = content),
             size = content.length.toLong(),

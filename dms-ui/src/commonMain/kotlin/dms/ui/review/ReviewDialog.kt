@@ -16,7 +16,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
-import dms.domain.document.DocumentId
+import dms.domain.document.model.DocumentIdModel
 import dms.ui.theme.Spacing
 
 /**
@@ -24,7 +24,7 @@ import dms.ui.theme.Spacing
  * [onOpenDocument] opens the document itself, to check the values against it.
  */
 @Composable
-fun ReviewDialog(controller: ReviewController, onOpenDocument: (DocumentId) -> Unit) {
+fun ReviewDialog(controller: ReviewController, onOpenDocument: (DocumentIdModel) -> Unit) {
     val review by controller.state.collectAsState()
     val state = review ?: return
     AlertDialog(
