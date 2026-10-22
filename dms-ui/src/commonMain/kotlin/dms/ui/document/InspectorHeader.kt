@@ -15,13 +15,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import dms.domain.document.Document
+import dms.domain.document.model.DocumentModel
 import dms.ui.components.surface.KindBadge
 import dms.ui.theme.Spacing
 
 /** The kind badge, the title and the file name of the inspected document, and closing the inspector. */
 @Composable
-fun InspectorHeader(document: Document, onClose: () -> Unit) {
+fun InspectorHeader(document: DocumentModel, onClose: () -> Unit) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.Top,

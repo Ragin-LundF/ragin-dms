@@ -6,7 +6,7 @@ import dms.application.common.OperationOutcome
 import dms.application.port.state.model.ActivityKind
 import dms.domain.catalog.CatalogRejection
 import dms.domain.catalog.CatalogUpdate
-import dms.domain.document.DocumentId
+import dms.domain.document.model.DocumentIdModel
 import java.time.LocalDate
 
 /**
@@ -22,7 +22,7 @@ class DetectDocumentDates(
     /** Returns how many documents got a date. */
     suspend operator fun invoke(): Int {
         val library = store.current() ?: return 0
-        val found = mutableMapOf<DocumentId, LocalDate>()
+        val found = mutableMapOf<DocumentIdModel, LocalDate>()
         library.catalog.documents.values
             .filter { it.metadata.documentDate == null }
             .forEach { document ->

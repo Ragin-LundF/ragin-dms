@@ -8,12 +8,15 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import dms.ui.settings.ai.model.AiDraft
+import dms.ui.settings.ai.model.AiDraftModel
 import dms.ui.theme.Spacing
 
-/** The address of the server, the model to use and how long one answer may take. */
+/**
+ * The address of the server, the model to use, how long one answer may take, and the embedding
+ * model for "Ask your library".
+ */
 @Composable
-fun AiServerFields(draft: AiDraft, onChange: (AiDraft) -> Unit) {
+fun AiServerFields(draft: AiDraftModel, onChange: (AiDraftModel) -> Unit) {
     OutlinedTextField(
         value = draft.baseUrl,
         onValueChange = { onChange(draft.copy(baseUrl = it)) },
@@ -40,4 +43,12 @@ fun AiServerFields(draft: AiDraft, onChange: (AiDraft) -> Unit) {
             modifier = Modifier.width(width = 150.dp),
         )
     }
+    OutlinedTextField(
+        value = draft.embeddingModel,
+        onValueChange = { onChange(draft.copy(embeddingModel = it)) },
+        label = { Text(text = "Embedding model for Ask") },
+        placeholder = { Text(text = "First embedding model of the server") },
+        singleLine = true,
+        modifier = Modifier.width(width = 360.dp),
+    )
 }

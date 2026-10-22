@@ -1,7 +1,7 @@
 package dms.ui.session
 
-import dms.application.library.model.ScanProgress
-import dms.ui.session.model.OperationProgress
+import dms.application.library.model.ScanProgressModel
+import dms.ui.session.model.OperationProgressModel
 
 /**
  * Turns the progress of a scan into the progress bar and the log: one line per folder, its file count,
@@ -9,12 +9,12 @@ import dms.ui.session.model.OperationProgress
  */
 class ScanReporter(
     private val log: SessionLog,
-    private val onProgress: (OperationProgress) -> Unit,
+    private val onProgress: (OperationProgressModel) -> Unit,
 ) {
 
-    private var announced: ScanProgress? = null
+    private var announced: ScanProgressModel? = null
 
-    fun report(progress: ScanProgress) {
+    fun report(progress: ScanProgressModel) {
         val previous = announced
         val folder = "${progress.folderName} (${progress.folderNumber} of ${progress.folderCount})"
         when {
@@ -28,7 +28,7 @@ class ScanReporter(
         }
         announced = progress
         onProgress(
-            OperationProgress(
+            OperationProgressModel(
                 step = if (progress.total == null) "Listing $folder" else "Checking $folder",
                 done = progress.done,
                 total = progress.total,

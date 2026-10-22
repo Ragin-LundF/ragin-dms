@@ -1,6 +1,6 @@
 package dms.ui.settings
 
-import dms.application.port.state.model.AiSettings
+import dms.application.port.state.model.AiSettingsModel
 import dms.ui.session.model.LibraryStatus
 import dms.ui.support.UiTest
 import kotlinx.coroutines.flow.first
@@ -91,12 +91,12 @@ class SettingsViewModelTest {
             val viewModel = SettingsViewModel(services = app.services, session = app.session, platform = app.platform)
             app.ai.models = listOf("sample-a", "sample-b")
 
-            viewModel.testAi(settings = AiSettings(baseUrl = "http://localhost:4321/v1"))
+            viewModel.testAi(settings = AiSettingsModel(baseUrl = "http://localhost:4321/v1"))
 
             val connection = viewModel.state.first { it.aiConnection.models.isNotEmpty() }.aiConnection
             assertEquals(expected = listOf("sample-a", "sample-b"), actual = connection.models)
             assertFalse(actual = connection.isError)
-            assertEquals(expected = AiSettings(), actual = app.services.library.settings.loadPreferences().ai)
+            assertEquals(expected = AiSettingsModel(), actual = app.services.library.settings.loadPreferences().ai)
         }
     }
 
@@ -107,7 +107,7 @@ class SettingsViewModelTest {
             val viewModel = SettingsViewModel(services = app.services, session = app.session, platform = app.platform)
             app.ai.reachable = false
 
-            viewModel.testAi(settings = AiSettings())
+            viewModel.testAi(settings = AiSettingsModel())
 
             val connection = viewModel.state.first { it.aiConnection.message != null }.aiConnection
             assertTrue(actual = connection.isError)
@@ -120,7 +120,7 @@ class SettingsViewModelTest {
         UiTest.run { app ->
             app.configure()
             val viewModel = SettingsViewModel(services = app.services, session = app.session, platform = app.platform)
-            val settings = AiSettings(model = "sample-b", timeoutSeconds = 60)
+            val settings = AiSettingsModel(model = "sample-b", timeoutSeconds = 60)
 
             viewModel.saveAi(settings = settings)
             app.idle()

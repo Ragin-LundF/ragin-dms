@@ -4,8 +4,8 @@ import dms.application.port.storage.CatalogRepository
 import dms.application.port.storage.model.CatalogLoad
 import dms.application.port.storage.model.StorageFailure
 import dms.application.port.storage.model.StorageResult
-import dms.domain.catalog.Catalog
-import dms.domain.library.LibraryFolder
+import dms.domain.catalog.model.CatalogModel
+import dms.domain.library.model.LibraryFolderModel
 import dms.storage.catalog.dto.CatalogDto
 import dms.storage.fs.AtomicFiles
 import dms.storage.fs.PathResolver
@@ -23,7 +23,7 @@ import java.nio.file.Path
  */
 class FileCatalogRepository(private val trash: SystemTrash) : CatalogRepository {
 
-    override suspend fun load(folder: LibraryFolder): CatalogLoad {
+    override suspend fun load(folder: LibraryFolderModel): CatalogLoad {
         val result = StorageIo.run {
             val root = PathResolver.root(folder = folder)
                 ?: return@run StorageIo.failure(reason = StorageFailure.FOLDER_UNREACHABLE)
@@ -46,7 +46,7 @@ class FileCatalogRepository(private val trash: SystemTrash) : CatalogRepository 
         }
     }
 
-    override suspend fun save(folder: LibraryFolder, catalog: Catalog): StorageResult<Unit> {
+    override suspend fun save(folder: LibraryFolderModel, catalog: CatalogModel): StorageResult<Unit> {
         return StorageIo.run {
             val root = PathResolver.root(folder = folder)
                 ?: return@run StorageIo.failure(reason = StorageFailure.FOLDER_UNREACHABLE)
@@ -62,7 +62,7 @@ class FileCatalogRepository(private val trash: SystemTrash) : CatalogRepository 
     }
 
     /** Moves the conflict copies to the trash. Copies that cannot be read stay, so nothing unread is lost. */
-    override suspend fun discardConflictCopies(folder: LibraryFolder): StorageResult<Unit> {
+    override suspend fun discardConflictCopies(folder: LibraryFolderModel): StorageResult<Unit> {
         return StorageIo.run {
             val root = PathResolver.root(folder = folder)
                 ?: return@run StorageIo.failure(reason = StorageFailure.FOLDER_UNREACHABLE)
@@ -77,7 +77,7 @@ class FileCatalogRepository(private val trash: SystemTrash) : CatalogRepository 
         }
     }
 
-    private fun readCatalog(file: Path): StorageResult<Catalog> {
+    private fun readCatalog(file: Path): StorageResult<CatalogModel> {
         val dto = readDto(file = file)
         if (dto is StorageResult.Failure) {
             return dto

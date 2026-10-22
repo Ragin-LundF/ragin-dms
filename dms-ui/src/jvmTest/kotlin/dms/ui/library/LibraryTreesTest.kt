@@ -1,11 +1,11 @@
 package dms.ui.library
 
-import dms.domain.document.ContentHash
-import dms.domain.document.Document
-import dms.domain.document.DocumentId
-import dms.domain.library.RelativePath
-import dms.domain.taxonomy.Category
-import dms.domain.taxonomy.CategoryId
+import dms.domain.document.model.ContentHashModel
+import dms.domain.document.model.DocumentIdModel
+import dms.domain.document.model.DocumentModel
+import dms.domain.library.model.RelativePathModel
+import dms.domain.taxonomy.model.CategoryIdModel
+import dms.domain.taxonomy.model.CategoryModel
 import java.time.Instant
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -23,7 +23,7 @@ class LibraryTreesTest {
 
         val entries = LibraryTrees.folders(
             documents = documents,
-            createdFolders = setOf(RelativePath.of(raw = "letters/empty")),
+            createdFolders = setOf(RelativePathModel.of(raw = "letters/empty")),
         )
 
         assertEquals(
@@ -50,7 +50,7 @@ class LibraryTreesTest {
         val unfolded = LibraryTrees.folders(
             documents = documents,
             createdFolders = emptySet(),
-            expanded = setOf(RelativePath.of(raw = "letters")),
+            expanded = setOf(RelativePathModel.of(raw = "letters")),
         )
 
         assertEquals(expected = listOf("", "Archive", "letters"), actual = folded.map { it.path.value })
@@ -63,8 +63,8 @@ class LibraryTreesTest {
 
     @Test
     fun `subcategories show only below an unfolded category`() {
-        val parent = Category(id = CategoryId(value = "p"), name = "Invoices")
-        val child = Category(id = CategoryId(value = "c"), name = "Energy", parentId = parent.id)
+        val parent = CategoryModel(id = CategoryIdModel(value = "p"), name = "Invoices")
+        val child = CategoryModel(id = CategoryIdModel(value = "c"), name = "Energy", parentId = parent.id)
 
         val folded = LibraryTrees.categories(
             categories = listOf(parent, child),
@@ -78,9 +78,9 @@ class LibraryTreesTest {
 
     @Test
     fun `subcategories follow their parent, sorted by name`() {
-        val parent = Category(id = CategoryId(value = "p"), name = "Invoices")
-        val child = Category(id = CategoryId(value = "c"), name = "Energy", parentId = parent.id)
-        val other = Category(id = CategoryId(value = "o"), name = "Contracts")
+        val parent = CategoryModel(id = CategoryIdModel(value = "p"), name = "Invoices")
+        val child = CategoryModel(id = CategoryIdModel(value = "c"), name = "Energy", parentId = parent.id)
+        val other = CategoryModel(id = CategoryIdModel(value = "o"), name = "Contracts")
         val documents = listOf(document(id = "1", path = "a.pdf").copy(categoryId = child.id))
 
         val entries = LibraryTrees.categories(categories = listOf(parent, child, other), documents = documents)
@@ -91,11 +91,11 @@ class LibraryTreesTest {
         )
     }
 
-    private fun document(id: String, path: String): Document {
-        return Document(
-            id = DocumentId(value = id),
-            path = RelativePath.of(raw = path),
-            contentHash = ContentHash(value = "0".repeat(n = 64)),
+    private fun document(id: String, path: String): DocumentModel {
+        return DocumentModel(
+            id = DocumentIdModel(value = id),
+            path = RelativePathModel.of(raw = path),
+            contentHash = ContentHashModel(value = "0".repeat(n = 64)),
             size = 1,
             addedAt = Instant.parse("2024-01-01T10:00:00Z"),
         )

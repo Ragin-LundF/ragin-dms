@@ -6,27 +6,33 @@ Use this file when touching `dms-domain` or `dms-application`.
 
 | Package | Purpose |
 |---|---|
-| `dms.domain.document` | `Document`, `DocumentId`, `DocumentKind`, `DocumentMetadata` (title, document date, correspondent), `ContentHash`. |
-| `dms.domain.library` | `LibraryFolder`, `LibraryFolderId`, `FolderRole` (`PRIMARY`, `SYNC`), `RelativePath`, `Folder`, `FileNamePolicy`. |
-| `dms.domain.taxonomy` | `Category`, `CategoryId`, `Tag`, `TagName`. |
-| `dms.domain.catalog` | `Catalog` (the aggregate root), `CatalogRevision`, `CatalogMerger`. |
-| `dms.domain.classification` | `ClassificationSuggestion` and its parts. Suggestions are values, never applied state. |
-| `dms.domain.change` | `DetectedChange` sealed hierarchy — what a scan found (`NewFile`, `ModifiedFile`, `MovedFile`, `MissingFile`, `ContentConflict`) — and `ChangeDetector`, which compares the catalog with `FolderSnapshot`s. |
-| `dms.domain.task` | `OpenTask` sealed hierarchy: what the dashboard asks the user to decide, with a stable `TaskKey`. `OpenTask.forChange` maps every `DetectedChange` to its task. |
+| `dms.domain.document` | `DocumentModel`, `DocumentIdModel`, `DocumentKind`, `DocumentMetadataModel` (title, document date, correspondent), `ContentHashModel`. |
+| `dms.domain.library` | `LibraryFolderModel`, `LibraryFolderIdModel`, `FolderRole` (`PRIMARY`, `SYNC`), `RelativePathModel`, `Folder`, `FileNamePolicy`. |
+| `dms.domain.taxonomy` | `CategoryModel`, `CategoryIdModel`, `Tag`, `TagNameModel`. |
+| `dms.domain.catalog` | `CatalogModel` (the aggregate root), `CatalogRevisionModel`, `CatalogMerger`. |
+| `dms.domain.classification` | `ClassificationSuggestionModel` and its parts. Suggestions are values, never applied state. |
+| `dms.domain.change` | `DetectedChange` sealed hierarchy — what a scan found (`NewFile`, `ModifiedFile`, `MovedFile`, `MissingFile`, `ContentConflict`) — and `ChangeDetector`, which compares the catalog with `FolderSnapshotModel`s. |
+| `dms.domain.task` | `OpenTask` sealed hierarchy: what the dashboard asks the user to decide, with a stable `TaskKeyModel`. `OpenTask.forChange` maps every `DetectedChange` to its task. |
+| `dms.domain.field`, `dms.domain.retention`, `dms.domain.deadline` | Custom fields (`FieldDefinitionModel`, sealed `FieldValue`, `FieldValues` parsing), the strictly opt-in retention (`RetentionDates`), and `DeadlinePlanner` for the deadline and retention tasks. |
+| `dms.domain.query`, `dms.domain.settings`, `dms.domain.link` | `DocumentQueryModel` (the one filter for library, smart folders, restructure, export and Ask), `SavedSearchModel`, the library-wide `CatalogSettingsModel` with `LibraryLayoutModel` and `InboxSettingsModel`, and `DocumentLinkModel`. |
+| `dms.domain.rule`, `dms.domain.restructure`, `dms.domain.outline` | Matching rules (`RuleMatcher`, `RuleLearner`), `PathTemplateModel`, `RestructurePlanner`, `FolderShape`, and the `FolderOutlineModel` the AI gets for a target folder. |
 | `dms.application.port` | Every port interface. |
 | `dms.application.common` | Shared outcome (`OperationOutcome`), `SiblingNames` (name collision checks against the primary and the catalog), `ActivityRecorder`. |
-| `dms.application.<feature>` | Use cases grouped by feature: `library`, `sync` (with `Replicator`), `folder`, `document`, `catalog`, `resolution`, `classification`, `search`. Inputs and outcomes go in `<feature>.model`. |
+| `dms.application.<feature>` | Use cases grouped by feature: `library`, `sync` (with `Replicator`), `folder`, `document`, `catalog`, `resolution`, `classification`, `search`, `inbox`, `restructure`, `deadline`, `rule`, `export`, `pdf`, `ask`. Inputs and outcomes go in `<feature>.model`. |
+
+The data and value types of every package above live in its `model` subpackage and end in `Model`
+(`dms.domain.document.model.DocumentModel`); see "Models and DTOs" in `coding-guidelines.md`.
 
 ## Domain rules
 
-- `Catalog` is the aggregate root. Documents, categories and tags are changed **through** `Catalog` functions that return a new `Catalog`; nothing mutates a document list from outside.
-- Every catalog change increments `CatalogRevision`. The revision decides which of two catalog copies is newer — never the file modification time, which cloud sync rewrites.
-- A document is identified by `DocumentId` (a UUID), not by its path. Paths change when the user moves or renames a file; the id does not.
-- `ContentHash` (SHA-256) is how a moved or renamed file is recognized again. Keep it in the catalog.
-- `RelativePath` is always relative to a library folder, uses `/` as separator, is **NFC-normalized** in its factory, and is never absolute. macOS may store umlauts decomposed (NFD), Windows, Linux and network shares composed (NFC); without normalization the same file looks like two.
+- `CatalogModel` is the aggregate root. Documents, categories and tags are changed **through** `CatalogModel` functions that return a new `CatalogModel`; nothing mutates a document list from outside.
+- Every catalog change increments `CatalogRevisionModel`. The revision decides which of two catalog copies is newer — never the file modification time, which cloud sync rewrites.
+- A document is identified by `DocumentIdModel` (a UUID), not by its path. Paths change when the user moves or renames a file; the id does not.
+- `ContentHashModel` (SHA-256) is how a moved or renamed file is recognized again. Keep it in the catalog.
+- `RelativePathModel` is always relative to a library folder, uses `/` as separator, is **NFC-normalized** in its factory, and is never absolute. macOS may store umlauts decomposed (NFD), Windows, Linux and network shares composed (NFC); without normalization the same file looks like two.
 - `FileNamePolicy` is the only validator for file and folder names from the user or the AI. A name must be valid on macOS, Windows **and** Linux: no `<>:"/\|?*` or control characters, no reserved Windows names (`CON`, `NUL`, …), no trailing dots or spaces, length limit, and no name that differs from a sibling only by case. Do not validate names anywhere else.
 - Keep original file names. A new name only comes from an approved suggestion or a user rename.
-- Tag names are normalized once, in `TagName`'s factory (trimmed, case-insensitive uniqueness, display casing preserved). Never compare raw tag strings.
+- Tag names are normalized once, in `TagNameModel`'s factory (trimmed, case-insensitive uniqueness, display casing preserved). Never compare raw tag strings.
 - Categories form a tree (`parentId`). A document has at most one category and any number of tags. Folders say *where / whose*, categories say *what kind of document* — do not derive one from the other.
 - A document of `DocumentKind.OTHER` is catalogued and synced but never sent to the AI.
 
@@ -46,12 +52,12 @@ Use this file when touching `dms-domain` or `dms-application`.
 
 ## Extending the catalog model
 
-Adding a field to `Document` or `Catalog` touches, in order:
+Adding a field to `DocumentModel` or `CatalogModel` touches, in order:
 
 1. The domain type in `dms-domain`.
 2. The catalog DTO and mapper in `dms-storage` (`dms.storage.catalog`), plus a format version decision — see `dms-storage.md`.
 3. `CatalogMerger`, or the field is lost when copies from two folders or devices are merged.
-4. `ClassificationSuggestion`, the JSON schema and the prompt in `dms-ai`, if the AI should fill it.
+4. `ClassificationSuggestionModel`, the JSON schema and the prompt in `dms-ai`, if the AI should fill it.
 5. The inspector, the review screen and their view models in `dms-ui`.
 
 ## Adding a detected change or a task type

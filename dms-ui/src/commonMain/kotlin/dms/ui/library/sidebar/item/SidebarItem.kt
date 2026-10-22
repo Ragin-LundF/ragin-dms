@@ -22,12 +22,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dms.ui.components.FoldToggle
 import dms.ui.components.surface.CountPill
-import dms.ui.library.sidebar.model.TreeToggle
+import dms.ui.library.sidebar.model.TreeToggleModel
 import dms.ui.theme.Spacing
 
 /**
  * One selectable line of the sidebar, indented by [depth]; it lights up while a document hovers over
- * it. A tree entry has a [toggle] that folds its children.
+ * it. A tree entry has a [toggle] that folds its children, and an entry with actions shows its [menu]
+ * at the end.
  */
 @Composable
 fun SidebarItem(
@@ -37,7 +38,8 @@ fun SidebarItem(
     depth: Int,
     selected: Boolean,
     dropHovered: Boolean,
-    toggle: TreeToggle? = null,
+    toggle: TreeToggleModel? = null,
+    menu: (@Composable () -> Unit)? = null,
     onClick: () -> Unit,
 ) {
     val colors = MaterialTheme.colorScheme
@@ -77,5 +79,6 @@ fun SidebarItem(
             modifier = Modifier.weight(weight = 1f),
         )
         count?.let { CountPill(count = it, selected = selected) }
+        menu?.invoke()
     }
 }

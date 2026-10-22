@@ -4,16 +4,16 @@ import dms.application.port.storage.LibraryScanner
 import dms.application.port.storage.ScanListener
 import dms.application.port.storage.model.StorageFailure
 import dms.application.port.storage.model.StorageResult
-import dms.domain.catalog.Catalog
-import dms.domain.change.FileFacts
-import dms.domain.change.FolderSnapshot
-import dms.domain.document.Document
-import dms.domain.library.LibraryFolder
-import dms.domain.library.RelativePath
+import dms.domain.catalog.model.CatalogModel
+import dms.domain.change.model.FileFactsModel
+import dms.domain.change.model.FolderSnapshotModel
+import dms.domain.document.model.DocumentModel
+import dms.domain.library.model.LibraryFolderModel
+import dms.domain.library.model.RelativePathModel
 import dms.storage.fs.ContentHasher
 import dms.storage.fs.PathResolver
 import dms.storage.fs.StorageIo
-import dms.storage.scan.model.ListedFile
+import dms.storage.scan.model.ListedFileModel
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.job
@@ -36,21 +36,21 @@ class FileSystemLibraryScanner(
 ) : LibraryScanner {
 
     override suspend fun scan(
-        folder: LibraryFolder,
-        catalog: Catalog,
+        folder: LibraryFolderModel,
+        catalog: CatalogModel,
         listener: ScanListener,
-    ): StorageResult<FolderSnapshot> {
+    ): StorageResult<FolderSnapshotModel> {
         val job = currentCoroutineContext().job
         return StorageIo.run {
             val root = PathResolver.root(folder = folder)
                 ?: return@run StorageIo.failure(reason = StorageFailure.FOLDER_UNREACHABLE)
             val cache = ScanCache.load(path = cacheDirectory.resolve("${folder.id.value}.yaml"))
             val known = catalog.documents.values.associateBy { it.path }
-            val listed = mutableListOf<ListedFile>()
-            val placeholders = mutableMapOf<RelativePath, FileFacts>()
+            val listed = mutableListOf<ListedFileModel>()
+            val placeholders = mutableMapOf<RelativePathModel, FileFactsModel>()
             list(directory = root, segments = emptyList(), known = known, listed = listed, placeholders = placeholders)
             listener.counted(total = listed.size)
-            val files = mutableMapOf<RelativePath, FileFacts>()
+            val files = mutableMapOf<RelativePathModel, FileFactsModel>()
             var sinceCheckpoint = 0
             listed.forEachIndexed { index, file ->
                 job.ensureActive()
@@ -74,16 +74,16 @@ class FileSystemLibraryScanner(
             // A downloaded file wins over a leftover placeholder of the same name.
             placeholders.forEach { (path, facts) -> files.putIfAbsent(path, facts) }
             cache.save(present = files.keys)
-            StorageResult.Success(value = FolderSnapshot(folderId = folder.id, files = files))
+            StorageResult.Success(value = FolderSnapshotModel(folderId = folder.id, files = files))
         }
     }
 
     private fun list(
         directory: Path,
         segments: List<String>,
-        known: Map<RelativePath, Document>,
-        listed: MutableList<ListedFile>,
-        placeholders: MutableMap<RelativePath, FileFacts>,
+        known: Map<RelativePathModel, DocumentModel>,
+        listed: MutableList<ListedFileModel>,
+        placeholders: MutableMap<RelativePathModel, FileFactsModel>,
     ) {
         val entries = Files.newDirectoryStream(directory).use { stream -> stream.sortedBy { it.fileName.toString() } }
         entries.forEach { entry ->
@@ -104,12 +104,12 @@ class FileSystemLibraryScanner(
 
                 !attributes.isRegularFile -> Unit
                 placeholderName != null -> {
-                    val path = RelativePath.fromSegments(segments = segments + placeholderName)
-                    placeholders[path] = FileFacts(size = known[path]?.size ?: 0, contentHash = null)
+                    val path = RelativePathModel.fromSegments(segments = segments + placeholderName)
+                    placeholders[path] = FileFactsModel(size = known[path]?.size ?: 0, contentHash = null)
                 }
 
-                else -> listed += ListedFile(
-                    path = RelativePath.fromSegments(segments = segments + name),
+                else -> listed += ListedFileModel(
+                    path = RelativePathModel.fromSegments(segments = segments + name),
                     entry = entry,
                     size = attributes.size(),
                     modified = attributes.lastModifiedTime().toMillis(),

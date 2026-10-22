@@ -3,7 +3,7 @@ package dms.application.document
 import dms.application.TestLibrary
 import dms.application.common.OperationOutcome
 import dms.domain.change.DetectedChange
-import dms.domain.library.RelativePath
+import dms.domain.library.model.RelativePathModel
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -28,7 +28,7 @@ class TrashDuplicateFileTest {
 
             assertIs<OperationOutcome.NotConfirmed>(value = refused)
             assertIs<OperationOutcome.Done>(value = outcome)
-            val copy = RelativePath.of(raw = "inbox/a copy.pdf")
+            val copy = RelativePathModel.of(raw = "inbox/a copy.pdf")
             val expected = setOf(library.primary.id to copy, library.syncA.id to copy)
             assertEquals(expected = expected, actual = library.folders.trashed.toSet())
             val original = library.folders.content(folder = library.primary, path = "letters/a.pdf")

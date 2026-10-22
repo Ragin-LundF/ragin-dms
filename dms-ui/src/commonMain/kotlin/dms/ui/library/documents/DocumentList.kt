@@ -13,20 +13,20 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import dms.domain.document.DocumentId
+import dms.domain.document.model.DocumentIdModel
 import dms.ui.library.DocumentColumns
 import dms.ui.library.drag.DocumentDrag
 import dms.ui.library.drag.DraggableDocument
-import dms.ui.library.model.DocumentRow
+import dms.ui.library.model.DocumentRowModel
 import dms.ui.theme.Spacing
 
 /** The documents as rows under a column header; each row can be dragged onto the sidebar. */
 @Composable
 fun DocumentList(
-    rows: List<DocumentRow>,
-    inspected: DocumentId?,
+    rows: List<DocumentRowModel>,
+    inspected: DocumentIdModel?,
     drag: DocumentDrag,
-    onInspect: (DocumentId) -> Unit,
+    onInspect: (DocumentIdModel) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier) {

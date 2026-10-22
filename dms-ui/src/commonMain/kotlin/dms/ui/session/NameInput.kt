@@ -1,7 +1,7 @@
 package dms.ui.session
 
 import dms.domain.library.FileNamePolicy
-import dms.domain.library.RelativePath
+import dms.domain.library.model.RelativePathModel
 
 /** Turns a name the user typed into a path, using the one file name policy of the domain. */
 object NameInput {
@@ -12,7 +12,7 @@ object NameInput {
     }
 
     /** [raw] as an entry of [parent]; only valid after [problem] returned `null`. */
-    fun child(parent: RelativePath, raw: String): RelativePath {
+    fun child(parent: RelativePathModel, raw: String): RelativePathModel {
         return parent.resolve(name = raw.trim())
     }
 }

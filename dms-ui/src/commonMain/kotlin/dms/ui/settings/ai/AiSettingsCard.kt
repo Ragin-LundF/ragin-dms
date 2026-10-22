@@ -15,26 +15,26 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import dms.application.port.state.model.AiSettings
+import dms.application.port.state.model.AiSettingsModel
 import dms.ui.components.ActionButtons
-import dms.ui.components.model.ActionButton
+import dms.ui.components.model.ActionButtonModel
 import dms.ui.components.model.ButtonStyle
 import dms.ui.components.surface.AppCard
 import dms.ui.components.surface.CardTitle
-import dms.ui.settings.ai.model.AiDraft
-import dms.ui.settings.model.AiConnection
+import dms.ui.settings.ai.model.AiDraftModel
+import dms.ui.settings.model.AiConnectionModel
 import dms.ui.theme.Spacing
 
 /** Where the AI runs: the server address, the model, and a test that lists the server's models. */
 @Composable
 fun AiSettingsCard(
-    settings: AiSettings,
-    connection: AiConnection,
+    settings: AiSettingsModel,
+    connection: AiConnectionModel,
     busyReason: String?,
-    onSave: (AiSettings) -> Unit,
-    onTest: (AiSettings) -> Unit,
+    onSave: (AiSettingsModel) -> Unit,
+    onTest: (AiSettingsModel) -> Unit,
 ) {
-    var draft by remember(settings) { mutableStateOf(AiDraft.of(settings = settings)) }
+    var draft by remember(settings) { mutableStateOf(AiDraftModel.of(settings = settings)) }
     val typed = draft.toSettings()
     AppCard(modifier = Modifier.widthIn(max = 920.dp)) {
         CardTitle(
@@ -56,13 +56,13 @@ fun AiSettingsCard(
             AiConnectionLine(connection = connection)
             ActionButtons(
                 buttons = listOf(
-                    ActionButton(
+                    ActionButtonModel(
                         label = "Test connection",
                         icon = Icons.Rounded.NetworkCheck,
                         disabledReason = if (typed == null) "Enter a valid address and timeout" else null,
                         onClick = { typed?.let(onTest) },
                     ),
-                    ActionButton(
+                    ActionButtonModel(
                         label = "Save",
                         icon = Icons.Rounded.Save,
                         style = ButtonStyle.TONAL,

@@ -10,8 +10,8 @@ import dms.application.port.storage.model.FolderOperation
 import dms.application.port.storage.model.StorageResult
 import dms.application.sync.Replicator
 import dms.domain.library.FileNamePolicy
-import dms.domain.library.LibraryFolderId
-import dms.domain.library.RelativePath
+import dms.domain.library.model.LibraryFolderIdModel
+import dms.domain.library.model.RelativePathModel
 
 /**
  * Keeps two versions of a path: the copy in one folder is renamed to a free name with a
@@ -26,10 +26,10 @@ class KeepBothVersions(
     private val activity: ActivityRecorder,
 ) {
 
-    suspend operator fun invoke(path: RelativePath, folderId: LibraryFolderId): OperationOutcome {
+    suspend operator fun invoke(path: RelativePathModel, folderId: LibraryFolderIdModel): OperationOutcome {
         val library = store.current() ?: return OperationOutcome.LibraryNotOpen
         val folder = library.folders.find(id = folderId) ?: return OperationOutcome.NotFound
-        val parent = path.parent ?: RelativePath.ROOT
+        val parent = path.parent ?: RelativePathModel.ROOT
         val known = names.of(library = library, parent = parent)
         if (known is StorageResult.Failure) {
             return OperationOutcome.StorageFailed(failure = known)

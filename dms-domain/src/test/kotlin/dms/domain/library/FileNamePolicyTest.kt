@@ -73,4 +73,19 @@ class FileNamePolicyTest {
         assertTrue(actual = FileNamePolicy.collidesWithAny(name = "beta.pdf", siblings = siblings))
         assertFalse(actual = FileNamePolicy.collidesWithAny(name = "gamma.pdf", siblings = siblings))
     }
+
+    @Test
+    fun `sanitize turns any text into a valid name`() {
+        assertEquals(expected = "Car- Policies", actual = FileNamePolicy.sanitize(name = "Car: Policies"))
+        assertEquals(expected = "hidden", actual = FileNamePolicy.sanitize(name = " ..hidden. "))
+        assertEquals(expected = "CON_", actual = FileNamePolicy.sanitize(name = "CON"))
+        assertEquals(expected = "_", actual = FileNamePolicy.sanitize(name = "..."))
+        assertEquals(
+            expected = FileNamePolicy.MAX_LENGTH,
+            actual = FileNamePolicy.sanitize(name = "x".repeat(n = 300)).length,
+        )
+        listOf("a/b", "tab\there", "Ü".repeat(n = 250)).forEach {
+            assertEquals(expected = null, actual = FileNamePolicy.check(name = FileNamePolicy.sanitize(name = it)))
+        }
+    }
 }

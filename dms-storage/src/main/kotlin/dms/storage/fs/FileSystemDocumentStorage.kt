@@ -1,15 +1,16 @@
 package dms.storage.fs
 
 import dms.application.port.storage.DocumentStorage
-import dms.application.port.storage.model.ExternalFile
+import dms.application.port.storage.model.ExternalFileModel
 import dms.application.port.storage.model.StorageFailure
 import dms.application.port.storage.model.StorageResult
-import dms.domain.change.FileFacts
-import dms.domain.library.LibraryFolder
-import dms.domain.library.RelativePath
+import dms.domain.change.model.FileFactsModel
+import dms.domain.library.model.LibraryFolderModel
+import dms.domain.library.model.RelativePathModel
 import dms.storage.platform.SystemTrash
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.StandardCopyOption
 import java.nio.file.attribute.BasicFileAttributes
 import java.time.Instant
 import java.time.LocalDate
@@ -22,10 +23,10 @@ import java.time.ZoneId
 class FileSystemDocumentStorage(private val trash: SystemTrash) : DocumentStorage {
 
     override suspend fun importFile(
-        folder: LibraryFolder,
-        source: ExternalFile,
-        target: RelativePath,
-    ): StorageResult<FileFacts> {
+        folder: LibraryFolderModel,
+        source: ExternalFileModel,
+        target: RelativePathModel,
+    ): StorageResult<FileFactsModel> {
         return inFolder(folder = folder) { root ->
             val sourcePath = Path.of(source.location)
             if (!Files.isRegularFile(sourcePath)) {
@@ -40,11 +41,11 @@ class FileSystemDocumentStorage(private val trash: SystemTrash) : DocumentStorag
     }
 
     override suspend fun copyFile(
-        from: LibraryFolder,
-        to: LibraryFolder,
-        path: RelativePath,
+        from: LibraryFolderModel,
+        to: LibraryFolderModel,
+        path: RelativePathModel,
         replaceExisting: Boolean,
-    ): StorageResult<FileFacts> {
+    ): StorageResult<FileFactsModel> {
         return inFolder(folder = from) { fromRoot ->
             val toRoot = PathResolver.root(folder = to)
                 ?: return@inFolder StorageIo.failure(reason = StorageFailure.FOLDER_UNREACHABLE)
@@ -64,7 +65,7 @@ class FileSystemDocumentStorage(private val trash: SystemTrash) : DocumentStorag
         }
     }
 
-    override suspend fun createFolder(folder: LibraryFolder, path: RelativePath): StorageResult<Unit> {
+    override suspend fun createFolder(folder: LibraryFolderModel, path: RelativePathModel): StorageResult<Unit> {
         return inFolder(folder = folder) { root ->
             val target = PathResolver.target(root = root, path = path)
             val existing = PathResolver.clashing(directory = target.parent, name = path.fileName)
@@ -77,7 +78,11 @@ class FileSystemDocumentStorage(private val trash: SystemTrash) : DocumentStorag
         }
     }
 
-    override suspend fun move(folder: LibraryFolder, from: RelativePath, to: RelativePath): StorageResult<Unit> {
+    override suspend fun move(
+        folder: LibraryFolderModel,
+        from: RelativePathModel,
+        to: RelativePathModel,
+    ): StorageResult<Unit> {
         return inFolder(folder = folder) { root ->
             val source = PathResolver.existing(root = root, path = from)
                 ?: return@inFolder StorageIo.failure(reason = StorageFailure.NOT_FOUND)
@@ -100,7 +105,30 @@ class FileSystemDocumentStorage(private val trash: SystemTrash) : DocumentStorag
         }
     }
 
-    override suspend fun moveToTrash(folder: LibraryFolder, path: RelativePath): StorageResult<Unit> {
+    override suspend fun replaceWith(
+        folder: LibraryFolderModel,
+        target: RelativePathModel,
+        replacement: RelativePathModel,
+    ): StorageResult<FileFactsModel> {
+        return inFolder(folder = folder) { root ->
+            val source = PathResolver.existing(root = root, path = replacement)
+                ?: return@inFolder StorageIo.failure(reason = StorageFailure.NOT_FOUND)
+            val existing = PathResolver.existing(root = root, path = target)
+            if (existing != null && !trash.moveToTrash(libraryRoot = root, entry = existing)) {
+                return@inFolder StorageIo.failure(reason = StorageFailure.IO_ERROR, detail = "Trash failed")
+            }
+            val destination = existing ?: PathResolver.target(root = root, path = target)
+            Files.createDirectories(destination.parent)
+            Files.move(source, destination, StandardCopyOption.ATOMIC_MOVE)
+            val facts = FileFactsModel(
+                size = Files.size(destination),
+                contentHash = ContentHasher.hash(path = destination),
+            )
+            StorageResult.Success(value = facts)
+        }
+    }
+
+    override suspend fun moveToTrash(folder: LibraryFolderModel, path: RelativePathModel): StorageResult<Unit> {
         return inFolder(folder = folder) { root ->
             val entry = PathResolver.existing(root = root, path = path)
                 ?: return@inFolder StorageIo.failure(reason = StorageFailure.NOT_FOUND)
@@ -111,19 +139,19 @@ class FileSystemDocumentStorage(private val trash: SystemTrash) : DocumentStorag
         }
     }
 
-    override suspend fun readFacts(folder: LibraryFolder, path: RelativePath): StorageResult<FileFacts> {
+    override suspend fun readFacts(folder: LibraryFolderModel, path: RelativePathModel): StorageResult<FileFactsModel> {
         return inFolder(folder = folder) { root ->
             val file = PathResolver.existing(root = root, path = path)?.takeIf { Files.isRegularFile(it) }
                 ?: return@inFolder StorageIo.failure(reason = StorageFailure.NOT_FOUND)
-            val facts = FileFacts(size = Files.size(file), contentHash = ContentHasher.hash(path = file))
+            val facts = FileFactsModel(size = Files.size(file), contentHash = ContentHasher.hash(path = file))
             StorageResult.Success(value = facts)
         }
     }
 
     override suspend fun sameContent(
-        folder: LibraryFolder,
-        first: RelativePath,
-        second: RelativePath,
+        folder: LibraryFolderModel,
+        first: RelativePathModel,
+        second: RelativePathModel,
     ): StorageResult<Boolean> {
         return inFolder(folder = folder) { root ->
             val firstFile = PathResolver.existing(root = root, path = first)?.takeIf { Files.isRegularFile(it) }
@@ -136,7 +164,7 @@ class FileSystemDocumentStorage(private val trash: SystemTrash) : DocumentStorag
         }
     }
 
-    override suspend fun createdOn(folder: LibraryFolder, path: RelativePath): LocalDate? {
+    override suspend fun createdOn(folder: LibraryFolderModel, path: RelativePathModel): LocalDate? {
         val result = inFolder(folder = folder) { root ->
             val file = PathResolver.existing(root = root, path = path)?.takeIf { Files.isRegularFile(it) }
                 ?: return@inFolder StorageIo.failure(reason = StorageFailure.NOT_FOUND)
@@ -148,7 +176,7 @@ class FileSystemDocumentStorage(private val trash: SystemTrash) : DocumentStorag
         return (result as? StorageResult.Success)?.value
     }
 
-    override suspend fun listNames(folder: LibraryFolder, path: RelativePath): StorageResult<List<String>> {
+    override suspend fun listNames(folder: LibraryFolderModel, path: RelativePathModel): StorageResult<List<String>> {
         return inFolder(folder = folder) { root ->
             val directory = PathResolver.existing(root = root, path = path)?.takeIf { Files.isDirectory(it) }
                 ?: return@inFolder StorageIo.failure(reason = StorageFailure.NOT_FOUND)
@@ -160,7 +188,7 @@ class FileSystemDocumentStorage(private val trash: SystemTrash) : DocumentStorag
     }
 
     private suspend fun <T> inFolder(
-        folder: LibraryFolder,
+        folder: LibraryFolderModel,
         block: (Path) -> StorageResult<T>,
     ): StorageResult<T> {
         return StorageIo.run {

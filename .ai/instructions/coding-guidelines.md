@@ -52,8 +52,9 @@ A **model** is a pure data declaration with no behavior: `data class`, `enum cla
   - Group inside `model` when it exceeds 8 files.
   - Composables, view models, services, mappers, and objects holding logic never go in a `model` package.
   - Extension functions belong next to the type they extend, including inside a `model` package.
+- Every top-level `data class`, `@JvmInline value class` and value object (an immutable class compared by its value, such as `TagNameModel` or `DocumentLinkModel`) ends in `Model` and lives in a `model` subpackage of its feature package, in every module: `dms.domain.document.model.DocumentModel`, `dms.application.library.model.ScanResultModel`, `dms.ui.inbox.model.InboxRowModel`. Exceptions: serialization DTOs keep their `Dto` suffix and `dto` package; private helper classes inside a file; the subtypes of a `sealed` hierarchy, which stay nested in it (`OpenTask.ReviewSuggestion`); `enum class`es; and `sealed` types themselves.
 - One top-level declaration per file, named after the declaration.
-- Models are immutable. Wrap primitive identifiers in `@JvmInline value class` (`DocumentId`, `CategoryId`, `TagName`, `RelativePath`, `ContentHash`), never pass raw strings where a typed id is expected.
+- Models are immutable. Wrap primitive identifiers in `@JvmInline value class` (`DocumentIdModel`, `CategoryIdModel`, `TagNameModel`, `RelativePathModel`, `ContentHashModel`), never pass raw strings where a typed id is expected.
 - The catalog file is persisted user data. Changing what it stores is a format change — see `dms-storage.md`.
 
 ## Tests

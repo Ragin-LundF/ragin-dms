@@ -1,6 +1,6 @@
 package dms.ui.library.search
 
-import dms.ui.library.search.model.ContentSearchState
+import dms.ui.library.search.model.ContentSearchStateModel
 import dms.ui.service.AppServices
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
@@ -28,9 +28,9 @@ class ContentSearch(
 ) {
 
     private val enabled = MutableStateFlow(value = true)
-    private val mutableState = MutableStateFlow(value = ContentSearchState())
+    private val mutableState = MutableStateFlow(value = ContentSearchStateModel())
 
-    val state: StateFlow<ContentSearchState> = mutableState.asStateFlow()
+    val state: StateFlow<ContentSearchStateModel> = mutableState.asStateFlow()
 
     init {
         scope.launch {
@@ -49,13 +49,13 @@ class ContentSearch(
 
     private suspend fun search(query: String, on: Boolean) {
         if (!on || query.isEmpty()) {
-            mutableState.value = ContentSearchState(enabled = on)
+            mutableState.value = ContentSearchStateModel(enabled = on)
             return
         }
         mutableState.update { it.copy(enabled = true, searching = true) }
         delay(timeMillis = TYPING_PAUSE_MILLIS)
         val matches = services.library.searchContents(query = query)
-        mutableState.value = ContentSearchState(enabled = true, matches = matches)
+        mutableState.value = ContentSearchStateModel(enabled = true, matches = matches)
     }
 
     private companion object {

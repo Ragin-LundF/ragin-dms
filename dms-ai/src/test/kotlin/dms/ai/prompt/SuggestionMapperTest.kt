@@ -1,10 +1,17 @@
 package dms.ai.prompt
 
+import dms.ai.client.dto.FieldAnswerDto
 import dms.ai.client.dto.SuggestionDto
 import dms.ai.support.Requests
-import dms.domain.classification.ClassificationSuggestion
 import dms.domain.classification.SuggestedCategory
-import dms.domain.taxonomy.TagName
+import dms.domain.classification.model.ClassificationSuggestionModel
+import dms.domain.classification.model.SuggestedFolderModel
+import dms.domain.field.FieldPresets
+import dms.domain.field.FieldValue
+import dms.domain.field.model.CurrencyCodeModel
+import dms.domain.library.model.RelativePathModel
+import dms.domain.taxonomy.model.TagNameModel
+import java.math.BigDecimal
 import java.time.LocalDate
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -44,7 +51,7 @@ class SuggestionMapperTest {
 
         assertEquals(expected = listOf("Tax", "Home"), actual = tags.map { it.name.value })
         assertEquals(expected = listOf(false, true), actual = tags.map { it.isNew })
-        assertEquals(expected = TagName.of(raw = "home"), actual = tags.last().name)
+        assertEquals(expected = TagNameModel.of(raw = "home"), actual = tags.last().name)
     }
 
     @Test
@@ -77,7 +84,82 @@ class SuggestionMapperTest {
         assertEquals(expected = LocalDate.parse("2026-01-15"), actual = dated.documentDate)
     }
 
-    private fun map(answer: SuggestionDto): ClassificationSuggestion {
+    @Test
+    fun `a target folder must be in the outline or a new folder flagged as new below one`() {
+        val withOutline = Requests.request(outline = Requests.outline)
+        fun target(folder: String, isNew: Boolean?): SuggestedFolderModel? {
+            val answer = SuggestionDto(
+                targetFolder = folder,
+                targetFolderIsNew = isNew,
+                targetReason = "Same sender\nmore",
+            )
+            return SuggestionMapper.toSuggestion(answer = answer, request = withOutline, model = "m").targetFolder
+        }
+
+        assertEquals(
+            expected = SuggestedFolderModel(path = RelativePathModel.of(raw = "Home/Power"), isNew = false),
+            actual = target("/Home/Power/", false),
+        )
+        assertEquals(
+            expected = SuggestedFolderModel(path = RelativePathModel.of(raw = "Home/Water"), isNew = true),
+            actual = target("Home/Water", true),
+        )
+        assertNull(actual = target(folder = "Home/Water", isNew = false))
+        assertNull(actual = target(folder = "Away/Water", isNew = true))
+        assertNull(actual = target(folder = "Inbox/Sorted", isNew = true))
+        assertNull(actual = target(folder = "Home/Wa:ter", isNew = true))
+        assertEquals(
+            expected = "Same sender",
+            actual = SuggestionMapper.toSuggestion(
+                answer = SuggestionDto(targetFolder = "Home", targetReason = "Same sender\nmore"),
+                request = withOutline,
+                model = "m",
+            ).targetReason,
+        )
+    }
+
+    @Test
+    fun `field values must be defined and fit their type, a missing currency takes the default`() {
+        val withFields = Requests.request(fieldDefinitions = FieldPresets.ALL)
+        val answer = SuggestionDto(
+            fields = listOf(
+                FieldAnswerDto(key = "amount", value = "1.234,50"),
+                FieldAnswerDto(key = "due", value = "next week"),
+                FieldAnswerDto(key = "cancel-by", value = "2026-09-30"),
+                FieldAnswerDto(key = "unknown", value = "x"),
+                FieldAnswerDto(key = "warranty-until", value = null),
+            ),
+        )
+
+        val fields = SuggestionMapper.toSuggestion(answer = answer, request = withFields, model = "m").fields
+
+        assertEquals(
+            expected = mapOf(
+                FieldPresets.AMOUNT.key to FieldValue.Money(
+                    amount = BigDecimal("1234.50"),
+                    currency = CurrencyCodeModel(value = "EUR"),
+                ),
+                FieldPresets.CANCEL_BY.key to FieldValue.Date(date = LocalDate.of(2026, 9, 30)),
+            ),
+            actual = fields,
+        )
+    }
+
+    @Test
+    fun `page texts become one transcription with a form feed between pages`() {
+        val paged = map(answer = SuggestionDto(transcription = "all", pages = listOf("first", " second ")))
+        val whole = map(answer = SuggestionDto(transcription = "all", pages = listOf(" ")))
+
+        assertEquals(expected = "first\u000Csecond", actual = paged.transcription)
+        assertEquals(expected = "all", actual = whole.transcription)
+    }
+
+    @Test
+    fun `without an outline no target folder is suggested`() {
+        assertNull(actual = map(answer = SuggestionDto(targetFolder = "Home", targetFolderIsNew = false)).targetFolder)
+    }
+
+    private fun map(answer: SuggestionDto): ClassificationSuggestionModel {
         return SuggestionMapper.toSuggestion(answer = answer, request = request, model = "sample-model")
     }
 }

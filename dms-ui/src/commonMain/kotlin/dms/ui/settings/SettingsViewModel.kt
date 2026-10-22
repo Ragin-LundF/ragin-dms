@@ -4,22 +4,23 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dms.application.library.model.LibraryCommand
 import dms.application.port.ai.model.ModelList
-import dms.application.port.state.model.AiSettings
-import dms.domain.library.FolderLocation
+import dms.application.port.state.model.AiSettingsModel
 import dms.domain.library.FolderRole
-import dms.domain.library.LibraryFolder
+import dms.domain.library.model.FolderLocationModel
+import dms.domain.library.model.LibraryFolderModel
 import dms.ui.PlatformActions
 import dms.ui.components.dialog.DialogController
-import dms.ui.components.model.ConfirmationRequest
+import dms.ui.components.model.ConfirmationRequestModel
 import dms.ui.review.AiMessages
 import dms.ui.service.AppServices
 import dms.ui.session.LibrarySession
 import dms.ui.session.OutcomeMessages
 import dms.ui.session.model.LibraryStatus
-import dms.ui.session.model.SessionState
-import dms.ui.settings.model.AiConnection
-import dms.ui.settings.model.FolderRow
-import dms.ui.settings.model.SettingsUiState
+import dms.ui.session.model.SessionStateModel
+import dms.ui.settings.library.LibrarySettingsController
+import dms.ui.settings.model.AiConnectionModel
+import dms.ui.settings.model.FolderRowModel
+import dms.ui.settings.model.SettingsUiStateModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -38,13 +39,18 @@ class SettingsViewModel(
 ) : ViewModel() {
 
     val dialogs: DialogController = DialogController()
+    val library: LibrarySettingsController = LibrarySettingsController(
+        services = services,
+        session = session,
+        scope = viewModelScope,
+    )
 
-    private val connection = MutableStateFlow(value = AiConnection())
+    private val connection = MutableStateFlow(value = AiConnectionModel())
 
-    val state: StateFlow<SettingsUiState> = combine(session.state, connection) { sessionState, aiConnection ->
+    val state: StateFlow<SettingsUiStateModel> = combine(session.state, connection) { sessionState, aiConnection ->
         toUiState(sessionState = sessionState).copy(aiConnection = aiConnection)
     }
-        .stateIn(scope = viewModelScope, started = SharingStarted.Eagerly, initialValue = SettingsUiState())
+        .stateIn(scope = viewModelScope, started = SharingStarted.Eagerly, initialValue = SettingsUiStateModel())
 
     fun choosePrimaryFolder() {
         viewModelScope.launch {
@@ -52,7 +58,7 @@ class SettingsViewModel(
             configure(
                 command = LibraryCommand.CreatePrimary(
                     displayName = displayNameOf(location = location),
-                    location = FolderLocation(value = location),
+                    location = FolderLocationModel(value = location),
                 ),
             )
         }
@@ -66,28 +72,28 @@ class SettingsViewModel(
         session.detectDocumentDates()
     }
 
-    fun saveAi(settings: AiSettings) {
+    fun saveAi(settings: AiSettingsModel) {
         session.updatePreferences { it.copy(ai = settings) }
     }
 
     /** Asks the server for its models with the typed [settings], without saving them. */
-    fun testAi(settings: AiSettings) {
-        connection.value = AiConnection(checking = true)
+    fun testAi(settings: AiSettingsModel) {
+        connection.value = AiConnectionModel(checking = true)
         viewModelScope.launch {
             connection.value = when (val list = services.ai.listAiModels(settings = settings)) {
                 is ModelList.Available -> if (list.models.isEmpty()) {
-                    AiConnection(
+                    AiConnectionModel(
                         message = "The server answers, but has no model loaded. Load one in LM Studio",
                         isError = true,
                     )
                 } else {
-                    AiConnection(
+                    AiConnectionModel(
                         models = list.models,
                         message = "Connected. The server offers ${list.models.size} models",
                     )
                 }
 
-                is ModelList.Unavailable -> AiConnection(
+                is ModelList.Unavailable -> AiConnectionModel(
                     message = AiMessages.failure(reason = list.reason) + (list.detail?.let { " ($it)" } ?: ""),
                     isError = true,
                 )
@@ -101,19 +107,19 @@ class SettingsViewModel(
             configure(
                 command = LibraryCommand.AddSyncFolder(
                     displayName = displayNameOf(location = location),
-                    location = FolderLocation(value = location),
+                    location = FolderLocationModel(value = location),
                 ),
             )
         }
     }
 
-    fun makePrimary(folder: LibraryFolder) {
+    fun makePrimary(folder: LibraryFolderModel) {
         configure(command = LibraryCommand.ChoosePrimary(folderId = folder.id))
     }
 
-    fun removeSyncFolder(folder: LibraryFolder) {
+    fun removeSyncFolder(folder: LibraryFolderModel) {
         dialogs.ask(
-            request = ConfirmationRequest(
+            request = ConfirmationRequestModel(
                 title = "Remove sync folder",
                 message = "The tool stops writing to this folder on this device. Its files stay where they are.",
                 affected = listOf(folder.location.value),
@@ -135,10 +141,10 @@ class SettingsViewModel(
         }
     }
 
-    private fun toUiState(sessionState: SessionState): SettingsUiState {
+    private fun toUiState(sessionState: SessionStateModel): SettingsUiStateModel {
         val open = sessionState.status as? LibraryStatus.Open
         val folders = sessionState.folders?.folders.orEmpty()
-        return SettingsUiState(
+        return SettingsUiStateModel(
             configured = folders.isNotEmpty(),
             rows = folders.map { folder ->
                 val note = when {
@@ -147,7 +153,7 @@ class SettingsViewModel(
                     folder.id in open.unreachableFolders -> "Not reachable when the library was opened"
                     else -> null
                 }
-                FolderRow(folder = folder, isPrimary = folder.role == FolderRole.PRIMARY, note = note)
+                FolderRowModel(folder = folder, isPrimary = folder.role == FolderRole.PRIMARY, note = note)
             },
             busy = sessionState.busy,
             addNewFilesWhileScanning = sessionState.preferences.addNewFilesWhileScanning,

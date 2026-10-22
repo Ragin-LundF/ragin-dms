@@ -16,4 +16,9 @@ data class SuggestionDto(
     val fileName: String? = null,
     val transcription: String? = null,
     val confidence: Double? = null,
+    val targetFolder: String? = null,
+    val targetFolderIsNew: Boolean? = null,
+    val targetReason: String? = null,
+    val fields: List<FieldAnswerDto> = emptyList(),
+    val pages: List<String> = emptyList(),
 )

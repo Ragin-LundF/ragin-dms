@@ -2,18 +2,23 @@ package dms.domain.catalog
 
 import dms.domain.TestData
 import dms.domain.TestData.applied
-import dms.domain.taxonomy.Category
-import dms.domain.taxonomy.CategoryId
-import dms.domain.taxonomy.TagName
+import dms.domain.catalog.model.CatalogModel
+import dms.domain.taxonomy.model.CategoryIdModel
+import dms.domain.taxonomy.model.CategoryModel
+import dms.domain.taxonomy.model.TagNameModel
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class CatalogTaxonomyTest {
 
-    private val finance = Category(id = CategoryId(value = "finance"), name = "Finance")
-    private val invoices = Category(id = CategoryId(value = "invoices"), name = "Invoices", parentId = finance.id)
-    private val taxonomy = Catalog.empty(libraryId = TestData.LIBRARY_ID)
+    private val finance = CategoryModel(id = CategoryIdModel(value = "finance"), name = "Finance")
+    private val invoices = CategoryModel(
+        id = CategoryIdModel(value = "invoices"),
+        name = "Invoices",
+        parentId = finance.id,
+    )
+    private val taxonomy = CatalogModel.empty(libraryId = TestData.LIBRARY_ID)
         .addCategory(category = finance).applied()
         .addCategory(category = invoices).applied()
 
@@ -22,20 +27,24 @@ class CatalogTaxonomyTest {
         assertEquals(
             expected = CatalogUpdate.Rejected(reason = CatalogRejection.CATEGORY_NOT_FOUND),
             actual = taxonomy.addCategory(
-                category = Category(id = CategoryId(value = "x"), name = "X", parentId = CategoryId(value = "nope")),
+                category = CategoryModel(
+                    id = CategoryIdModel(value = "x"),
+                    name = "X",
+                    parentId = CategoryIdModel(value = "nope"),
+                ),
             ),
         )
         assertEquals(
             expected = CatalogUpdate.Rejected(reason = CatalogRejection.CATEGORY_NAME_TAKEN),
             actual = taxonomy.addCategory(
-                category = Category(id = CategoryId(value = "x"), name = " invoices ", parentId = finance.id),
+                category = CategoryModel(id = CategoryIdModel(value = "x"), name = " invoices ", parentId = finance.id),
             ),
         )
     }
 
     @Test
     fun `the same name is allowed below different parents`() {
-        val other = Category(id = CategoryId(value = "other"), name = "Invoices")
+        val other = CategoryModel(id = CategoryIdModel(value = "other"), name = "Invoices")
 
         val catalog = taxonomy.addCategory(category = other).applied()
 
@@ -82,12 +91,15 @@ class CatalogTaxonomyTest {
 
     @Test
     fun `renaming a tag into an existing tag merges both`() {
-        val tax = TagName.of(raw = "Tax")
-        val taxes = TagName.of(raw = "Taxes")
+        val tax = TagNameModel.of(raw = "Tax")
+        val taxes = TagNameModel.of(raw = "Taxes")
         val first = TestData.document(id = "d1", path = "a.pdf", tags = setOf(tax))
         val second = TestData.document(id = "d2", path = "b.pdf", tags = setOf(taxes))
 
-        val merged = TestData.catalogWith(first, second).renameTag(from = taxes, to = TagName.of(raw = "tax")).applied()
+        val merged = TestData.catalogWith(
+            first,
+            second,
+        ).renameTag(from = taxes, to = TagNameModel.of(raw = "tax")).applied()
 
         assertEquals(expected = listOf("Tax"), actual = merged.tags.map { it.value })
         assertTrue(actual = merged.documents.values.all { it.tags.single().value == "Tax" })
@@ -95,10 +107,10 @@ class CatalogTaxonomyTest {
 
     @Test
     fun `renaming a tag to another casing changes its spelling`() {
-        val document = TestData.document(id = "d1", path = "a.pdf", tags = setOf(TagName.of(raw = "tax")))
+        val document = TestData.document(id = "d1", path = "a.pdf", tags = setOf(TagNameModel.of(raw = "tax")))
 
         val renamed = TestData.catalogWith(document)
-            .renameTag(from = TagName.of(raw = "tax"), to = TagName.of(raw = "Tax")).applied()
+            .renameTag(from = TagNameModel.of(raw = "tax"), to = TagNameModel.of(raw = "Tax")).applied()
 
         assertEquals(expected = "Tax", actual = renamed.tags.single().value)
         assertEquals(expected = "Tax", actual = renamed.documents.getValue(key = document.id).tags.single().value)
@@ -106,7 +118,7 @@ class CatalogTaxonomyTest {
 
     @Test
     fun `removing a tag removes it from every document`() {
-        val tag = TagName.of(raw = "Draft")
+        val tag = TagNameModel.of(raw = "Draft")
         val document = TestData.document(id = "d1", path = "a.pdf", tags = setOf(tag))
 
         val catalog = TestData.catalogWith(document).removeTag(tag = tag).applied()

@@ -33,13 +33,13 @@ Feature packages: `ui.dashboard`, `ui.library`, `ui.document` (inspector), `ui.r
 - `ui.components` holds only cross-feature Compose widgets — nothing feature-specific. Subpackages:
   - `components.surface`: cards (`AppCard`, `CardTitle`), badges, chips, empty states and the per-kind styles (`KindStyles`).
   - `components.layout`: `ScreenHeader`, `SearchField`, and `FileDropZone` (files dropped from the file manager).
-  - `components.chart`: the dashboard charts (`ColumnChart`, `DonutChart`, `BarList`) with `ChartPoint`/`ChartSlice` in `chart.model`.
+  - `components.chart`: the dashboard charts (`ColumnChart`, `DonutChart`, `BarList`) with `ChartPointModel`/`ChartSliceModel` in `chart.model`.
   - `components.dialog`: `DialogController`, `DialogHost` and the dialogs.
 - `ui.shell` holds the window frame: the navigation sidebar, the brand mark, the status footer, the activity bar (progress and Cancel) and the log panel.
 - `ui.session` holds `LibrarySession`, the one owner of the open library: it runs operations through `perform`, one at a time per `OperationLane`: `LIBRARY` for everything that changes files or the catalog, `AI` for the AI's runs, which only add suggestions and so run beside library operations. Screens disable a button only while its own lane is busy (`busy`, `aiBusy`). It keeps the last scan and the folder list, and maps outcomes to messages. View models start work through it, never in parallel to it.
 - `ui.service` holds the use case bundles (`AppServices`) that the composition root hands to the view models.
-- `ui.review` holds the review of one AI suggestion: `ReviewController` (owned by the dashboard and the inspector view models), `ReviewDialog`, and `ReviewDrafts`, which turns the edited draft into a `SuggestionApproval`. Nothing changes before the user approves. The category field offers every existing category path to pick from and still takes a new name; the suggested file name starts checked only when the AI setting `acceptSuggestedFileNames` is on.
-- `ui.library.LibraryFilter` decides which documents the library shows: the sidebar selection (a folder, category, tag, "Uncategorized" or "Recently added"), the `YearFilter` and the text filter. A document's year is the one of its document date, or of when it was added; the dashboard's year chart counts the same way, so a click on a year opens exactly those documents.
+- `ui.review` holds the review of one AI suggestion: `ReviewController` (owned by the dashboard and the inspector view models), `ReviewDialog`, and `ReviewDrafts`, which turns the edited draft into a `SuggestionApprovalModel`. Nothing changes before the user approves. The category field offers every existing category path to pick from and still takes a new name; the suggested file name starts checked only when the AI setting `acceptSuggestedFileNames` is on.
+- `ui.library.LibraryFilter` decides which documents the library shows: the sidebar selection (a folder, category, tag, "Uncategorized" or "Recently added"), the `YearFilterModel` and the text filter. A document's year is the one of its document date, or of when it was added; the dashboard's year chart counts the same way, so a click on a year opens exactly those documents.
 - The library sidebar folds: each section (`SidebarGroup`) and every folder or category with children has a boxed +/- (`components.FoldToggle`). Subfolders and subcategories start folded; selecting one unfolds its parents. Sidebar entries live in `library.sidebar.item`.
 - `ui.assistant` holds what the AI does with one document beside the library's operations, because it only reads: `SummaryController`/`SummaryDialog` and the conversation (`ChatController`, `ChatDialog`). The inspector view model owns both. Tagging and classifying store suggestions and therefore run through `LibrarySession.perform` in the `AI` lane and the review dialog.
 - `ui.dashboard.AiBatches` runs "Tag with AI" and "Classify with AI" over the library; `ui.dashboard.hero` holds the gradient header with its buttons.
@@ -63,7 +63,7 @@ The dashboard is the home screen and the **only place where detected changes bec
 ## State management and unidirectional data flow
 
 - UI state is held in view models in `commonMain` (`androidx.lifecycle.ViewModel` from the Compose Multiplatform lifecycle library).
-- View models expose one immutable `StateFlow<XxxUiState>` per screen and accept events through functions. Composables are "dumb": they render state and emit events via lambdas (`onTagAdded: (TagName) -> Unit`).
+- View models expose one immutable `StateFlow<XxxUiState>` per screen and accept events through functions. Composables are "dumb": they render state and emit events via lambdas (`onTagAdded: (TagNameModel) -> Unit`).
 - Launch coroutines in `viewModelScope`. Long-running work (scan, sync, batch classification) reports progress through state and can be cancelled; batch classification can also be paused.
 - Every persisted setting has **one writer** (a settings controller). Composables never write settings directly.
 - Derive, don't duplicate: the selected document, the visible list, the filter result and the task counts are derived from one source of truth, not stored in several places.
@@ -76,7 +76,7 @@ The dashboard is the home screen and the **only place where detected changes bec
 
 ## Progress and the log
 
-- Long operations report progress through `LibrarySession.progress` (`OperationProgress`: step, done of total, current item), kept apart from `SessionState` so screens do not recompute on every file. Loops over many items use `LibrarySession.forEachWithProgress`.
+- Long operations report progress through `LibrarySession.progress` (`OperationProgressModel`: step, done of total, current item), kept apart from `SessionStateModel` so screens do not recompute on every file. Loops over many items use `LibrarySession.forEachWithProgress`.
 - Only operations that leave the library consistent wherever they stop are `cancellable` (a scan, adopting many files). Cancel is offered in the activity bar and the menu.
 - `SessionLog` keeps the last lines of what the app did in this session, for the log panel. It is not written to disk.
 - A scan with the preference "Add new files while scanning" catalogs new files of the primary in batches while it runs, so the library fills up live; files only the sync folders have are adopted right after the scan.

@@ -8,14 +8,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import dms.ui.dashboard.CorrespondentCard
-import dms.ui.dashboard.stats.model.LibraryStats
+import dms.ui.dashboard.stats.model.LibraryStatsModel
 import dms.ui.dashboard.widgets.KindCard
 import dms.ui.dashboard.widgets.YearChartCard
 import dms.ui.theme.Spacing
 
 /** Charts of the library: documents per year, file types and the main correspondents. */
 @Composable
-fun InsightsSection(stats: LibraryStats, onSearch: (String) -> Unit, onOpenYear: (String) -> Unit) {
+fun InsightsSection(stats: LibraryStatsModel, onSearch: (String) -> Unit, onOpenYear: (String) -> Unit) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(space = Spacing.large),

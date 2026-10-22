@@ -1,6 +1,6 @@
 package dms.application.assistant
 
-import dms.application.classification.model.ClassificationProgress
+import dms.application.classification.model.ClassificationProgressModel
 import dms.application.library.CatalogStore
 import dms.application.port.state.TaskStore
 import kotlinx.coroutines.flow.Flow
@@ -16,7 +16,7 @@ class TagAllUntagged(
     private val suggestTags: SuggestTags,
 ) {
 
-    operator fun invoke(): Flow<ClassificationProgress> {
+    operator fun invoke(): Flow<ClassificationProgressModel> {
         return flow {
             val library = store.current() ?: return@flow
             val pending = tasks.suggestions().map { it.documentId }.toSet()
@@ -24,7 +24,7 @@ class TagAllUntagged(
                 .filter { it.tags.isEmpty() && it.kind.readableByAi && it.id !in pending }
                 .sortedBy { it.path.value }
             candidates.forEachIndexed { index, document ->
-                val progress = ClassificationProgress(
+                val progress = ClassificationProgressModel(
                     done = index + 1,
                     total = candidates.size,
                     documentId = document.id,

@@ -9,11 +9,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import dms.ui.components.model.TextInputRequest
+import dms.ui.components.model.TextInputRequestModel
 
 /** Asks for one line of text; the view model validates what is submitted. */
 @Composable
-fun TextInputDialog(request: TextInputRequest, onSubmit: (String) -> Unit, onDismiss: () -> Unit) {
+fun TextInputDialog(request: TextInputRequestModel, onSubmit: (String) -> Unit, onDismiss: () -> Unit) {
     var value by remember(key1 = request) { mutableStateOf(value = request.initialValue) }
     AlertDialog(
         onDismissRequest = onDismiss,

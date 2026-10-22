@@ -1,10 +1,16 @@
 package dms.application
 
+import dms.application.ask.AskLibrary
+import dms.application.ask.DocumentTexts
+import dms.application.ask.IndexLibrary
+import dms.application.ask.RelatedDocuments
+import dms.application.ask.VectorSearch
 import dms.application.assistant.AskAboutDocument
 import dms.application.assistant.DocumentReading
 import dms.application.assistant.SuggestTags
 import dms.application.assistant.SummarizeDocument
 import dms.application.assistant.TagAllUntagged
+import dms.application.catalog.ChangeSettings
 import dms.application.catalog.EditCatalog
 import dms.application.classification.ApproveSuggestion
 import dms.application.classification.ClassifyAllNew
@@ -12,27 +18,41 @@ import dms.application.classification.RejectSuggestion
 import dms.application.classification.SuggestClassification
 import dms.application.common.ActivityRecorder
 import dms.application.common.DocumentDates
+import dms.application.common.DocumentFiling
 import dms.application.common.OperationOutcome
 import dms.application.common.SiblingNames
+import dms.application.deadline.SettleRetention
 import dms.application.document.AddDocuments
 import dms.application.document.AdoptNewFile
+import dms.application.document.EditDocumentDetails
 import dms.application.document.MoveDocument
 import dms.application.document.RestoreDocument
 import dms.application.document.TrashDocument
 import dms.application.document.TrashDuplicateFile
 import dms.application.document.TrashNewFile
+import dms.application.export.ExportDocuments
 import dms.application.fake.ai.FakeAssistant
 import dms.application.fake.ai.FakeClassifier
 import dms.application.fake.ai.FakeContentReader
+import dms.application.fake.ai.FakeEmbeddings
+import dms.application.fake.ai.FakeLibraryAssistant
+import dms.application.fake.export.FakeExportWriter
+import dms.application.fake.index.InMemoryVectorIndex
+import dms.application.fake.pdf.FakeOcr
+import dms.application.fake.pdf.FakePdfEditor
 import dms.application.fake.state.InMemoryActivityLog
 import dms.application.fake.state.InMemorySettings
 import dms.application.fake.state.InMemoryTaskStore
 import dms.application.fake.storage.FakeFolders
 import dms.application.fake.storage.InMemoryJournal
+import dms.application.fake.storage.InMemoryPlanStore
 import dms.application.fake.system.FixedClock
 import dms.application.fake.system.SequentialIds
 import dms.application.folder.CreateFolder
 import dms.application.folder.MoveFolder
+import dms.application.inbox.CollectInbox
+import dms.application.inbox.ConfigureInbox
+import dms.application.inbox.FileInboxDocument
 import dms.application.library.AddScannedFiles
 import dms.application.library.BuildDashboard
 import dms.application.library.CatalogStore
@@ -40,25 +60,38 @@ import dms.application.library.DetectDocumentDates
 import dms.application.library.OpenLibrary
 import dms.application.library.ScanLibrary
 import dms.application.library.model.OpenLibraryOutcome
+import dms.application.pdf.EditPages
+import dms.application.pdf.EmbedPdfMetadata
+import dms.application.pdf.MakeAllSearchable
+import dms.application.pdf.MakeSearchable
+import dms.application.pdf.MergeDocuments
+import dms.application.pdf.PdfVersions
+import dms.application.pdf.ScansWithoutText
+import dms.application.pdf.SplitDocument
 import dms.application.resolution.DismissTask
 import dms.application.resolution.KeepBothVersions
 import dms.application.resolution.KeepVersion
 import dms.application.resolution.MergeDuplicates
 import dms.application.resolution.ResolveMove
+import dms.application.restructure.ApplyRestructurePlan
+import dms.application.restructure.PlanRestructure
+import dms.application.restructure.RemoveEmptyFolders
+import dms.application.restructure.ReverseRestructure
+import dms.application.rule.AcceptRuleProposal
 import dms.application.search.SearchContents
 import dms.application.sync.MergeAllFolders
 import dms.application.sync.Replicator
 import dms.application.sync.RetryFailedOperations
 import dms.application.sync.SyncFromPrimary
-import dms.domain.catalog.Catalog
-import dms.domain.document.Document
-import dms.domain.document.DocumentId
-import dms.domain.library.FolderLocation
+import dms.domain.catalog.model.CatalogModel
+import dms.domain.document.model.DocumentIdModel
+import dms.domain.document.model.DocumentModel
 import dms.domain.library.FolderRole
-import dms.domain.library.LibraryFolder
-import dms.domain.library.LibraryFolderId
-import dms.domain.library.LibraryFolders
-import dms.domain.library.RelativePath
+import dms.domain.library.model.FolderLocationModel
+import dms.domain.library.model.LibraryFolderIdModel
+import dms.domain.library.model.LibraryFolderModel
+import dms.domain.library.model.LibraryFoldersModel
+import dms.domain.library.model.RelativePathModel
 import java.time.Instant
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
@@ -69,13 +102,13 @@ import kotlin.test.assertNotNull
  */
 class TestLibrary {
 
-    val primary: LibraryFolder = folder(id = "primary", role = FolderRole.PRIMARY)
-    val syncA: LibraryFolder = folder(id = "sync-a", role = FolderRole.SYNC)
-    val syncB: LibraryFolder = folder(id = "sync-b", role = FolderRole.SYNC)
-    val allFolders: List<LibraryFolder> = listOf(primary, syncA, syncB)
+    val primary: LibraryFolderModel = folder(id = "primary", role = FolderRole.PRIMARY)
+    val syncA: LibraryFolderModel = folder(id = "sync-a", role = FolderRole.SYNC)
+    val syncB: LibraryFolderModel = folder(id = "sync-b", role = FolderRole.SYNC)
+    val allFolders: List<LibraryFolderModel> = listOf(primary, syncA, syncB)
 
     val folders: FakeFolders = FakeFolders()
-    val settings: InMemorySettings = InMemorySettings(folders = LibraryFolders(folders = allFolders))
+    val settings: InMemorySettings = InMemorySettings(folders = LibraryFoldersModel(folders = allFolders))
     val journal: InMemoryJournal = InMemoryJournal()
     val tasks: InMemoryTaskStore = InMemoryTaskStore()
     val activityLog: InMemoryActivityLog = InMemoryActivityLog()
@@ -84,11 +117,20 @@ class TestLibrary {
     val classifier: FakeClassifier = FakeClassifier()
     val reader: FakeContentReader = FakeContentReader()
     val assistant: FakeAssistant = FakeAssistant()
+    val plans: InMemoryPlanStore = InMemoryPlanStore(unreachable = folders.unreachable)
+    val index: InMemoryVectorIndex = InMemoryVectorIndex(unreachable = folders.unreachable)
+    val embeddings: FakeEmbeddings = FakeEmbeddings()
+    val libraryAssistant: FakeLibraryAssistant = FakeLibraryAssistant()
+    val exports: FakeExportWriter = FakeExportWriter()
+    val pdf: FakePdfEditor = FakePdfEditor(folders = folders)
+    val ocr: FakeOcr = FakeOcr(folders = folders)
 
     val replicator: Replicator = Replicator(
         storage = folders,
         catalogs = folders,
         texts = folders,
+        plans = plans,
+        index = index,
         journal = journal,
         clock = clock,
         ids = ids,
@@ -124,6 +166,7 @@ class TestLibrary {
         tasks = tasks,
         journal = journal,
         activity = activityLog,
+        clock = clock,
     )
 
     val addDocuments: AddDocuments = AddDocuments(
@@ -242,10 +285,11 @@ class TestLibrary {
         replicator = replicator,
         clock = clock,
     )
+    val filing: DocumentFiling = DocumentFiling(store = store, names = names, moveDocument = moveDocument)
     val approveSuggestion: ApproveSuggestion = ApproveSuggestion(
         store = store,
         tasks = tasks,
-        moveDocument = moveDocument,
+        filing = filing,
         activity = activity,
         clock = clock,
         ids = ids,
@@ -258,33 +302,139 @@ class TestLibrary {
     val suggestTags: SuggestTags = SuggestTags(reading = reading, assistant = assistant, tasks = tasks)
     val tagAllUntagged: TagAllUntagged = TagAllUntagged(store = store, tasks = tasks, suggestTags = suggestTags)
     val askAboutDocument: AskAboutDocument = AskAboutDocument(store = store, reading = reading, assistant = assistant)
-    val searchContents: SearchContents = SearchContents(store = store, reader = reader, texts = folders)
+    val searchContents: SearchContents = SearchContents(
+        store = store,
+        reader = reader,
+        texts = folders,
+        clock = clock,
+    )
+
+    val editDocumentDetails: EditDocumentDetails = EditDocumentDetails(store = store, activity = activity)
+    val settleRetention: SettleRetention = SettleRetention(store = store, activity = activity, clock = clock)
+    val changeSettings: ChangeSettings = ChangeSettings(store = store, activity = activity)
+    val acceptRuleProposal: AcceptRuleProposal = AcceptRuleProposal(changeSettings = changeSettings, ids = ids)
+    val exportDocuments: ExportDocuments = ExportDocuments(
+        store = store,
+        search = searchContents,
+        writer = exports,
+        activity = activity,
+        clock = clock,
+    )
+    private val pdfVersions: PdfVersions = PdfVersions(
+        store = store,
+        storage = folders,
+        replicator = replicator,
+        reader = reader,
+        texts = folders,
+        ids = ids,
+    )
+    val editPages: EditPages = EditPages(store = store, pdf = pdf, versions = pdfVersions, activity = activity)
+    val splitDocument: SplitDocument = SplitDocument(
+        store = store,
+        pdf = pdf,
+        replicator = replicator,
+        names = names,
+        trashDocument = trashDocument,
+        activity = activity,
+        clock = clock,
+        ids = ids,
+    )
+    val mergeDocuments: MergeDocuments = MergeDocuments(
+        store = store,
+        pdf = pdf,
+        replicator = replicator,
+        names = names,
+        trashDocument = trashDocument,
+        activity = activity,
+        clock = clock,
+        ids = ids,
+    )
+    val makeSearchable: MakeSearchable = MakeSearchable(
+        store = store,
+        pdf = pdf,
+        ocr = ocr,
+        texts = folders,
+        versions = pdfVersions,
+        activity = activity,
+    )
+    val makeAllSearchable: MakeAllSearchable = MakeAllSearchable(store = store, makeSearchable = makeSearchable)
+    val scansWithoutText: ScansWithoutText = ScansWithoutText(store = store, pdf = pdf)
+    val embedPdfMetadata: EmbedPdfMetadata = EmbedPdfMetadata(store = store, pdf = pdf, versions = pdfVersions)
+    private val documentTexts: DocumentTexts = DocumentTexts(reader = reader, texts = folders)
+    private val vectorSearch: VectorSearch = VectorSearch(index = index)
+    val indexLibrary: IndexLibrary = IndexLibrary(
+        store = store,
+        texts = documentTexts,
+        embeddings = embeddings,
+        index = index,
+        replicator = replicator,
+    )
+    val askLibrary: AskLibrary = AskLibrary(
+        store = store,
+        search = searchContents,
+        texts = documentTexts,
+        embeddings = embeddings,
+        vectors = vectorSearch,
+        assistant = libraryAssistant,
+    )
+    val relatedDocuments: RelatedDocuments = RelatedDocuments(store = store, vectors = vectorSearch)
+    val configureInbox: ConfigureInbox = ConfigureInbox(
+        store = store,
+        storage = folders,
+        replicator = replicator,
+        activity = activity,
+    )
+    val collectInbox: CollectInbox = CollectInbox(store = store, adoptNewFile = adoptNewFile)
+    val fileInboxDocument: FileInboxDocument = FileInboxDocument(store = store, filing = filing, activity = activity)
+    val planRestructure: PlanRestructure = PlanRestructure(store = store, search = searchContents)
+    val applyRestructurePlan: ApplyRestructurePlan = ApplyRestructurePlan(
+        store = store,
+        storage = folders,
+        replicator = replicator,
+        plans = plans,
+        activity = activity,
+        clock = clock,
+    )
+    val reverseRestructure: ReverseRestructure = ReverseRestructure(
+        store = store,
+        plans = plans,
+        apply = applyRestructurePlan,
+    )
+    val removeEmptyFolders: RemoveEmptyFolders = RemoveEmptyFolders(
+        store = store,
+        storage = folders,
+        replicator = replicator,
+        activity = activity,
+    )
 
     /** The open catalog; fails the test while no library is open. */
-    val catalog: Catalog
+    val catalog: CatalogModel
         get() {
             return assertNotNull(actual = store.catalog.value)
         }
 
     /** Opens the library and returns the opened catalog. */
-    suspend fun open(): Catalog {
+    suspend fun open(): CatalogModel {
         return assertIs<OpenLibraryOutcome.Opened>(value = openLibrary()).catalog
     }
 
     /** Adds a file with [content] at [path] to every folder through the tool and returns its document. */
-    suspend fun add(path: String, content: String): Document {
-        val target = RelativePath.of(raw = path)
+    suspend fun add(path: String, content: String): DocumentModel {
+        val target = RelativePathModel.of(raw = path)
         val source = folders.external(location = "/outside/${target.fileName}", content = content)
-        val added = addDocuments(files = listOf(source), targetFolder = target.parent ?: RelativePath.ROOT).single()
+        val added = addDocuments(
+            files = listOf(source),
+            targetFolder = target.parent ?: RelativePathModel.ROOT,
+        ).single()
         assertIs<OperationOutcome.Done>(value = added.outcome)
         return assertNotNull(actual = catalog.findByPath(path = target))
     }
 
-    private fun folder(id: String, role: FolderRole): LibraryFolder {
-        return LibraryFolder(
-            id = LibraryFolderId(value = id),
+    private fun folder(id: String, role: FolderRole): LibraryFolderModel {
+        return LibraryFolderModel(
+            id = LibraryFolderIdModel(value = id),
             displayName = id,
-            location = FolderLocation(value = "/library/$id"),
+            location = FolderLocationModel(value = "/library/$id"),
             role = role,
         )
     }
@@ -292,11 +442,11 @@ class TestLibrary {
     companion object {
 
         /** A document for catalogs built by hand; [content] decides its hash and size. */
-        fun document(id: String, path: String, content: String): Document {
+        fun document(id: String, path: String, content: String): DocumentModel {
             val facts = FakeFolders.factsOf(content = content)
-            return Document(
-                id = DocumentId(value = id),
-                path = RelativePath.of(raw = path),
+            return DocumentModel(
+                id = DocumentIdModel(value = id),
+                path = RelativePathModel.of(raw = path),
                 contentHash = FakeFolders.hashOf(content = content),
                 size = facts.size,
                 addedAt = Instant.parse("2024-01-01T10:00:00Z"),

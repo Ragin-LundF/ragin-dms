@@ -16,7 +16,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import dms.ui.components.chart.model.ChartPoint
+import dms.ui.components.chart.model.ChartPointModel
 import dms.ui.theme.Spacing
 
 /**
@@ -25,11 +25,11 @@ import dms.ui.theme.Spacing
  */
 @Composable
 fun ColumnChart(
-    points: List<ChartPoint>,
+    points: List<ChartPointModel>,
     color: Color,
     modifier: Modifier = Modifier,
     height: Dp = 180.dp,
-    onClick: ((ChartPoint) -> Unit)? = null,
+    onClick: ((ChartPointModel) -> Unit)? = null,
 ) {
     val max = points.maxOfOrNull { it.value }?.takeIf { it > 0 } ?: 1
     Column(modifier = modifier) {

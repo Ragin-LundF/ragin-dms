@@ -1,9 +1,9 @@
 package dms.application.document
 
 import dms.application.common.ActivityRecorder
-import dms.application.common.LibrarySnapshot
 import dms.application.common.OperationOutcome
 import dms.application.common.SiblingNames
+import dms.application.common.model.LibrarySnapshotModel
 import dms.application.library.CatalogStore
 import dms.application.port.state.model.ActivityKind
 import dms.application.port.storage.DocumentStorage
@@ -12,9 +12,9 @@ import dms.application.port.storage.model.StorageResult
 import dms.application.sync.Replicator
 import dms.application.sync.model.Replication
 import dms.domain.catalog.CatalogUpdate
-import dms.domain.document.DocumentId
+import dms.domain.document.model.DocumentIdModel
 import dms.domain.library.FileNamePolicy
-import dms.domain.library.RelativePath
+import dms.domain.library.model.RelativePathModel
 
 /**
  * Moves or renames one document in every library folder. A rename that only changes the case of the
@@ -28,7 +28,7 @@ class MoveDocument(
     private val activity: ActivityRecorder,
 ) {
 
-    suspend operator fun invoke(documentId: DocumentId, newPath: RelativePath): OperationOutcome {
+    suspend operator fun invoke(documentId: DocumentIdModel, newPath: RelativePathModel): OperationOutcome {
         val library = store.current() ?: return OperationOutcome.LibraryNotOpen
         val document = library.catalog.documents[documentId] ?: return OperationOutcome.NotFound
         if (document.path == newPath) {
@@ -54,10 +54,10 @@ class MoveDocument(
     }
 
     private suspend fun move(
-        library: LibrarySnapshot,
-        documentId: DocumentId,
-        from: RelativePath,
-        to: RelativePath,
+        library: LibrarySnapshotModel,
+        documentId: DocumentIdModel,
+        from: RelativePathModel,
+        to: RelativePathModel,
     ): OperationOutcome {
         val replication = replicator.replicate(
             folders = library.folders,

@@ -2,7 +2,7 @@ package dms.ai.read
 
 import dms.ai.prompt.PromptTexts
 import dms.application.port.ai.model.DocumentContent
-import dms.application.port.ai.model.PageImage
+import dms.application.port.ai.model.PageImageModel
 import org.apache.pdfbox.Loader
 import org.apache.pdfbox.io.RandomAccessReadBufferedFile
 import org.apache.pdfbox.rendering.ImageType
@@ -34,7 +34,7 @@ object PdfContent {
     }
 
     /** The first page, at most [maxSide] pixels on its long side; `null` for a PDF without pages. */
-    fun thumbnail(file: Path, maxSide: Int): PageImage? {
+    fun thumbnail(file: Path, maxSide: Int): PageImageModel? {
         return Loader.loadPDF(RandomAccessReadBufferedFile(file.toString())).use { pdf ->
             if (pdf.numberOfPages == 0) {
                 null

@@ -3,13 +3,13 @@ package dms.ai.assistant
 import dms.ai.AiAdapters
 import dms.application.port.ai.model.ClassificationFailure
 import dms.application.port.ai.model.DocumentContent
-import dms.application.port.ai.model.PageImage
+import dms.application.port.ai.model.PageImageModel
 import dms.application.port.assistant.model.AssistantAnswer
-import dms.application.port.assistant.model.AssistantRequest
+import dms.application.port.assistant.model.AssistantRequestModel
 import dms.application.port.assistant.model.ChatRole
-import dms.application.port.assistant.model.ChatTurn
-import dms.application.port.state.model.AiSettings
-import dms.domain.taxonomy.TagName
+import dms.application.port.assistant.model.ChatTurnModel
+import dms.application.port.state.model.AiSettingsModel
+import dms.domain.taxonomy.model.TagNameModel
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
 import io.ktor.client.engine.mock.toByteArray
@@ -32,7 +32,7 @@ import kotlin.test.assertTrue
 class OpenAiAssistantTest {
 
     private val sentBodies = mutableListOf<JsonObject>()
-    private val text = AssistantRequest(
+    private val text = AssistantRequestModel(
         fileName = "scan-001.pdf",
         content = DocumentContent.Text(text = "Sample Energy, bill 4711"),
     )
@@ -58,7 +58,7 @@ class OpenAiAssistantTest {
         runTest {
             val assistant = assistantAnswering(content = "Tags: Invoice, tax, Electricity")
 
-            val answer = assistant.suggestTags(request = text, existingTags = setOf(TagName.of(raw = "Tax")))
+            val answer = assistant.suggestTags(request = text, existingTags = setOf(TagNameModel.of(raw = "Tax")))
 
             val tags = assertIs<AssistantAnswer.Tags>(value = answer).tags.map { it.value }
             assertEquals(expected = listOf("Invoice", "Tax", "Electricity"), actual = tags)
@@ -84,15 +84,15 @@ class OpenAiAssistantTest {
     fun `in a conversation the page images go with the first question only`() {
         runTest {
             val assistant = assistantAnswering(content = "On 15 March 2024.")
-            val image = PageImage(bytes = byteArrayOf(1, 2, 3), mimeType = "image/jpeg")
-            val request = AssistantRequest(
+            val image = PageImageModel(bytes = byteArrayOf(1, 2, 3), mimeType = "image/jpeg")
+            val request = AssistantRequestModel(
                 fileName = "scan-001.png",
                 content = DocumentContent.PageImages(pages = listOf(image)),
             )
             val conversation = listOf(
-                ChatTurn(role = ChatRole.USER, text = "Who sent it?"),
-                ChatTurn(role = ChatRole.ASSISTANT, text = "Sample Energy."),
-                ChatTurn(role = ChatRole.USER, text = "When?"),
+                ChatTurnModel(role = ChatRole.USER, text = "Who sent it?"),
+                ChatTurnModel(role = ChatRole.ASSISTANT, text = "Sample Energy."),
+                ChatTurnModel(role = ChatRole.USER, text = "When?"),
             )
 
             assistant.answer(request = request, conversation = conversation)
@@ -116,7 +116,7 @@ class OpenAiAssistantTest {
                 headers = headersOf(HttpHeaders.ContentType, "application/json"),
             )
         }
-        val settings = AiSettings(model = "sample-model")
+        val settings = AiSettingsModel(model = "sample-model")
         return AiAdapters(settings = { settings }, locate = { _, _ -> null }, engine = engine).assistant
     }
 

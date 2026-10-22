@@ -12,7 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
-import dms.ui.review.model.ReviewField
+import dms.ui.review.model.ReviewFieldModel
 import dms.ui.theme.Spacing
 
 /**
@@ -22,11 +22,11 @@ import dms.ui.theme.Spacing
 @Composable
 fun ReviewFieldRow(
     label: String,
-    field: ReviewField,
+    field: ReviewFieldModel,
     current: String,
     options: List<String> = emptyList(),
     hint: String? = null,
-    onChange: (ReviewField) -> Unit,
+    onChange: (ReviewFieldModel) -> Unit,
 ) {
     Row(
         verticalAlignment = Alignment.Top,
@@ -37,7 +37,7 @@ fun ReviewFieldRow(
             if (options.isEmpty()) {
                 OutlinedTextField(
                     value = field.value,
-                    onValueChange = { onChange(ReviewField(accepted = true, value = it)) },
+                    onValueChange = { onChange(ReviewFieldModel(accepted = true, value = it)) },
                     label = { Text(text = label) },
                     singleLine = true,
                     enabled = true,
@@ -45,7 +45,7 @@ fun ReviewFieldRow(
                 )
             } else {
                 SuggestingTextField(value = field.value, label = label, options = options) {
-                    onChange(ReviewField(accepted = true, value = it))
+                    onChange(ReviewFieldModel(accepted = true, value = it))
                 }
             }
             val now = "Now: ${current.ifEmpty { "—" }}"

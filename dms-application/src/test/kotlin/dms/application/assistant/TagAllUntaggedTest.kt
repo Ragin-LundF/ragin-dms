@@ -2,8 +2,8 @@ package dms.application.assistant
 
 import dms.application.TestLibrary
 import dms.application.catalog.model.CatalogEdit
-import dms.domain.document.DocumentId
-import dms.domain.taxonomy.TagName
+import dms.domain.document.model.DocumentIdModel
+import dms.domain.taxonomy.model.TagNameModel
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
@@ -20,7 +20,7 @@ class TagAllUntaggedTest {
             library.add(path = "inbox/a.pdf", content = "a")
             val tagged = library.add(path = "inbox/b.pdf", content = "b")
             library.add(path = "inbox/c.txt", content = "c")
-            val tags = setOf(TagName.of(raw = "Home"))
+            val tags = setOf(TagNameModel.of(raw = "Home"))
             library.editCatalog(edit = CatalogEdit.AddTags(documentId = tagged.id, tags = tags))
 
             val progress = library.tagAllUntagged().toList()
@@ -32,7 +32,7 @@ class TagAllUntaggedTest {
         }
     }
 
-    private fun pathOf(library: TestLibrary, id: DocumentId): String {
+    private fun pathOf(library: TestLibrary, id: DocumentIdModel): String {
         return library.catalog.documents.getValue(id).path.value
     }
 }

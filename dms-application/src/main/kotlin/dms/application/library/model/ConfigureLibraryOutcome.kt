@@ -1,10 +1,10 @@
 package dms.application.library.model
 
-import dms.domain.library.LibraryFolders
+import dms.domain.library.model.LibraryFoldersModel
 
 sealed interface ConfigureLibraryOutcome {
 
-    data class Configured(val folders: LibraryFolders) : ConfigureLibraryOutcome
+    data class Configured(val folders: LibraryFoldersModel) : ConfigureLibraryOutcome
 
     data object AlreadyConfigured : ConfigureLibraryOutcome
 

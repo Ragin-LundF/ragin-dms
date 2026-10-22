@@ -1,11 +1,11 @@
 package dms.ai.client
 
-import dms.ai.client.model.ChatMessage
+import dms.ai.client.model.ChatMessageModel
 import dms.ai.prompt.PromptTexts
 import dms.ai.prompt.SuggestionSchema
-import dms.application.port.ai.model.ClassificationRequest
+import dms.application.port.ai.model.ClassificationRequestModel
 import dms.application.port.ai.model.DocumentContent
-import dms.application.port.ai.model.PageImage
+import dms.application.port.ai.model.PageImageModel
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonObjectBuilder
@@ -24,7 +24,7 @@ object ChatRequestBuilder {
     private const val CLASSIFICATION_TEMPERATURE = 0.1
 
     /** A classification: the rules and taxonomy, the document, and the JSON schema of the answer. */
-    fun build(model: String, request: ClassificationRequest): JsonObject {
+    fun build(model: String, request: ClassificationRequestModel): JsonObject {
         val images = (request.content as? DocumentContent.PageImages)?.pages.orEmpty()
         val text = when (val content = request.content) {
             is DocumentContent.Text -> PromptTexts.user(request = request, text = content.text)
@@ -32,8 +32,8 @@ object ChatRequestBuilder {
             is DocumentContent.PageImages -> PromptTexts.user(request = request, text = null)
         }
         val messages = listOf(
-            ChatMessage(role = "system", content = JsonPrimitive(value = PromptTexts.system(request = request))),
-            ChatMessage(role = "user", content = content(text = text, images = images)),
+            ChatMessageModel(role = "system", content = JsonPrimitive(value = PromptTexts.system(request = request))),
+            ChatMessageModel(role = "user", content = content(text = text, images = images)),
         )
         return buildJsonObject {
             fill(model = model, temperature = CLASSIFICATION_TEMPERATURE, messages = messages)
@@ -49,14 +49,14 @@ object ChatRequestBuilder {
     }
 
     /** A plain chat, answered with free text. */
-    fun chat(model: String, temperature: Double, messages: List<ChatMessage>): JsonObject {
+    fun chat(model: String, temperature: Double, messages: List<ChatMessageModel>): JsonObject {
         return buildJsonObject {
             fill(model = model, temperature = temperature, messages = messages)
         }
     }
 
     /** Text alone as one string; with page images, a text part followed by one image part per page. */
-    fun content(text: String, images: List<PageImage>): JsonElement {
+    fun content(text: String, images: List<PageImageModel>): JsonElement {
         if (images.isEmpty()) {
             return JsonPrimitive(value = text)
         }
@@ -77,7 +77,7 @@ object ChatRequestBuilder {
         }
     }
 
-    private fun JsonObjectBuilder.fill(model: String, temperature: Double, messages: List<ChatMessage>) {
+    private fun JsonObjectBuilder.fill(model: String, temperature: Double, messages: List<ChatMessageModel>) {
         put(key = "model", value = model)
         put(key = "temperature", value = temperature)
         put(key = "stream", value = false)

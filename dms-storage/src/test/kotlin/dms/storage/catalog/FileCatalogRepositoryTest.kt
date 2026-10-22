@@ -3,17 +3,17 @@ package dms.storage.catalog
 import dms.application.port.storage.model.CatalogLoad
 import dms.application.port.storage.model.StorageFailure
 import dms.application.port.storage.model.StorageResult
-import dms.domain.catalog.Catalog
 import dms.domain.catalog.CatalogUpdate
-import dms.domain.catalog.LibraryId
-import dms.domain.document.ClassificationRecord
+import dms.domain.catalog.model.CatalogModel
+import dms.domain.catalog.model.LibraryIdModel
 import dms.domain.document.ClassificationSource
-import dms.domain.document.Document
-import dms.domain.document.DocumentId
-import dms.domain.document.DocumentMetadata
-import dms.domain.taxonomy.Category
-import dms.domain.taxonomy.CategoryId
-import dms.domain.taxonomy.TagName
+import dms.domain.document.model.ClassificationRecordModel
+import dms.domain.document.model.DocumentIdModel
+import dms.domain.document.model.DocumentMetadataModel
+import dms.domain.document.model.DocumentModel
+import dms.domain.taxonomy.model.CategoryIdModel
+import dms.domain.taxonomy.model.CategoryModel
+import dms.domain.taxonomy.model.TagNameModel
 import dms.storage.support.RecordingTrash
 import dms.storage.support.StorageResults
 import dms.storage.support.TestFolders
@@ -76,8 +76,8 @@ class FileCatalogRepositoryTest {
             val loaded = assertIs<CatalogLoad.Found>(value = repository.load(folder = folder)).catalog
 
             val update = loaded.updateMetadata(
-                documentId = DocumentId(value = "doc-1"),
-                metadata = DocumentMetadata(title = "Changed"),
+                documentId = DocumentIdModel(value = "doc-1"),
+                metadata = DocumentMetadataModel(title = "Changed"),
             )
             repository.save(folder = folder, catalog = assertIs<CatalogUpdate.Applied>(value = update).catalog)
 
@@ -155,39 +155,39 @@ class FileCatalogRepositoryTest {
         return (load as? CatalogLoad.Failed)?.failure?.reason
     }
 
-    private fun Catalog.addTag(name: String): CatalogUpdate {
-        return setTags(documentId = DocumentId(value = "doc-a"), newTags = setOf(TagName.of(raw = name)))
+    private fun CatalogModel.addTag(name: String): CatalogUpdate {
+        return setTags(documentId = DocumentIdModel(value = "doc-a"), newTags = setOf(TagNameModel.of(raw = name)))
     }
 
-    private fun sampleCatalog(): Catalog {
-        val category = Category(id = CategoryId(value = "cat-1"), name = "Invoices")
-        val later = Document(
-            id = DocumentId(value = "doc-b"),
+    private fun sampleCatalog(): CatalogModel {
+        val category = CategoryModel(id = CategoryIdModel(value = "cat-1"), name = "Invoices")
+        val later = DocumentModel(
+            id = DocumentIdModel(value = "doc-b"),
             path = TestFolders.path(raw = "letters/b.pdf"),
             contentHash = TestFolders.hashOf(content = "beta"),
             size = 4,
             addedAt = Instant.parse("2024-02-01T09:30:00Z"),
-            tags = setOf(TagName.of(raw = "Tax"), TagName.of(raw = "2024")),
+            tags = setOf(TagNameModel.of(raw = "Tax"), TagNameModel.of(raw = "2024")),
         )
-        val earlier = Document(
-            id = DocumentId(value = "doc-a"),
+        val earlier = DocumentModel(
+            id = DocumentIdModel(value = "doc-a"),
             path = TestFolders.path(raw = "a.pdf"),
             contentHash = TestFolders.hashOf(content = "alpha"),
             size = 5,
             addedAt = Instant.parse("2024-01-01T10:00:00Z"),
-            metadata = DocumentMetadata(
+            metadata = DocumentMetadataModel(
                 title = "Sample invoice",
                 documentDate = LocalDate.parse("2023-12-24"),
                 correspondent = "Example Supplier",
             ),
             categoryId = category.id,
-            classification = ClassificationRecord(
+            classification = ClassificationRecordModel(
                 source = ClassificationSource.AI,
                 model = "test-model",
                 confirmedAt = Instant.parse("2024-01-02T08:00:00Z"),
             ),
         )
-        val update = Catalog.empty(libraryId = LibraryId(value = "library-1"))
+        val update = CatalogModel.empty(libraryId = LibraryIdModel(value = "library-1"))
             .addCategory(category = category)
             .andThen { it.addDocument(document = later) }
             .andThen { it.addDocument(document = earlier) }

@@ -1,0 +1,13 @@
+plugins {
+    alias(libs.plugins.kotlin.jvm)
+}
+
+// Adapter: writing PDF files with PDFBox (page tools, text layers, embedded metadata) and an
+// installed OCR program. Knows the application's ports, never another adapter.
+dependencies {
+    implementation project(":dms-application")
+    implementation libs.pdfbox
+    implementation libs.xmpbox
+    testImplementation libs.kotlin.test
+    testImplementation libs.kotlinx.coroutines.test
+}

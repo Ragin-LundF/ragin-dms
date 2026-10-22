@@ -1,26 +1,26 @@
 package dms.application.fake.state
 
 import dms.application.port.state.SettingsRepository
-import dms.application.port.state.model.Preferences
-import dms.domain.library.LibraryFolders
+import dms.application.port.state.model.PreferencesModel
+import dms.domain.library.model.LibraryFoldersModel
 
-class InMemorySettings(private var folders: LibraryFolders? = null) : SettingsRepository {
+class InMemorySettings(private var folders: LibraryFoldersModel? = null) : SettingsRepository {
 
-    override suspend fun loadLibraryFolders(): LibraryFolders? {
+    override suspend fun loadLibraryFolders(): LibraryFoldersModel? {
         return folders
     }
 
-    override suspend fun saveLibraryFolders(folders: LibraryFolders) {
+    override suspend fun saveLibraryFolders(folders: LibraryFoldersModel) {
         this.folders = folders
     }
 
-    private var preferences = Preferences()
+    private var preferences = PreferencesModel()
 
-    override suspend fun loadPreferences(): Preferences {
+    override suspend fun loadPreferences(): PreferencesModel {
         return preferences
     }
 
-    override suspend fun savePreferences(preferences: Preferences) {
+    override suspend fun savePreferences(preferences: PreferencesModel) {
         this.preferences = preferences
     }
 }

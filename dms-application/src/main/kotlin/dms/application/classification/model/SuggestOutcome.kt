@@ -1,12 +1,12 @@
 package dms.application.classification.model
 
 import dms.application.port.ai.model.ClassificationFailure
-import dms.domain.classification.ClassificationSuggestion
+import dms.domain.classification.model.ClassificationSuggestionModel
 
 sealed interface SuggestOutcome {
 
     /** The suggestion waits on the dashboard for the user's review. */
-    data class Suggested(val suggestion: ClassificationSuggestion) : SuggestOutcome
+    data class Suggested(val suggestion: ClassificationSuggestionModel) : SuggestOutcome
 
     data object LibraryNotOpen : SuggestOutcome
 

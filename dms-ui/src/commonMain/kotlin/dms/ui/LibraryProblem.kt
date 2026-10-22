@@ -10,7 +10,7 @@ import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import dms.ui.components.StyledButton
-import dms.ui.components.model.ActionButton
+import dms.ui.components.model.ActionButtonModel
 import dms.ui.components.model.ButtonStyle
 import dms.ui.components.surface.EmptyState
 import dms.ui.session.OutcomeMessages
@@ -39,7 +39,7 @@ fun LibraryProblem(status: LibraryStatus, onRetry: () -> Unit, onOpenSettings: (
     ) {
         Row(horizontalArrangement = Arrangement.spacedBy(space = Spacing.small)) {
             StyledButton(
-                button = ActionButton(
+                button = ActionButtonModel(
                     label = "Try again",
                     icon = Icons.Rounded.Refresh,
                     style = ButtonStyle.FILLED,
@@ -48,7 +48,7 @@ fun LibraryProblem(status: LibraryStatus, onRetry: () -> Unit, onOpenSettings: (
                 enabled = true,
             )
             StyledButton(
-                button = ActionButton(label = "Settings", icon = Icons.Rounded.Settings, onClick = onOpenSettings),
+                button = ActionButtonModel(label = "Settings", icon = Icons.Rounded.Settings, onClick = onOpenSettings),
                 enabled = true,
             )
         }

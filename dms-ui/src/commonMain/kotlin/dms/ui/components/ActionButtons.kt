@@ -5,14 +5,14 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import dms.ui.components.model.ActionButton
+import dms.ui.components.model.ActionButtonModel
 import dms.ui.theme.Spacing
 
 /** A row of buttons that wraps when narrow; a disabled one explains in its tooltip why it cannot be used. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ActionButtons(
-    buttons: List<ActionButton>,
+    buttons: List<ActionButtonModel>,
     enabled: Boolean,
     busyReason: String?,
     modifier: Modifier = Modifier,

@@ -7,8 +7,8 @@ import io.ktor.client.engine.mock.toByteArray
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.headersOf
-import kotlinx.serialization.json.Json
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.serialization.json.Json
 import java.net.ConnectException
 
 /**

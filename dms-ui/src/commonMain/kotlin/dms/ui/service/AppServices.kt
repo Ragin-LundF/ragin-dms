@@ -6,4 +6,7 @@ class AppServices(
     val documents: DocumentServices,
     val sync: SyncServices,
     val ai: AiServices,
+    val organize: OrganizeServices,
+    val pdf: PdfServices,
+    val ask: AskServices,
 )

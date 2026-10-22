@@ -1,7 +1,7 @@
 package dms.storage.state
 
 import dms.application.port.storage.OperationJournal
-import dms.application.port.storage.model.PendingOperation
+import dms.application.port.storage.model.PendingOperationModel
 import dms.storage.state.dto.JournalDto
 import dms.storage.yaml.YamlFile
 import kotlinx.coroutines.Dispatchers
@@ -16,11 +16,11 @@ class FileOperationJournal(path: Path) : OperationJournal {
     private val file = YamlFile(path = path, type = JournalDto::class.java)
     private val mutex = Mutex()
 
-    override suspend fun record(operation: PendingOperation) {
+    override suspend fun record(operation: PendingOperationModel) {
         update { it + operation }
     }
 
-    override suspend fun pending(): List<PendingOperation> {
+    override suspend fun pending(): List<PendingOperationModel> {
         return mutex.withLock { read() }
     }
 
@@ -28,7 +28,7 @@ class FileOperationJournal(path: Path) : OperationJournal {
         update { operations -> operations.filterNot { it.id == id } }
     }
 
-    private suspend fun update(change: (List<PendingOperation>) -> List<PendingOperation>) {
+    private suspend fun update(change: (List<PendingOperationModel>) -> List<PendingOperationModel>) {
         mutex.withLock {
             val operations = change(read())
             withContext(context = Dispatchers.IO) {
@@ -37,7 +37,7 @@ class FileOperationJournal(path: Path) : OperationJournal {
         }
     }
 
-    private suspend fun read(): List<PendingOperation> {
+    private suspend fun read(): List<PendingOperationModel> {
         return withContext(context = Dispatchers.IO) {
             file.read()?.operations.orEmpty().mapNotNull { OperationMapper.toDomain(dto = it) }
         }

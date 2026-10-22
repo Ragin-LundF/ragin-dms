@@ -23,9 +23,9 @@ import dms.ui.theme.AppColors
 import dms.ui.theme.LocalAppLogo
 import dms.ui.theme.Spacing
 
-/** The logo tile in the brand gradient and the app's name. */
+/** The logo tile in the brand gradient and the app's name; a [compact] mark is the logo alone. */
 @Composable
-fun BrandMark() {
+fun BrandMark(compact: Boolean) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(space = Spacing.medium),
@@ -49,13 +49,15 @@ fun BrandMark() {
                 )
             }
         }
-        Column {
-            Text(text = "Ragin-DMS", style = MaterialTheme.typography.titleMedium)
-            Text(
-                text = "Your documents",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+        if (!compact) {
+            Column {
+                Text(text = "Ragin-DMS", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    text = "Your documents",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
     }
 }

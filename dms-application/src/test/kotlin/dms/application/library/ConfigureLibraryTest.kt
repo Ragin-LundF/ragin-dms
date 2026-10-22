@@ -4,8 +4,8 @@ import dms.application.fake.state.InMemorySettings
 import dms.application.fake.system.SequentialIds
 import dms.application.library.model.ConfigureLibraryOutcome
 import dms.application.library.model.LibraryCommand
-import dms.domain.library.FolderLocation
 import dms.domain.library.FolderRole
+import dms.domain.library.model.FolderLocationModel
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -15,8 +15,8 @@ class ConfigureLibraryTest {
 
     private val settings = InMemorySettings()
     private val configure = ConfigureLibrary(settings = settings, ids = SequentialIds())
-    private val primaryLocation = FolderLocation(value = "/library/main")
-    private val backupLocation = FolderLocation(value = "/library/backup")
+    private val primaryLocation = FolderLocationModel(value = "/library/main")
+    private val backupLocation = FolderLocationModel(value = "/library/backup")
 
     @Test
     fun `the first folder becomes the primary and further folders sync folders`() {

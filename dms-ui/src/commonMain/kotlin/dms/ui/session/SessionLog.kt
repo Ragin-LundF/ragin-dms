@@ -1,7 +1,7 @@
 package dms.ui.session
 
 import dms.application.port.system.Clock
-import dms.ui.session.model.LogEntry
+import dms.ui.session.model.LogEntryModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -13,23 +13,23 @@ import kotlinx.coroutines.flow.update
  */
 class SessionLog(private val clock: Clock, private val capacity: Int = DEFAULT_CAPACITY) {
 
-    private val mutableEntries = MutableStateFlow(value = emptyList<LogEntry>())
+    private val mutableEntries = MutableStateFlow(value = emptyList<LogEntryModel>())
 
-    val entries: StateFlow<List<LogEntry>> = mutableEntries.asStateFlow()
+    val entries: StateFlow<List<LogEntryModel>> = mutableEntries.asStateFlow()
 
     fun info(text: String) {
-        add(entry = LogEntry(at = clock.now(), text = text))
+        add(entry = LogEntryModel(at = clock.now(), text = text))
     }
 
     fun error(text: String) {
-        add(entry = LogEntry(at = clock.now(), text = text, isError = true))
+        add(entry = LogEntryModel(at = clock.now(), text = text, isError = true))
     }
 
     fun clear() {
         mutableEntries.value = emptyList()
     }
 
-    private fun add(entry: LogEntry) {
+    private fun add(entry: LogEntryModel) {
         mutableEntries.update { entries -> (entries + entry).takeLast(n = capacity) }
     }
 

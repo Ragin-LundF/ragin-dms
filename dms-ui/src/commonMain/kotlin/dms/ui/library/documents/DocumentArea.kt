@@ -12,12 +12,12 @@ import dms.ui.library.LibraryViewModel
 import dms.ui.library.drag.DocumentDrag
 import dms.ui.library.model.DocumentLayout
 import dms.ui.library.model.LibrarySelection
-import dms.ui.library.model.LibraryUiState
+import dms.ui.library.model.LibraryUiStateModel
 
 /** The documents of the selection as a list or a grid; files dropped here go to the selected folder. */
 @Composable
 fun DocumentArea(
-    state: LibraryUiState,
+    state: LibraryUiStateModel,
     drag: DocumentDrag,
     platform: PlatformActions,
     viewModel: LibraryViewModel,

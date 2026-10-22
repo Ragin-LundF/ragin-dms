@@ -2,11 +2,11 @@ package dms.ai.read
 
 import dms.application.port.ai.DocumentContentReader
 import dms.application.port.ai.model.DocumentContent
-import dms.application.port.state.model.AiSettings
-import dms.domain.document.Document
+import dms.application.port.state.model.AiSettingsModel
 import dms.domain.document.DocumentKind
-import dms.domain.library.LibraryFolder
-import dms.domain.library.RelativePath
+import dms.domain.document.model.DocumentModel
+import dms.domain.library.model.LibraryFolderModel
+import dms.domain.library.model.RelativePathModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.IOException
@@ -17,11 +17,11 @@ import java.nio.file.Path
  * never changed. [locate] finds the file on disk, the way the storage adapters do.
  */
 class FileContentReader(
-    private val locate: (LibraryFolder, RelativePath) -> Path?,
-    private val settings: suspend () -> AiSettings,
+    private val locate: (LibraryFolderModel, RelativePathModel) -> Path?,
+    private val settings: suspend () -> AiSettingsModel,
 ) : DocumentContentReader {
 
-    override suspend fun read(folder: LibraryFolder, document: Document): DocumentContent {
+    override suspend fun read(folder: LibraryFolderModel, document: DocumentModel): DocumentContent {
         val preferVision = settings().preferVisionForPdfs
         return withContext(context = Dispatchers.IO) {
             val file = locate(folder, document.path) ?: return@withContext DocumentContent.NotReadable(
@@ -43,7 +43,7 @@ class FileContentReader(
         }
     }
 
-    override suspend fun text(folder: LibraryFolder, document: Document): String? {
+    override suspend fun text(folder: LibraryFolderModel, document: DocumentModel): String? {
         return withContext(context = Dispatchers.IO) {
             val file = locate(folder, document.path) ?: return@withContext null
             try {

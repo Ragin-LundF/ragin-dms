@@ -2,9 +2,9 @@ package dms.application.library
 
 import dms.application.TestLibrary
 import dms.application.library.model.OpenLibraryOutcome
-import dms.domain.catalog.Catalog
 import dms.domain.catalog.CatalogUpdate
-import dms.domain.catalog.LibraryId
+import dms.domain.catalog.model.CatalogModel
+import dms.domain.catalog.model.LibraryIdModel
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -13,7 +13,7 @@ import kotlin.test.assertTrue
 
 class OpenLibraryTest {
 
-    private val libraryId = LibraryId(value = "library-1")
+    private val libraryId = LibraryIdModel(value = "library-1")
 
     @Test
     fun `a new library starts with an empty catalog saved to every folder`() {
@@ -33,7 +33,7 @@ class OpenLibraryTest {
     fun `catalog copies and conflict copies are merged and saved to every folder`() {
         runTest {
             val library = TestLibrary()
-            val empty = Catalog.empty(libraryId = libraryId)
+            val empty = CatalogModel.empty(libraryId = libraryId)
             val first = TestLibrary.document(id = "d1", path = "letters/a.pdf", content = "a")
             val second = TestLibrary.document(id = "d2", path = "letters/b.pdf", content = "b")
             val third = TestLibrary.document(id = "d3", path = "letters/c.pdf", content = "c")
@@ -56,8 +56,8 @@ class OpenLibraryTest {
     fun `a folder holding another library is reported and not overwritten`() {
         runTest {
             val library = TestLibrary()
-            val foreign = Catalog.empty(libraryId = LibraryId(value = "other-library"))
-            library.folders.catalogs[library.primary.id] = Catalog.empty(libraryId = libraryId)
+            val foreign = CatalogModel.empty(libraryId = LibraryIdModel(value = "other-library"))
+            library.folders.catalogs[library.primary.id] = CatalogModel.empty(libraryId = libraryId)
             library.folders.catalogs[library.syncB.id] = foreign
 
             val outcome = assertIs<OpenLibraryOutcome.Opened>(value = library.openLibrary())
@@ -96,7 +96,7 @@ class OpenLibraryTest {
         }
     }
 
-    private fun applied(update: CatalogUpdate): Catalog {
+    private fun applied(update: CatalogUpdate): CatalogModel {
         return assertIs<CatalogUpdate.Applied>(value = update).catalog
     }
 }

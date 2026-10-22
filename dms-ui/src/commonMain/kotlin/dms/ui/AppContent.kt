@@ -16,7 +16,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import dms.ui.model.Screen
 import dms.ui.service.AppServices
@@ -39,6 +41,7 @@ fun AppContent(
     val sessionState by session.state.collectAsState()
     val progress by session.progress.collectAsState()
     val snackbar = remember { SnackbarHostState() }
+    var navigationCollapsed by remember { mutableStateOf(value = false) }
     LaunchedEffect(key1 = sessionState.message) {
         val message = sessionState.message ?: return@LaunchedEffect
         snackbar.showSnackbar(
@@ -53,7 +56,13 @@ fun AppContent(
         containerColor = MaterialTheme.colorScheme.background,
     ) { padding ->
         Row(modifier = Modifier.fillMaxSize().padding(paddingValues = padding)) {
-            NavigationSidebar(screen = screen, sessionState = sessionState, onScreenChange = onScreenChange)
+            NavigationSidebar(
+                screen = screen,
+                sessionState = sessionState,
+                collapsed = navigationCollapsed,
+                onToggleCollapsed = { navigationCollapsed = !navigationCollapsed },
+                onScreenChange = onScreenChange,
+            )
             Column(modifier = Modifier.weight(weight = 1f).fillMaxHeight()) {
                 Box(modifier = Modifier.weight(weight = 1f).fillMaxWidth()) {
                     ScreenContent(

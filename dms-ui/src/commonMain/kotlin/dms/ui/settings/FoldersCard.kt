@@ -13,16 +13,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import dms.ui.components.ActionButtons
-import dms.ui.components.model.ActionButton
+import dms.ui.components.model.ActionButtonModel
 import dms.ui.components.model.ButtonStyle
 import dms.ui.components.surface.AppCard
 import dms.ui.components.surface.CardTitle
-import dms.ui.settings.model.FolderRow
+import dms.ui.settings.model.FolderRowModel
 import dms.ui.theme.Spacing
 
 /** The primary folder and the sync folders, with the actions that change them. */
 @Composable
-fun FoldersCard(rows: List<FolderRow>, busyReason: String?, viewModel: SettingsViewModel) {
+fun FoldersCard(rows: List<FolderRowModel>, busyReason: String?, viewModel: SettingsViewModel) {
     AppCard(modifier = Modifier.widthIn(max = 920.dp)) {
         CardTitle(
             title = "Library folders",
@@ -48,7 +48,7 @@ fun FoldersCard(rows: List<FolderRow>, busyReason: String?, viewModel: SettingsV
         )
         ActionButtons(
             buttons = listOf(
-                ActionButton(
+                ActionButtonModel(
                     label = "Add sync folder…",
                     icon = Icons.Rounded.CreateNewFolder,
                     style = ButtonStyle.TONAL,

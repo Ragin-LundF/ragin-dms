@@ -3,7 +3,7 @@ package dms.application.folder
 import dms.application.TestLibrary
 import dms.application.common.OperationOutcome
 import dms.domain.catalog.CatalogRejection
-import dms.domain.library.RelativePath
+import dms.domain.library.model.RelativePathModel
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -11,7 +11,7 @@ import kotlin.test.assertIs
 
 class MoveFolderTest {
 
-    private val letters = RelativePath.of(raw = "letters")
+    private val letters = RelativePathModel.of(raw = "letters")
 
     @Test
     fun `a folder moves with its documents in every folder and in the catalog`() {
@@ -21,7 +21,7 @@ class MoveFolderTest {
             library.add(path = "letters/a.pdf", content = "alpha")
             library.add(path = "letters/b.pdf", content = "beta")
 
-            val outcome = library.moveFolder(from = letters, to = RelativePath.of(raw = "archive/letters"))
+            val outcome = library.moveFolder(from = letters, to = RelativePathModel.of(raw = "archive/letters"))
 
             assertIs<OperationOutcome.Done>(value = outcome)
             val expected = setOf("archive/letters/a.pdf", "archive/letters/b.pdf")
@@ -40,7 +40,7 @@ class MoveFolderTest {
             library.add(path = "letters/a.pdf", content = "alpha")
             library.add(path = "archive/b.pdf", content = "beta")
 
-            val outcome = library.moveFolder(from = letters, to = RelativePath.of(raw = "Archive"))
+            val outcome = library.moveFolder(from = letters, to = RelativePathModel.of(raw = "Archive"))
 
             assertEquals(expected = OperationOutcome.NameTaken, actual = outcome)
         }
@@ -53,7 +53,7 @@ class MoveFolderTest {
             library.open()
             library.add(path = "letters/a.pdf", content = "alpha")
 
-            val outcome = library.moveFolder(from = letters, to = RelativePath.of(raw = "letters/inner"))
+            val outcome = library.moveFolder(from = letters, to = RelativePathModel.of(raw = "letters/inner"))
 
             assertEquals(
                 expected = OperationOutcome.Rejected(reason = CatalogRejection.INVALID_FOLDER_MOVE),

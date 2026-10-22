@@ -1,8 +1,8 @@
 package dms.application.resolution
 
 import dms.application.common.ActivityRecorder
-import dms.application.common.LibrarySnapshot
 import dms.application.common.OperationOutcome
+import dms.application.common.model.LibrarySnapshotModel
 import dms.application.library.CatalogStore
 import dms.application.port.state.model.ActivityKind
 import dms.application.port.storage.DocumentStorage
@@ -12,7 +12,7 @@ import dms.application.resolution.model.MoveDecision
 import dms.application.sync.Replicator
 import dms.domain.catalog.CatalogUpdate
 import dms.domain.change.DetectedChange
-import dms.domain.library.LibraryFolder
+import dms.domain.library.model.LibraryFolderModel
 
 /** Applies a move made outside the tool to the other folders and the catalog, or undoes it. */
 class ResolveMove(
@@ -36,8 +36,8 @@ class ResolveMove(
     }
 
     private suspend fun apply(
-        library: LibrarySnapshot,
-        folder: LibraryFolder,
+        library: LibrarySnapshotModel,
+        folder: LibraryFolderModel,
         change: DetectedChange.MovedFile,
     ): OperationOutcome {
         val check = library.catalog.moveDocument(documentId = change.documentId, newPath = change.path)
@@ -65,8 +65,8 @@ class ResolveMove(
     }
 
     private suspend fun undo(
-        library: LibrarySnapshot,
-        folder: LibraryFolder,
+        library: LibrarySnapshotModel,
+        folder: LibraryFolderModel,
         change: DetectedChange.MovedFile,
     ): OperationOutcome {
         val moved = storage.move(folder = folder, from = change.path, to = change.previousPath)

@@ -17,7 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import dms.ui.components.ActionButtons
 import dms.ui.components.ReasonTooltip
-import dms.ui.components.model.ActionButton
+import dms.ui.components.model.ActionButtonModel
 import dms.ui.components.surface.AppCard
 import dms.ui.components.surface.CardTitle
 import dms.ui.theme.Spacing
@@ -67,7 +67,7 @@ fun ScanningCard(
         )
         ActionButtons(
             buttons = listOf(
-                ActionButton(label = "Detect missing dates", icon = Icons.Rounded.Event, onClick = onDetectDates),
+                ActionButtonModel(label = "Detect missing dates", icon = Icons.Rounded.Event, onClick = onDetectDates),
             ),
             enabled = busyReason == null,
             busyReason = busyReason,

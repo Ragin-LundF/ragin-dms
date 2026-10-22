@@ -1,16 +1,16 @@
 package dms.ui.dashboard
 
-import dms.application.classification.model.ClassificationProgress
+import dms.application.classification.model.ClassificationProgressModel
 import dms.application.classification.model.SuggestOutcome
 import dms.application.port.ai.model.ClassificationFailure
-import dms.domain.classification.ClassificationSuggestion
-import dms.domain.document.DocumentId
+import dms.domain.classification.model.ClassificationSuggestionModel
+import dms.domain.document.model.DocumentIdModel
 import dms.ui.review.AiMessages
 import dms.ui.service.AppServices
 import dms.ui.session.LibrarySession
 import dms.ui.session.model.OperationLane
-import dms.ui.session.model.OperationProgress
-import dms.ui.session.model.UiMessage
+import dms.ui.session.model.OperationProgressModel
+import dms.ui.session.model.UiMessageModel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.onEach
@@ -40,15 +40,15 @@ class AiBatches(
         }
     }
 
-    private fun run(step: String, batch: () -> Flow<ClassificationProgress>, done: (Int) -> String) {
+    private fun run(step: String, batch: () -> Flow<ClassificationProgressModel>, done: (Int) -> String) {
         session.perform(label = step, lane = OperationLane.AI, cancellable = true) {
             var suggested = 0
             var failure: SuggestOutcome.Failed? = null
-            session.progress(progress = OperationProgress(step = step), lane = OperationLane.AI)
+            session.progress(progress = OperationProgressModel(step = step), lane = OperationLane.AI)
             batch()
                 .onEach { progress ->
                     val name = nameOf(documentId = progress.documentId)
-                    val current = OperationProgress(step = step, done = progress.done, total = progress.total)
+                    val current = OperationProgressModel(step = step, done = progress.done, total = progress.total)
                     session.progress(progress = current.copy(detail = name), lane = OperationLane.AI)
                     when (val outcome = progress.outcome) {
                         is SuggestOutcome.Suggested -> if (outcome.suggestion.hasValues()) {
@@ -69,19 +69,19 @@ class AiBatches(
             val stopped = failure
             session.report(
                 message = if (stopped != null) {
-                    UiMessage(text = AiMessages.failure(reason = stopped.reason), isError = true)
+                    UiMessageModel(text = AiMessages.failure(reason = stopped.reason), isError = true)
                 } else {
-                    UiMessage(text = done(suggested))
+                    UiMessageModel(text = done(suggested))
                 },
             )
         }
     }
 
-    private fun ClassificationSuggestion.hasValues(): Boolean {
+    private fun ClassificationSuggestionModel.hasValues(): Boolean {
         return tags.isNotEmpty() || listOf(title, category, documentDate, correspondent, fileName).any { it != null }
     }
 
-    private fun nameOf(documentId: DocumentId): String {
+    private fun nameOf(documentId: DocumentIdModel): String {
         return services.library.catalog.value?.documents?.get(documentId)?.path?.value ?: documentId.value
     }
 }

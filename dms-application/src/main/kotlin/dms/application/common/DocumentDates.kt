@@ -1,10 +1,10 @@
 package dms.application.common
 
 import dms.application.port.storage.DocumentStorage
-import dms.domain.document.DocumentMetadata
 import dms.domain.document.FileNameDates
-import dms.domain.library.LibraryFolder
-import dms.domain.library.RelativePath
+import dms.domain.document.model.DocumentMetadataModel
+import dms.domain.library.model.LibraryFolderModel
+import dms.domain.library.model.RelativePathModel
 import java.time.LocalDate
 
 /**
@@ -14,12 +14,12 @@ import java.time.LocalDate
  */
 class DocumentDates(private val storage: DocumentStorage) {
 
-    suspend fun guess(folder: LibraryFolder, path: RelativePath): LocalDate? {
+    suspend fun guess(folder: LibraryFolderModel, path: RelativePathModel): LocalDate? {
         return FileNameDates.dateIn(name = path.fileName) ?: storage.createdOn(folder = folder, path = path)
     }
 
     /** Metadata with the guessed date, for a document that is about to be catalogued. */
-    suspend fun metadataFor(folder: LibraryFolder, path: RelativePath): DocumentMetadata {
-        return DocumentMetadata(documentDate = guess(folder = folder, path = path))
+    suspend fun metadataFor(folder: LibraryFolderModel, path: RelativePathModel): DocumentMetadataModel {
+        return DocumentMetadataModel(documentDate = guess(folder = folder, path = path))
     }
 }

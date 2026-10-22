@@ -21,14 +21,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
-import dms.ui.session.model.LogEntry
+import dms.ui.session.model.LogEntryModel
 import dms.ui.theme.Spacing
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 /** What the app did in this session, newest at the bottom; follows new lines as they come. */
 @Composable
-fun LogPanel(entries: List<LogEntry>, onClear: () -> Unit) {
+fun LogPanel(entries: List<LogEntryModel>, onClear: () -> Unit) {
     val colors = MaterialTheme.colorScheme
     val listState = rememberLazyListState()
     val time = remember { DateTimeFormatter.ofPattern("HH:mm:ss").withZone(ZoneId.systemDefault()) }

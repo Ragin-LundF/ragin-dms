@@ -19,12 +19,12 @@ import androidx.compose.ui.unit.dp
 import dms.ui.components.FileSizes
 import dms.ui.components.surface.KindBadge
 import dms.ui.components.surface.LabelChip
-import dms.ui.library.model.DocumentRow
+import dms.ui.library.model.DocumentRowModel
 import dms.ui.theme.Spacing
 
 /** One document as a card of the grid: a large kind badge, the title, the folder, category and date. */
 @Composable
-fun DocumentCard(row: DocumentRow, selected: Boolean, onClick: () -> Unit) {
+fun DocumentCard(row: DocumentRowModel, selected: Boolean, onClick: () -> Unit) {
     val colors = MaterialTheme.colorScheme
     val document = row.document
     Surface(

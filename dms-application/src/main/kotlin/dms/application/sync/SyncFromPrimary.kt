@@ -1,21 +1,21 @@
 package dms.application.sync
 
 import dms.application.common.ActivityRecorder
-import dms.application.common.LibrarySnapshot
+import dms.application.common.model.LibrarySnapshotModel
 import dms.application.library.CatalogStore
 import dms.application.port.state.model.ActivityKind
 import dms.application.port.storage.LibraryScanner
 import dms.application.port.storage.model.FolderOperation
 import dms.application.port.storage.model.StorageResult
-import dms.application.sync.model.SyncAction
 import dms.application.sync.model.SyncActionKind
+import dms.application.sync.model.SyncActionModel
 import dms.application.sync.model.SyncOutcome
-import dms.application.sync.model.SyncReport
+import dms.application.sync.model.SyncReportModel
 import dms.domain.change.ChangeDetector
 import dms.domain.change.DetectedChange
-import dms.domain.change.FolderSnapshot
-import dms.domain.library.LibraryFolder
-import dms.domain.library.RelativePath
+import dms.domain.change.model.FolderSnapshotModel
+import dms.domain.library.model.LibraryFolderModel
+import dms.domain.library.model.RelativePathModel
 
 /**
  * "Sync to all destinations": makes every reachable sync folder contain what the primary contains.
@@ -40,19 +40,19 @@ class SyncFromPrimary(
         val source = (primaryScan as StorageResult.Success).value
         val report = library.folders.syncFolders
             .map { target -> syncFolder(library = library, source = source, target = target) }
-            .fold(initial = SyncReport()) { total, folderReport -> total + folderReport }
+            .fold(initial = SyncReportModel()) { total, folderReport -> total + folderReport }
         activity.record(kind = ActivityKind.SYNCHRONIZED, subject = library.folders.primary.displayName)
         return SyncOutcome.Completed(report = report)
     }
 
     private suspend fun syncFolder(
-        library: LibrarySnapshot,
-        source: FolderSnapshot,
-        target: LibraryFolder,
-    ): SyncReport {
+        library: LibrarySnapshotModel,
+        source: FolderSnapshotModel,
+        target: LibraryFolderModel,
+    ): SyncReportModel {
         val scanned = scanner.scan(folder = target, catalog = library.catalog)
         if (scanned is StorageResult.Failure) {
-            return SyncReport(unreachableFolders = setOf(target.id))
+            return SyncReportModel(unreachableFolders = setOf(target.id))
         }
         val snapshot = (scanned as StorageResult.Success).value
         val targetFiles = snapshot.files.toMutableMap()
@@ -77,7 +77,7 @@ class SyncFromPrimary(
             targets = listOf(target),
             operation = FolderOperation.SaveCatalog,
         )
-        val remaining = SyncReport(
+        val remaining = SyncReportModel(
             conflicts = conflicts,
             leftAlone = if (extra.isEmpty()) emptyMap() else mapOf(target.id to extra),
             pendingFolders = catalogPending,
@@ -87,9 +87,9 @@ class SyncFromPrimary(
 
     /** Documents the sync folder still holds under a path the primary no longer uses. */
     private fun knownMoves(
-        library: LibrarySnapshot,
-        source: FolderSnapshot,
-        snapshot: FolderSnapshot,
+        library: LibrarySnapshotModel,
+        source: FolderSnapshotModel,
+        snapshot: FolderSnapshotModel,
     ): List<DetectedChange.MovedFile> {
         return ChangeDetector.detect(catalog = library.catalog, snapshots = listOf(snapshot))
             .filterIsInstance<DetectedChange.MovedFile>()
@@ -97,32 +97,36 @@ class SyncFromPrimary(
     }
 
     private suspend fun moveInTarget(
-        library: LibrarySnapshot,
-        target: LibraryFolder,
+        library: LibrarySnapshotModel,
+        target: LibraryFolderModel,
         move: DetectedChange.MovedFile,
-    ): SyncReport {
+    ): SyncReportModel {
         val pending = replicator.distribute(
             folders = library.folders,
             targets = listOf(target),
             operation = FolderOperation.Move(from = move.path, to = move.previousPath),
         )
         if (pending.isNotEmpty()) {
-            return SyncReport(pendingFolders = pending)
+            return SyncReportModel(pendingFolders = pending)
         }
-        val action = SyncAction(folderId = target.id, kind = SyncActionKind.MOVED, path = move.previousPath)
-        return SyncReport(actions = listOf(action))
+        val action = SyncActionModel(folderId = target.id, kind = SyncActionKind.MOVED, path = move.previousPath)
+        return SyncReportModel(actions = listOf(action))
     }
 
-    private suspend fun copyToTarget(library: LibrarySnapshot, target: LibraryFolder, path: RelativePath): SyncReport {
+    private suspend fun copyToTarget(
+        library: LibrarySnapshotModel,
+        target: LibraryFolderModel,
+        path: RelativePathModel,
+    ): SyncReportModel {
         val pending = replicator.distribute(
             folders = library.folders,
             targets = listOf(target),
             operation = FolderOperation.CopyFromPrimary(path = path),
         )
         if (pending.isNotEmpty()) {
-            return SyncReport(pendingFolders = pending)
+            return SyncReportModel(pendingFolders = pending)
         }
-        val action = SyncAction(folderId = target.id, kind = SyncActionKind.COPIED, path = path)
-        return SyncReport(actions = listOf(action))
+        val action = SyncActionModel(folderId = target.id, kind = SyncActionKind.COPIED, path = path)
+        return SyncReportModel(actions = listOf(action))
     }
 }

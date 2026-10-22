@@ -1,9 +1,9 @@
 package dms.storage.state
 
 import dms.application.port.storage.model.FolderOperation
-import dms.application.port.storage.model.PendingOperation
-import dms.domain.document.DocumentId
-import dms.domain.library.LibraryFolderId
+import dms.application.port.storage.model.PendingOperationModel
+import dms.domain.document.model.DocumentIdModel
+import dms.domain.library.model.LibraryFolderIdModel
 import dms.storage.support.TestFolders
 import kotlinx.coroutines.test.runTest
 import java.nio.file.Files
@@ -32,7 +32,9 @@ class FileOperationJournalTest {
                 FolderOperation.CreateFolder(path = TestFolders.path(raw = "letters")),
                 FolderOperation.Move(from = TestFolders.path(raw = "a.pdf"), to = TestFolders.path(raw = "x/a.pdf")),
                 FolderOperation.MoveToTrash(path = TestFolders.path(raw = "old.pdf")),
-                FolderOperation.CopyText(documentId = DocumentId(value = "doc-1")),
+                FolderOperation.CopyText(documentId = DocumentIdModel(value = "doc-1")),
+                FolderOperation.CopyPlan(name = "20261022-080000"),
+                FolderOperation.CopyIndex(documentId = DocumentIdModel(value = "doc-2")),
                 FolderOperation.SaveCatalog,
             ).mapIndexed { index, operation -> pending(id = "op-$index", operation = operation) }
             val journal = FileOperationJournal(path = path)
@@ -77,10 +79,10 @@ class FileOperationJournalTest {
         }
     }
 
-    private fun pending(id: String, operation: FolderOperation): PendingOperation {
-        return PendingOperation(
+    private fun pending(id: String, operation: FolderOperation): PendingOperationModel {
+        return PendingOperationModel(
             id = id,
-            folderId = LibraryFolderId(value = "sync"),
+            folderId = LibraryFolderIdModel(value = "sync"),
             operation = operation,
             recordedAt = Instant.parse("2024-05-01T08:00:00Z"),
         )

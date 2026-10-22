@@ -1,15 +1,15 @@
 package dms.storage.fs
 
 import dms.domain.library.FileNamePolicy
-import dms.domain.library.LibraryFolder
-import dms.domain.library.RelativePath
+import dms.domain.library.model.LibraryFolderModel
+import dms.domain.library.model.RelativePathModel
 import java.nio.file.Files
 import java.nio.file.LinkOption
 import java.nio.file.Path
 import java.text.Normalizer
 
 /**
- * The one mapping between [RelativePath] (NFC, `/`) and file system paths.
+ * The one mapping between [RelativePathModel] (NFC, `/`) and file system paths.
  *
  * macOS may report names decomposed (NFD) while the catalog stores them composed (NFC), so existing
  * entries are found by comparing NFC-normalized names, never by string equality alone.
@@ -17,13 +17,13 @@ import java.text.Normalizer
 object PathResolver {
 
     /** The folder's root directory, or `null` if it is not reachable right now. */
-    fun root(folder: LibraryFolder): Path? {
+    fun root(folder: LibraryFolderModel): Path? {
         val root = Path.of(folder.location.value)
         return root.takeIf { Files.isDirectory(it) }
     }
 
     /** The existing entry for [path] below [root], or `null` if there is none. */
-    fun existing(root: Path, path: RelativePath): Path? {
+    fun existing(root: Path, path: RelativePathModel): Path? {
         var current = root
         for (segment in path.segments) {
             current = child(directory = current, name = segment) ?: return null
@@ -35,7 +35,7 @@ object PathResolver {
      * Where [path] lives or would be created below [root]: existing folders are matched by NFC name,
      * the remaining segments are used as given.
      */
-    fun target(root: Path, path: RelativePath): Path {
+    fun target(root: Path, path: RelativePathModel): Path {
         var current = root
         var parentExists = true
         for (segment in path.segments) {

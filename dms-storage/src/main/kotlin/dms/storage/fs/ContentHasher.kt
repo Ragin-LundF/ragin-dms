@@ -1,6 +1,7 @@
 package dms.storage.fs
 
-import dms.domain.document.ContentHash
+import dms.domain.document.model.ContentHashModel
+import java.io.InputStream
 import java.nio.channels.Channels
 import java.nio.channels.FileChannel
 import java.nio.file.Files
@@ -14,15 +15,18 @@ object ContentHasher {
 
     private const val BUFFER_SIZE = 64 * 1024
 
-    fun hash(path: Path): ContentHash {
+    fun hash(path: Path): ContentHashModel {
+        return Files.newInputStream(path).use { hash(input = it) }
+    }
+
+    /** The hash of everything [input] still has; the caller closes it. */
+    fun hash(input: InputStream): ContentHashModel {
         val digest = MessageDigest.getInstance("SHA-256")
-        Files.newInputStream(path).use { input ->
-            val buffer = ByteArray(size = BUFFER_SIZE)
-            var read = input.read(buffer)
-            while (read >= 0) {
-                digest.update(buffer, 0, read)
-                read = input.read(buffer)
-            }
+        val buffer = ByteArray(size = BUFFER_SIZE)
+        var read = input.read(buffer)
+        while (read >= 0) {
+            digest.update(buffer, 0, read)
+            read = input.read(buffer)
         }
         return toContentHash(digest = digest)
     }
@@ -31,7 +35,7 @@ object ContentHasher {
      * Copies [source] into the new file [target], forces it to disk and returns the hash of what was
      * read. The caller verifies the written file against it.
      */
-    fun copyAndHash(source: Path, target: Path): ContentHash {
+    fun copyAndHash(source: Path, target: Path): ContentHashModel {
         val digest = MessageDigest.getInstance("SHA-256")
         FileChannel.open(target, StandardOpenOption.WRITE, StandardOpenOption.CREATE_NEW).use { channel ->
             val output = Channels.newOutputStream(channel)
@@ -50,7 +54,7 @@ object ContentHasher {
         return toContentHash(digest = digest)
     }
 
-    private fun toContentHash(digest: MessageDigest): ContentHash {
-        return ContentHash(value = HexFormat.of().formatHex(digest.digest()))
+    private fun toContentHash(digest: MessageDigest): ContentHashModel {
+        return ContentHashModel(value = HexFormat.of().formatHex(digest.digest()))
     }
 }

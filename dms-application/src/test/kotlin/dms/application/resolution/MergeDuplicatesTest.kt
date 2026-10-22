@@ -2,9 +2,9 @@ package dms.application.resolution
 
 import dms.application.TestLibrary
 import dms.application.common.OperationOutcome
-import dms.domain.document.DocumentMetadata
-import dms.domain.library.RelativePath
-import dms.domain.taxonomy.TagName
+import dms.domain.document.model.DocumentMetadataModel
+import dms.domain.library.model.RelativePathModel
+import dms.domain.taxonomy.model.TagNameModel
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -21,8 +21,10 @@ class MergeDuplicatesTest {
             val kept = library.add(path = "letters/a.pdf", content = "alpha")
             val copy = library.add(path = "letters/b.pdf", content = "alpha")
             library.store.commit { catalog ->
-                catalog.setTags(documentId = copy.id, newTags = setOf(TagName.of(raw = "energy")))
-                    .andThen { it.updateMetadata(documentId = copy.id, metadata = DocumentMetadata(title = "Bill")) }
+                catalog.setTags(documentId = copy.id, newTags = setOf(TagNameModel.of(raw = "energy")))
+                    .andThen {
+                        it.updateMetadata(documentId = copy.id, metadata = DocumentMetadataModel(title = "Bill"))
+                    }
             }
 
             val refused = library.mergeDuplicates(keep = kept.id, confirmed = false)
@@ -34,7 +36,7 @@ class MergeDuplicatesTest {
             assertEquals(expected = kept.id, actual = document.id)
             assertEquals(expected = setOf("energy"), actual = document.tags.map { it.value }.toSet())
             assertEquals(expected = "Bill", actual = document.metadata.title)
-            val trashed = library.allFolders.map { it.id to RelativePath.of(raw = "letters/b.pdf") }.toSet()
+            val trashed = library.allFolders.map { it.id to RelativePathModel.of(raw = "letters/b.pdf") }.toSet()
             assertEquals(expected = trashed, actual = library.folders.trashed.toSet())
         }
     }
@@ -70,7 +72,8 @@ class MergeDuplicatesTest {
             assertIs<OperationOutcome.Done>(value = outcome)
             val different = library.folders.content(folder = library.syncA, path = "letters/b.pdf")
             assertEquals(expected = "alphb", actual = different)
-            val trashed = listOf(library.primary, library.syncB).map { it.id to RelativePath.of(raw = "letters/b.pdf") }
+            val copyPath = RelativePathModel.of(raw = "letters/b.pdf")
+            val trashed = listOf(library.primary, library.syncB).map { it.id to copyPath }
             assertEquals(expected = trashed.toSet(), actual = library.folders.trashed.toSet())
         }
     }
@@ -82,7 +85,9 @@ class MergeDuplicatesTest {
             library.open()
             val plain = library.add(path = "letters/a.pdf", content = "alpha")
             val tagged = library.add(path = "letters/b.pdf", content = "alpha")
-            library.store.commit { it.setTags(documentId = tagged.id, newTags = setOf(TagName.of(raw = "energy"))) }
+            library.store.commit {
+                it.setTags(documentId = tagged.id, newTags = setOf(TagNameModel.of(raw = "energy")))
+            }
             val documents = library.catalog.documents.values.filter { it.id in setOf(plain.id, tagged.id) }
 
             assertEquals(expected = tagged.id, actual = DuplicatePreference.preferred(copies = documents).id)

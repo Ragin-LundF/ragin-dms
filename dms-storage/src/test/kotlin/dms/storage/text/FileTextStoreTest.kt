@@ -2,7 +2,7 @@ package dms.storage.text
 
 import dms.application.port.storage.model.StorageFailure
 import dms.application.port.storage.model.StorageResult
-import dms.domain.document.DocumentId
+import dms.domain.document.model.DocumentIdModel
 import dms.storage.support.StorageResults
 import dms.storage.support.TestFolders
 import kotlinx.coroutines.test.runTest
@@ -20,7 +20,7 @@ class FileTextStoreTest {
     private val root: Path = Files.createDirectories(temp.resolve("library"))
     private val folder = TestFolders.folder(location = root)
     private val store = FileTextStore()
-    private val documentId = DocumentId(value = "doc-1")
+    private val documentId = DocumentIdModel(value = "doc-1")
 
     @AfterTest
     fun deleteTemp() {

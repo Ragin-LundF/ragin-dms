@@ -1,11 +1,11 @@
 package dms.ui.library
 
-import dms.domain.document.Document
-import dms.domain.library.RelativePath
-import dms.domain.taxonomy.Category
-import dms.domain.taxonomy.CategoryId
-import dms.ui.library.model.CategoryEntry
-import dms.ui.library.model.FolderEntry
+import dms.domain.document.model.DocumentModel
+import dms.domain.library.model.RelativePathModel
+import dms.domain.taxonomy.model.CategoryIdModel
+import dms.domain.taxonomy.model.CategoryModel
+import dms.ui.library.model.CategoryEntryModel
+import dms.ui.library.model.FolderEntryModel
 import java.util.Locale
 
 /** Builds the folder tree and the category tree of the sidebar as indented lists. */
@@ -16,18 +16,18 @@ object LibraryTrees {
      * [expanded]; `null` unfolds everything. Top-level folders always show.
      */
     fun folders(
-        documents: Collection<Document>,
-        createdFolders: Set<RelativePath>,
-        expanded: Set<RelativePath>? = null,
-    ): List<FolderEntry> {
+        documents: Collection<DocumentModel>,
+        createdFolders: Set<RelativePathModel>,
+        expanded: Set<RelativePathModel>? = null,
+    ): List<FolderEntryModel> {
         val withDocuments = documents.flatMap { ancestorsOf(path = it.path) }
         val created = createdFolders.flatMap { selfAndAncestors(folder = it) }
         // Sorting by segments keeps every folder directly above its subfolders.
         val folders = (withDocuments + created).toSet().sortedWith(
             comparator = compareBy { path -> path.segments.joinToString(separator = "\u0000").lowercase(Locale.ROOT) },
         )
-        val root = FolderEntry(
-            path = RelativePath.ROOT,
+        val root = FolderEntryModel(
+            path = RelativePathModel.ROOT,
             name = "All documents",
             depth = 0,
             documentCount = documents.size,
@@ -35,7 +35,7 @@ object LibraryTrees {
             expanded = true,
         )
         val entries = listOf(root) + folders.mapIndexed { index, folder ->
-            FolderEntry(
+            FolderEntryModel(
                 path = folder,
                 name = folder.fileName,
                 depth = folder.segments.size,
@@ -49,10 +49,10 @@ object LibraryTrees {
 
     /** Top-level categories by name, each followed by its subcategories while in [expanded]; `null` unfolds all. */
     fun categories(
-        categories: Collection<Category>,
-        documents: Collection<Document>,
-        expanded: Set<CategoryId>? = null,
-    ): List<CategoryEntry> {
+        categories: Collection<CategoryModel>,
+        documents: Collection<DocumentModel>,
+        expanded: Set<CategoryIdModel>? = null,
+    ): List<CategoryEntryModel> {
         val children = categories.groupBy { it.parentId }
         val counts = documents.groupingBy { it.categoryId }.eachCount()
         val entries = flatten(parentId = null, depth = 0, children = children, counts = counts).map { entry ->
@@ -78,25 +78,29 @@ object LibraryTrees {
     }
 
     private fun flatten(
-        parentId: CategoryId?,
+        parentId: CategoryIdModel?,
         depth: Int,
-        children: Map<CategoryId?, List<Category>>,
-        counts: Map<CategoryId?, Int>,
-    ): List<CategoryEntry> {
+        children: Map<CategoryIdModel?, List<CategoryModel>>,
+        counts: Map<CategoryIdModel?, Int>,
+    ): List<CategoryEntryModel> {
         return children[parentId].orEmpty()
             .sortedBy { it.name.lowercase(Locale.ROOT) }
             .flatMap { category ->
-                val entry = CategoryEntry(category = category, depth = depth, documentCount = counts[category.id] ?: 0)
+                val entry = CategoryEntryModel(
+                    category = category,
+                    depth = depth,
+                    documentCount = counts[category.id] ?: 0,
+                )
                 listOf(entry) + flatten(parentId = category.id, depth = depth + 1, children = children, counts = counts)
             }
     }
 
     /** The folders containing [path], without the root. */
-    private fun ancestorsOf(path: RelativePath): List<RelativePath> {
+    private fun ancestorsOf(path: RelativePathModel): List<RelativePathModel> {
         return path.parent?.let { selfAndAncestors(folder = it) }.orEmpty()
     }
 
-    private fun selfAndAncestors(folder: RelativePath): List<RelativePath> {
+    private fun selfAndAncestors(folder: RelativePathModel): List<RelativePathModel> {
         if (folder.isRoot) {
             return emptyList()
         }

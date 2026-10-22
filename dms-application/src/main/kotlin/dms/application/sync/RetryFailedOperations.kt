@@ -2,12 +2,12 @@ package dms.application.sync
 
 import dms.application.library.CatalogStore
 import dms.application.port.storage.OperationJournal
-import dms.application.port.storage.model.PendingOperation
+import dms.application.port.storage.model.PendingOperationModel
 import dms.application.port.storage.model.StorageFailure
 import dms.application.port.storage.model.StorageResult
-import dms.application.sync.model.RetryReport
-import dms.domain.library.LibraryFolderId
-import dms.domain.library.LibraryFolders
+import dms.application.sync.model.RetryReportModel
+import dms.domain.library.model.LibraryFolderIdModel
+import dms.domain.library.model.LibraryFoldersModel
 
 /**
  * Replays the journal: the operations of each sync folder in the order they were recorded. The first
@@ -21,7 +21,7 @@ class RetryFailedOperations(
 ) {
 
     /** Returns `null` while no library is open. */
-    suspend operator fun invoke(): RetryReport? {
+    suspend operator fun invoke(): RetryReportModel? {
         val library = store.current() ?: return null
         return journal.pending()
             .sortedBy { it.recordedAt }
@@ -29,41 +29,41 @@ class RetryFailedOperations(
             .map { (folderId, operations) ->
                 retry(folders = library.folders, folderId = folderId, operations = operations)
             }
-            .fold(initial = RetryReport()) { total, report -> total + report }
+            .fold(initial = RetryReportModel()) { total, report -> total + report }
     }
 
     private suspend fun retry(
-        folders: LibraryFolders,
-        folderId: LibraryFolderId,
-        operations: List<PendingOperation>,
-    ): RetryReport {
+        folders: LibraryFoldersModel,
+        folderId: LibraryFolderIdModel,
+        operations: List<PendingOperationModel>,
+    ): RetryReportModel {
         val target = folders.syncFolders.firstOrNull { it.id == folderId }
         if (target == null) {
             // The folder was removed or became the primary; its operations no longer apply.
             operations.forEach { journal.remove(id = it.id) }
-            return RetryReport(dropped = operations.size)
+            return RetryReportModel(dropped = operations.size)
         }
-        var report = RetryReport()
+        var report = RetryReportModel()
         for ((index, pending) in operations.withIndex()) {
             val result = replicator.execute(primary = folders.primary, target = target, operation = pending.operation)
             val step = outcome(pending = pending, result = result)
-                ?: return report + RetryReport(stillPending = operations.size - index)
+                ?: return report + RetryReportModel(stillPending = operations.size - index)
             report += step
         }
         return report
     }
 
     /** Removes a finished or pointless operation from the journal; `null` if it must stay. */
-    private suspend fun outcome(pending: PendingOperation, result: StorageResult<Unit>): RetryReport? {
+    private suspend fun outcome(pending: PendingOperationModel, result: StorageResult<Unit>): RetryReportModel? {
         return when {
             result is StorageResult.Success -> {
                 journal.remove(id = pending.id)
-                RetryReport(succeeded = 1)
+                RetryReportModel(succeeded = 1)
             }
 
             (result as StorageResult.Failure).reason in OBSOLETE -> {
                 journal.remove(id = pending.id)
-                RetryReport(dropped = 1)
+                RetryReportModel(dropped = 1)
             }
 
             else -> null

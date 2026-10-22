@@ -6,17 +6,17 @@ import dms.application.port.storage.LibraryScanner
 import dms.application.port.storage.ScanListener
 import dms.application.port.storage.TextStore
 import dms.application.port.storage.model.CatalogLoad
-import dms.application.port.storage.model.ExternalFile
+import dms.application.port.storage.model.ExternalFileModel
 import dms.application.port.storage.model.StorageFailure
 import dms.application.port.storage.model.StorageResult
-import dms.domain.catalog.Catalog
-import dms.domain.change.FileFacts
-import dms.domain.change.FolderSnapshot
-import dms.domain.document.ContentHash
-import dms.domain.document.DocumentId
-import dms.domain.library.LibraryFolder
-import dms.domain.library.LibraryFolderId
-import dms.domain.library.RelativePath
+import dms.domain.catalog.model.CatalogModel
+import dms.domain.change.model.FileFactsModel
+import dms.domain.change.model.FolderSnapshotModel
+import dms.domain.document.model.ContentHashModel
+import dms.domain.document.model.DocumentIdModel
+import dms.domain.library.model.LibraryFolderIdModel
+import dms.domain.library.model.LibraryFolderModel
+import dms.domain.library.model.RelativePathModel
 import java.security.MessageDigest
 import java.time.LocalDate
 
@@ -26,44 +26,44 @@ import java.time.LocalDate
  */
 class FakeFolders : DocumentStorage, LibraryScanner, CatalogRepository, TextStore {
 
-    val unreachable: MutableSet<LibraryFolderId> = mutableSetOf()
-    val trashed: MutableList<Pair<LibraryFolderId, RelativePath>> = mutableListOf()
+    val unreachable: MutableSet<LibraryFolderIdModel> = mutableSetOf()
+    val trashed: MutableList<Pair<LibraryFolderIdModel, RelativePathModel>> = mutableListOf()
 
-    private val files = mutableMapOf<LibraryFolderId, MutableMap<RelativePath, String>>()
-    private val directories = mutableMapOf<LibraryFolderId, MutableSet<RelativePath>>()
+    private val files = mutableMapOf<LibraryFolderIdModel, MutableMap<RelativePathModel, String>>()
+    private val directories = mutableMapOf<LibraryFolderIdModel, MutableSet<RelativePathModel>>()
     /** The catalog file of each folder. */
-    val catalogs: MutableMap<LibraryFolderId, Catalog> = mutableMapOf()
+    val catalogs: MutableMap<LibraryFolderIdModel, CatalogModel> = mutableMapOf()
 
     /** Conflict copies of the catalog file, as a sync client creates them. */
-    val conflictCopies: MutableMap<LibraryFolderId, MutableList<Catalog>> = mutableMapOf()
+    val conflictCopies: MutableMap<LibraryFolderIdModel, MutableList<CatalogModel>> = mutableMapOf()
 
-    private val texts = mutableMapOf<LibraryFolderId, MutableMap<DocumentId, String>>()
-    private val external = mutableMapOf<ExternalFile, String>()
+    private val texts = mutableMapOf<LibraryFolderIdModel, MutableMap<DocumentIdModel, String>>()
+    private val external = mutableMapOf<ExternalFileModel, String>()
 
     // --- Test setup and inspection
 
-    fun put(folder: LibraryFolder, path: String, content: String) {
-        filesOf(folderId = folder.id)[RelativePath.of(raw = path)] = content
+    fun put(folder: LibraryFolderModel, path: String, content: String) {
+        filesOf(folderId = folder.id)[RelativePathModel.of(raw = path)] = content
     }
 
-    fun content(folder: LibraryFolder, path: String): String? {
-        return filesOf(folderId = folder.id)[RelativePath.of(raw = path)]
+    fun content(folder: LibraryFolderModel, path: String): String? {
+        return filesOf(folderId = folder.id)[RelativePathModel.of(raw = path)]
     }
 
-    fun paths(folder: LibraryFolder): Set<String> {
+    fun paths(folder: LibraryFolderModel): Set<String> {
         return filesOf(folderId = folder.id).keys.map { it.value }.toSet()
     }
 
-    fun hasDirectory(folder: LibraryFolder, path: String): Boolean {
-        return isDirectory(folderId = folder.id, path = RelativePath.of(raw = path))
+    fun hasDirectory(folder: LibraryFolderModel, path: String): Boolean {
+        return isDirectory(folderId = folder.id, path = RelativePathModel.of(raw = path))
     }
 
-    fun textIn(folder: LibraryFolder, documentId: DocumentId): String? {
+    fun textIn(folder: LibraryFolderModel, documentId: DocumentIdModel): String? {
         return texts[folder.id]?.get(key = documentId)
     }
 
-    fun external(location: String, content: String): ExternalFile {
-        val file = ExternalFile(location = location)
+    fun external(location: String, content: String): ExternalFileModel {
+        val file = ExternalFileModel(location = location)
         external[file] = content
         return file
     }
@@ -71,10 +71,10 @@ class FakeFolders : DocumentStorage, LibraryScanner, CatalogRepository, TextStor
     // --- DocumentStorage
 
     override suspend fun importFile(
-        folder: LibraryFolder,
-        source: ExternalFile,
-        target: RelativePath,
-    ): StorageResult<FileFacts> {
+        folder: LibraryFolderModel,
+        source: ExternalFileModel,
+        target: RelativePathModel,
+    ): StorageResult<FileFactsModel> {
         unreachableFailure(folder = folder)?.let { return it }
         val content = external[source] ?: return failure(reason = StorageFailure.NOT_FOUND)
         if (exists(folderId = folder.id, path = target)) {
@@ -85,11 +85,11 @@ class FakeFolders : DocumentStorage, LibraryScanner, CatalogRepository, TextStor
     }
 
     override suspend fun copyFile(
-        from: LibraryFolder,
-        to: LibraryFolder,
-        path: RelativePath,
+        from: LibraryFolderModel,
+        to: LibraryFolderModel,
+        path: RelativePathModel,
         replaceExisting: Boolean,
-    ): StorageResult<FileFacts> {
+    ): StorageResult<FileFactsModel> {
         unreachableFailure(folder = from)?.let { return it }
         unreachableFailure(folder = to)?.let { return it }
         val content = filesOf(folderId = from.id)[path] ?: return failure(reason = StorageFailure.NOT_FOUND)
@@ -103,7 +103,7 @@ class FakeFolders : DocumentStorage, LibraryScanner, CatalogRepository, TextStor
         return StorageResult.Success(value = factsOf(content = content))
     }
 
-    override suspend fun createFolder(folder: LibraryFolder, path: RelativePath): StorageResult<Unit> {
+    override suspend fun createFolder(folder: LibraryFolderModel, path: RelativePathModel): StorageResult<Unit> {
         unreachableFailure(folder = folder)?.let { return it }
         if (filesOf(folderId = folder.id).containsKey(key = path)) {
             return failure(reason = StorageFailure.ALREADY_EXISTS)
@@ -112,7 +112,11 @@ class FakeFolders : DocumentStorage, LibraryScanner, CatalogRepository, TextStor
         return StorageResult.Success(value = Unit)
     }
 
-    override suspend fun move(folder: LibraryFolder, from: RelativePath, to: RelativePath): StorageResult<Unit> {
+    override suspend fun move(
+        folder: LibraryFolderModel,
+        from: RelativePathModel,
+        to: RelativePathModel,
+    ): StorageResult<Unit> {
         unreachableFailure(folder = folder)?.let { return it }
         val folderFiles = filesOf(folderId = folder.id)
         val caseOnly = from.parent == to.parent && from.fileName.equals(other = to.fileName, ignoreCase = true)
@@ -139,7 +143,22 @@ class FakeFolders : DocumentStorage, LibraryScanner, CatalogRepository, TextStor
         return StorageResult.Success(value = Unit)
     }
 
-    override suspend fun moveToTrash(folder: LibraryFolder, path: RelativePath): StorageResult<Unit> {
+    override suspend fun replaceWith(
+        folder: LibraryFolderModel,
+        target: RelativePathModel,
+        replacement: RelativePathModel,
+    ): StorageResult<FileFactsModel> {
+        unreachableFailure(folder = folder)?.let { return it }
+        val folderFiles = filesOf(folderId = folder.id)
+        val content = folderFiles.remove(key = replacement) ?: return failure(reason = StorageFailure.NOT_FOUND)
+        if (folderFiles.containsKey(key = target)) {
+            trashed += folder.id to target
+        }
+        folderFiles[target] = content
+        return StorageResult.Success(value = factsOf(content = content))
+    }
+
+    override suspend fun moveToTrash(folder: LibraryFolderModel, path: RelativePathModel): StorageResult<Unit> {
         unreachableFailure(folder = folder)?.let { return it }
         val folderFiles = filesOf(folderId = folder.id)
         if (folderFiles.remove(key = path) != null) {
@@ -155,16 +174,16 @@ class FakeFolders : DocumentStorage, LibraryScanner, CatalogRepository, TextStor
         return StorageResult.Success(value = Unit)
     }
 
-    override suspend fun readFacts(folder: LibraryFolder, path: RelativePath): StorageResult<FileFacts> {
+    override suspend fun readFacts(folder: LibraryFolderModel, path: RelativePathModel): StorageResult<FileFactsModel> {
         unreachableFailure(folder = folder)?.let { return it }
         val content = filesOf(folderId = folder.id)[path] ?: return failure(reason = StorageFailure.NOT_FOUND)
         return StorageResult.Success(value = factsOf(content = content))
     }
 
     override suspend fun sameContent(
-        folder: LibraryFolder,
-        first: RelativePath,
-        second: RelativePath,
+        folder: LibraryFolderModel,
+        first: RelativePathModel,
+        second: RelativePathModel,
     ): StorageResult<Boolean> {
         unreachableFailure(folder = folder)?.let { return it }
         val folderFiles = filesOf(folderId = folder.id)
@@ -174,13 +193,13 @@ class FakeFolders : DocumentStorage, LibraryScanner, CatalogRepository, TextStor
     }
 
     /** Creation days the test set; files without one have none, like on file systems without them. */
-    val creationDays: MutableMap<RelativePath, LocalDate> = mutableMapOf()
+    val creationDays: MutableMap<RelativePathModel, LocalDate> = mutableMapOf()
 
-    override suspend fun createdOn(folder: LibraryFolder, path: RelativePath): LocalDate? {
+    override suspend fun createdOn(folder: LibraryFolderModel, path: RelativePathModel): LocalDate? {
         return creationDays[path]
     }
 
-    override suspend fun listNames(folder: LibraryFolder, path: RelativePath): StorageResult<List<String>> {
+    override suspend fun listNames(folder: LibraryFolderModel, path: RelativePathModel): StorageResult<List<String>> {
         unreachableFailure(folder = folder)?.let { return it }
         if (!path.isRoot && !isDirectory(folderId = folder.id, path = path)) {
             return failure(reason = StorageFailure.NOT_FOUND)
@@ -194,34 +213,34 @@ class FakeFolders : DocumentStorage, LibraryScanner, CatalogRepository, TextStor
     // --- LibraryScanner
 
     override suspend fun scan(
-        folder: LibraryFolder,
-        catalog: Catalog,
+        folder: LibraryFolderModel,
+        catalog: CatalogModel,
         listener: ScanListener,
-    ): StorageResult<FolderSnapshot> {
+    ): StorageResult<FolderSnapshotModel> {
         unreachableFailure(folder = folder)?.let { return it }
         val facts = filesOf(folderId = folder.id).mapValues { (_, content) -> factsOf(content = content) }
         listener.counted(total = facts.size)
         facts.entries.forEachIndexed { index, (path, fileFacts) ->
             listener.fileDone(done = index + 1, path = path, facts = fileFacts, hashed = true)
         }
-        return StorageResult.Success(value = FolderSnapshot(folderId = folder.id, files = facts))
+        return StorageResult.Success(value = FolderSnapshotModel(folderId = folder.id, files = facts))
     }
 
     // --- CatalogRepository
 
-    override suspend fun load(folder: LibraryFolder): CatalogLoad {
+    override suspend fun load(folder: LibraryFolderModel): CatalogLoad {
         unreachableFailure(folder = folder)?.let { return CatalogLoad.Failed(failure = it) }
         val catalog = catalogs[folder.id] ?: return CatalogLoad.NotFound
         return CatalogLoad.Found(catalog = catalog, conflictCopies = conflictCopies[folder.id].orEmpty().toList())
     }
 
-    override suspend fun save(folder: LibraryFolder, catalog: Catalog): StorageResult<Unit> {
+    override suspend fun save(folder: LibraryFolderModel, catalog: CatalogModel): StorageResult<Unit> {
         unreachableFailure(folder = folder)?.let { return it }
         catalogs[folder.id] = catalog
         return StorageResult.Success(value = Unit)
     }
 
-    override suspend fun discardConflictCopies(folder: LibraryFolder): StorageResult<Unit> {
+    override suspend fun discardConflictCopies(folder: LibraryFolderModel): StorageResult<Unit> {
         unreachableFailure(folder = folder)?.let { return it }
         conflictCopies.remove(key = folder.id)
         return StorageResult.Success(value = Unit)
@@ -229,13 +248,17 @@ class FakeFolders : DocumentStorage, LibraryScanner, CatalogRepository, TextStor
 
     // --- TextStore
 
-    override suspend fun write(folder: LibraryFolder, documentId: DocumentId, text: String): StorageResult<Unit> {
+    override suspend fun write(
+        folder: LibraryFolderModel,
+        documentId: DocumentIdModel,
+        text: String,
+    ): StorageResult<Unit> {
         unreachableFailure(folder = folder)?.let { return it }
         texts.getOrPut(key = folder.id) { mutableMapOf() }[documentId] = text
         return StorageResult.Success(value = Unit)
     }
 
-    override suspend fun read(folder: LibraryFolder, documentId: DocumentId): String? {
+    override suspend fun read(folder: LibraryFolderModel, documentId: DocumentIdModel): String? {
         if (folder.id in unreachable) {
             return null
         }
@@ -244,22 +267,22 @@ class FakeFolders : DocumentStorage, LibraryScanner, CatalogRepository, TextStor
 
     // --- Helpers
 
-    private fun filesOf(folderId: LibraryFolderId): MutableMap<RelativePath, String> {
+    private fun filesOf(folderId: LibraryFolderIdModel): MutableMap<RelativePathModel, String> {
         return files.getOrPut(key = folderId) { mutableMapOf() }
     }
 
-    private fun exists(folderId: LibraryFolderId, path: RelativePath): Boolean {
+    private fun exists(folderId: LibraryFolderIdModel, path: RelativePathModel): Boolean {
         return filesOf(folderId = folderId).containsKey(key = path) || isDirectory(folderId = folderId, path = path)
     }
 
-    private fun isDirectory(folderId: LibraryFolderId, path: RelativePath): Boolean {
+    private fun isDirectory(folderId: LibraryFolderIdModel, path: RelativePathModel): Boolean {
         val explicit = directories[folderId].orEmpty()
         return path in explicit ||
             explicit.any { it.isInside(folder = path) } ||
             filesOf(folderId = folderId).keys.any { it.isInside(folder = path) }
     }
 
-    private fun unreachableFailure(folder: LibraryFolder): StorageResult.Failure? {
+    private fun unreachableFailure(folder: LibraryFolderModel): StorageResult.Failure? {
         if (folder.id in unreachable) {
             return failure(reason = StorageFailure.FOLDER_UNREACHABLE)
         }
@@ -273,14 +296,14 @@ class FakeFolders : DocumentStorage, LibraryScanner, CatalogRepository, TextStor
     companion object {
 
         /** The facts a scanner reports for [content]: its length and SHA-256. */
-        fun factsOf(content: String): FileFacts {
+        fun factsOf(content: String): FileFactsModel {
             val bytes = content.toByteArray()
-            return FileFacts(size = bytes.size.toLong(), contentHash = hashOf(content = content))
+            return FileFactsModel(size = bytes.size.toLong(), contentHash = hashOf(content = content))
         }
 
-        fun hashOf(content: String): ContentHash {
+        fun hashOf(content: String): ContentHashModel {
             val digest = MessageDigest.getInstance("SHA-256").digest(content.toByteArray())
-            return ContentHash(value = digest.joinToString(separator = "") { "%02x".format(it) })
+            return ContentHashModel(value = digest.joinToString(separator = "") { "%02x".format(it) })
         }
     }
 }

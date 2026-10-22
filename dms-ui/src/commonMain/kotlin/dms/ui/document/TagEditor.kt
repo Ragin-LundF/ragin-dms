@@ -25,7 +25,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.ImeAction
-import dms.domain.taxonomy.TagName
+import dms.domain.taxonomy.model.TagNameModel
 import dms.ui.theme.Spacing
 import java.util.Locale
 
@@ -33,11 +33,11 @@ import java.util.Locale
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun TagEditor(
-    tags: List<TagName>,
-    allTags: List<TagName>,
+    tags: List<TagNameModel>,
+    allTags: List<TagNameModel>,
     enabled: Boolean,
     onAdd: (String) -> Unit,
-    onRemove: (TagName) -> Unit,
+    onRemove: (TagNameModel) -> Unit,
 ) {
     var text by remember { mutableStateOf(value = "") }
     val prefix = text.trim().lowercase(Locale.ROOT)

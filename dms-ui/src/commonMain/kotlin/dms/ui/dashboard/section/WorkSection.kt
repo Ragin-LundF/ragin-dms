@@ -10,7 +10,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import dms.ui.dashboard.ActivityPanel
 import dms.ui.dashboard.FolderPanel
-import dms.ui.dashboard.model.DashboardUiState
+import dms.ui.dashboard.model.DashboardUiStateModel
 import dms.ui.dashboard.model.TaskGroup
 import dms.ui.dashboard.task.TaskList
 import dms.ui.preview.ThumbnailLoader
@@ -19,7 +19,7 @@ import dms.ui.theme.Spacing
 /** What needs the user: the open tasks, next to the state of the folders and what happened lately. */
 @Composable
 fun WorkSection(
-    state: DashboardUiState,
+    state: DashboardUiStateModel,
     busyReason: String?,
     thumbnails: ThumbnailLoader,
     onFilter: (TaskGroup?) -> Unit,
@@ -35,7 +35,6 @@ fun WorkSection(
             busyReason = busyReason,
             thumbnails = thumbnails,
             onFilter = onFilter,
-            full = false,
             onFullView = onFullView,
             modifier = Modifier.weight(weight = 2f),
         )

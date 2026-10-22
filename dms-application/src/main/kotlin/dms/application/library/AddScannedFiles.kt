@@ -3,18 +3,18 @@ package dms.application.library
 import dms.application.common.ActivityRecorder
 import dms.application.common.DocumentDates
 import dms.application.common.OperationOutcome
-import dms.application.library.model.ScannedFile
+import dms.application.library.model.ScannedFileModel
 import dms.application.port.state.model.ActivityKind
 import dms.application.port.system.Clock
 import dms.application.port.system.IdGenerator
-import dms.domain.catalog.Catalog
 import dms.domain.catalog.CatalogRejection
 import dms.domain.catalog.CatalogUpdate
-import dms.domain.document.ContentHash
-import dms.domain.document.Document
-import dms.domain.document.DocumentId
-import dms.domain.document.DocumentMetadata
-import dms.domain.library.RelativePath
+import dms.domain.catalog.model.CatalogModel
+import dms.domain.document.model.ContentHashModel
+import dms.domain.document.model.DocumentIdModel
+import dms.domain.document.model.DocumentMetadataModel
+import dms.domain.document.model.DocumentModel
+import dms.domain.library.model.RelativePathModel
 
 /**
  * Catalogs files of the primary folder while a scan reads them, many in one catalog write. The files
@@ -31,13 +31,13 @@ class AddScannedFiles(
 ) {
 
     /** Returns how many of [files] were added. */
-    suspend operator fun invoke(files: List<ScannedFile>): Int {
+    suspend operator fun invoke(files: List<ScannedFileModel>): Int {
         val primary = store.current()?.folders?.primary
         if (files.isEmpty() || primary == null) {
             return 0
         }
         val metadata = files.associate { it.path to dates.metadataFor(folder = primary, path = it.path) }
-        var added = emptyList<Document>()
+        var added = emptyList<DocumentModel>()
         val outcome = store.commit { catalog ->
             var current = catalog
             added = newDocuments(catalog = catalog, files = files, metadata = metadata).filter { document ->
@@ -62,23 +62,23 @@ class AddScannedFiles(
     }
 
     private fun newDocuments(
-        catalog: Catalog,
-        files: List<ScannedFile>,
-        metadata: Map<RelativePath, DocumentMetadata>,
-    ): List<Document> {
+        catalog: CatalogModel,
+        files: List<ScannedFileModel>,
+        metadata: Map<RelativePathModel, DocumentMetadataModel>,
+    ): List<DocumentModel> {
         val knownPaths = catalog.documents.values.map { it.path }.toMutableSet()
-        val knownHashes: MutableSet<ContentHash> = catalog.documents.values.map { it.contentHash }.toMutableSet()
+        val knownHashes: MutableSet<ContentHashModel> = catalog.documents.values.map { it.contentHash }.toMutableSet()
         val now = clock.now()
         return files
             .filter { knownPaths.add(element = it.path) && knownHashes.add(element = it.contentHash) }
             .map { file ->
-                Document(
-                    id = DocumentId(value = ids.newId()),
+                DocumentModel(
+                    id = DocumentIdModel(value = ids.newId()),
                     path = file.path,
                     contentHash = file.contentHash,
                     size = file.size,
                     addedAt = now,
-                    metadata = metadata[file.path] ?: DocumentMetadata.EMPTY,
+                    metadata = metadata[file.path] ?: DocumentMetadataModel.EMPTY,
                 )
             }
     }

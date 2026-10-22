@@ -4,7 +4,7 @@ import dms.application.TestLibrary
 import dms.application.catalog.model.CatalogEdit
 import dms.application.common.OperationOutcome
 import dms.domain.catalog.CatalogRejection
-import dms.domain.taxonomy.TagName
+import dms.domain.taxonomy.model.TagNameModel
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -23,10 +23,10 @@ class EditCatalogTest {
             val category = library.catalog.categories.values.single()
             library.editCatalog(edit = CatalogEdit.AssignCategory(documentId = document.id, categoryId = category.id))
             library.editCatalog(
-                edit = CatalogEdit.AddTags(documentId = document.id, tags = setOf(TagName.of(raw = "Tax"))),
+                edit = CatalogEdit.AddTags(documentId = document.id, tags = setOf(TagNameModel.of(raw = "Tax"))),
             )
             val outcome = library.editCatalog(
-                edit = CatalogEdit.AddTags(documentId = document.id, tags = setOf(TagName.of(raw = "tax"))),
+                edit = CatalogEdit.AddTags(documentId = document.id, tags = setOf(TagNameModel.of(raw = "tax"))),
             )
 
             val catalog = assertIs<OperationOutcome.Done>(value = outcome).catalog

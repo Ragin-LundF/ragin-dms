@@ -1,7 +1,7 @@
 package dms.application.library
 
 import dms.application.TestLibrary
-import dms.domain.library.RelativePath
+import dms.domain.library.model.RelativePathModel
 import kotlinx.coroutines.test.runTest
 import java.time.LocalDate
 import kotlin.test.Test
@@ -18,7 +18,7 @@ class DetectDocumentDatesTest {
             library.folders.put(folder = library.primary, path = "15.03.2024 Sample.pdf", content = "alpha")
             library.folders.put(folder = library.primary, path = "created.pdf", content = "beta")
             library.folders.put(folder = library.primary, path = "unknown.pdf", content = "gamma")
-            library.folders.creationDays[RelativePath.of(raw = "created.pdf")] = LocalDate.parse("2019-06-01")
+            library.folders.creationDays[RelativePathModel.of(raw = "created.pdf")] = LocalDate.parse("2019-06-01")
 
             library.scanLibrary(addNewFiles = true)
 
@@ -38,7 +38,7 @@ class DetectDocumentDatesTest {
             library.folders.put(folder = library.primary, path = "2021-02-03 Sample.pdf", content = "alpha")
             library.folders.put(folder = library.primary, path = "other.pdf", content = "beta")
             library.scanLibrary(addNewFiles = true)
-            library.folders.creationDays[RelativePath.of(raw = "other.pdf")] = LocalDate.parse("2018-01-01")
+            library.folders.creationDays[RelativePathModel.of(raw = "other.pdf")] = LocalDate.parse("2018-01-01")
 
             val dated = library.detectDocumentDates()
 
@@ -51,6 +51,6 @@ class DetectDocumentDatesTest {
     }
 
     private fun dateOf(library: TestLibrary, path: String): LocalDate? {
-        return library.catalog.findByPath(path = RelativePath.of(raw = path))?.metadata?.documentDate
+        return library.catalog.findByPath(path = RelativePathModel.of(raw = path))?.metadata?.documentDate
     }
 }

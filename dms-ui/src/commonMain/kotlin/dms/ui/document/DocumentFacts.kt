@@ -13,7 +13,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import dms.domain.document.Document
+import dms.domain.document.model.DocumentModel
 import dms.ui.components.FileSizes
 import dms.ui.components.surface.KindStyles
 import dms.ui.dashboard.ActivityTexts
@@ -21,7 +21,7 @@ import dms.ui.theme.Spacing
 
 /** Where the document lives, its type, its size and when it was added. */
 @Composable
-fun DocumentFacts(document: Document) {
+fun DocumentFacts(document: DocumentModel) {
     val facts = listOf(
         "Folder" to (document.path.parent?.value?.ifEmpty { "Top level" } ?: "Top level"),
         "Type" to KindStyles.label(kind = document.kind),

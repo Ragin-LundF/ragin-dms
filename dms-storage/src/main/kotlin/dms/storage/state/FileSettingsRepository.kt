@@ -1,13 +1,13 @@
 package dms.storage.state
 
 import dms.application.port.state.SettingsRepository
-import dms.application.port.state.model.AiSettings
-import dms.application.port.state.model.Preferences
-import dms.domain.library.FolderLocation
+import dms.application.port.state.model.AiSettingsModel
+import dms.application.port.state.model.PreferencesModel
 import dms.domain.library.FolderRole
-import dms.domain.library.LibraryFolder
-import dms.domain.library.LibraryFolderId
-import dms.domain.library.LibraryFolders
+import dms.domain.library.model.FolderLocationModel
+import dms.domain.library.model.LibraryFolderIdModel
+import dms.domain.library.model.LibraryFolderModel
+import dms.domain.library.model.LibraryFoldersModel
 import dms.storage.state.dto.AiSettingsDto
 import dms.storage.state.dto.LibraryFolderDto
 import dms.storage.state.dto.SettingsDto
@@ -24,37 +24,38 @@ class FileSettingsRepository(path: Path) : SettingsRepository {
 
     private val file = YamlFile(path = path, type = SettingsDto::class.java)
 
-    override suspend fun loadLibraryFolders(): LibraryFolders? {
+    override suspend fun loadLibraryFolders(): LibraryFoldersModel? {
         return withContext(context = Dispatchers.IO) {
             val folders = file.read()?.folders.orEmpty()
-            if (folders.isEmpty()) null else LibraryFolders(folders = folders.map { toDomain(dto = it) })
+            if (folders.isEmpty()) null else LibraryFoldersModel(folders = folders.map { toDomain(dto = it) })
         }
     }
 
-    override suspend fun saveLibraryFolders(folders: LibraryFolders) {
+    override suspend fun saveLibraryFolders(folders: LibraryFoldersModel) {
         withContext(context = Dispatchers.IO) {
             val current = file.read() ?: SettingsDto()
             file.write(value = current.copy(folders = folders.folders.map { toDto(folder = it) }))
         }
     }
 
-    override suspend fun loadPreferences(): Preferences {
+    override suspend fun loadPreferences(): PreferencesModel {
         return withContext(context = Dispatchers.IO) {
             val settings = file.read() ?: SettingsDto()
-            Preferences(
+            PreferencesModel(
                 addNewFilesWhileScanning = settings.addNewFilesWhileScanning,
-                ai = AiSettings(
+                ai = AiSettingsModel(
                     baseUrl = settings.ai.baseUrl,
                     model = settings.ai.model,
                     preferVisionForPdfs = settings.ai.preferVisionForPdfs,
                     timeoutSeconds = settings.ai.timeoutSeconds,
                     acceptSuggestedFileNames = settings.ai.acceptSuggestedFileNames,
+                    embeddingModel = settings.ai.embeddingModel,
                 ),
             )
         }
     }
 
-    override suspend fun savePreferences(preferences: Preferences) {
+    override suspend fun savePreferences(preferences: PreferencesModel) {
         withContext(context = Dispatchers.IO) {
             val current = file.read() ?: SettingsDto()
             val ai = preferences.ai
@@ -66,13 +67,14 @@ class FileSettingsRepository(path: Path) : SettingsRepository {
                     preferVisionForPdfs = ai.preferVisionForPdfs,
                     timeoutSeconds = ai.timeoutSeconds,
                     acceptSuggestedFileNames = ai.acceptSuggestedFileNames,
+                    embeddingModel = ai.embeddingModel,
                 ),
             )
             file.write(value = updated)
         }
     }
 
-    private fun toDto(folder: LibraryFolder): LibraryFolderDto {
+    private fun toDto(folder: LibraryFolderModel): LibraryFolderDto {
         return LibraryFolderDto(
             id = folder.id.value,
             displayName = folder.displayName,
@@ -81,11 +83,11 @@ class FileSettingsRepository(path: Path) : SettingsRepository {
         )
     }
 
-    private fun toDomain(dto: LibraryFolderDto): LibraryFolder {
-        return LibraryFolder(
-            id = LibraryFolderId(value = dto.id),
+    private fun toDomain(dto: LibraryFolderDto): LibraryFolderModel {
+        return LibraryFolderModel(
+            id = LibraryFolderIdModel(value = dto.id),
             displayName = dto.displayName,
-            location = FolderLocation(value = dto.location),
+            location = FolderLocationModel(value = dto.location),
             role = FolderRole.valueOf(dto.role),
         )
     }

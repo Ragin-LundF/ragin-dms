@@ -1,7 +1,7 @@
 package dms.ui.assistant
 
 import dms.application.port.assistant.model.ChatRole
-import dms.domain.document.Document
+import dms.domain.document.model.DocumentModel
 import dms.ui.dashboard.DashboardViewModel
 import dms.ui.dashboard.model.TaskGroup
 import dms.ui.document.InspectorViewModel
@@ -110,11 +110,11 @@ class AssistantUiTest {
         }
     }
 
-    private suspend fun libraryWithOneImage(app: TestApp): Document {
+    private suspend fun libraryWithOneImage(app: TestApp): DocumentModel {
         return libraryWithImages(app = app, names = listOf("scan-7.png")).single()
     }
 
-    private suspend fun libraryWithImages(app: TestApp, names: List<String>): List<Document> {
+    private suspend fun libraryWithImages(app: TestApp, names: List<String>): List<DocumentModel> {
         app.configure()
         val library = app.libraryViewModel()
         app.platform.nextFiles = names.map { SampleImages.write(file = app.root.resolve("outside/$it")).toString() }

@@ -13,6 +13,8 @@ object YamlMappers {
         .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
         .disable(YAMLWriteFeature.WRITE_DOC_START_MARKER)
         .enable(YAMLWriteFeature.MINIMIZE_QUOTES)
+        // Multi-line text such as a document's note is written as a readable block scalar.
+        .enable(YAMLWriteFeature.LITERAL_BLOCK_STYLE)
         .enable(YAMLWriteFeature.ALWAYS_QUOTE_NUMBERS_AS_STRINGS)
         .build()
 }

@@ -5,13 +5,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import dms.ui.components.layout.SearchField
-import dms.ui.library.search.model.ContentSearchState
+import dms.ui.library.search.model.ContentSearchStateModel
 
 /** The library's search field, with the switch that makes it search the documents' text too. */
 @Composable
 fun LibrarySearch(
     query: String,
-    search: ContentSearchState,
+    search: ContentSearchStateModel,
     onSearch: (String) -> Unit,
     onContentSearch: (Boolean) -> Unit,
 ) {

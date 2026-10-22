@@ -12,7 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import dms.ui.components.ReasonTooltip
 import dms.ui.components.StyledButton
-import dms.ui.dashboard.model.DuplicateCopy
+import dms.ui.dashboard.model.DuplicateCopyModel
 import dms.ui.theme.Spacing
 
 /**
@@ -21,7 +21,7 @@ import dms.ui.theme.Spacing
  * stays possible while operations run. Shows nothing when there are no copies.
  */
 @Composable
-fun DuplicateCopies(copies: List<DuplicateCopy>, busyReason: String?, modifier: Modifier = Modifier) {
+fun DuplicateCopies(copies: List<DuplicateCopyModel>, busyReason: String?, modifier: Modifier = Modifier) {
     if (copies.isEmpty()) {
         return
     }

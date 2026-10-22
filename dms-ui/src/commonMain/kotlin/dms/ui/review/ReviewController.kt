@@ -1,13 +1,13 @@
 package dms.ui.review
 
 import dms.application.common.OperationOutcome
-import dms.domain.classification.ClassificationSuggestion
-import dms.ui.review.model.ReviewDraft
-import dms.ui.review.model.ReviewState
+import dms.domain.classification.model.ClassificationSuggestionModel
+import dms.ui.review.model.ReviewDraftModel
+import dms.ui.review.model.ReviewStateModel
 import dms.ui.service.AppServices
 import dms.ui.session.LibrarySession
 import dms.ui.session.OutcomeMessages
-import dms.ui.session.model.UiMessage
+import dms.ui.session.model.UiMessageModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -22,18 +22,18 @@ class ReviewController(
     private val session: LibrarySession,
 ) {
 
-    private val mutableState = MutableStateFlow<ReviewState?>(value = null)
+    private val mutableState = MutableStateFlow<ReviewStateModel?>(value = null)
 
-    val state: StateFlow<ReviewState?> = mutableState.asStateFlow()
+    val state: StateFlow<ReviewStateModel?> = mutableState.asStateFlow()
 
-    fun open(suggestion: ClassificationSuggestion) {
+    fun open(suggestion: ClassificationSuggestionModel) {
         val catalog = services.library.catalog.value
         val document = catalog?.documents?.get(suggestion.documentId)
         if (catalog == null || document == null) {
-            session.report(message = UiMessage(text = "The document of this suggestion is gone", isError = true))
+            session.report(message = UiMessageModel(text = "The document of this suggestion is gone", isError = true))
             return
         }
-        mutableState.value = ReviewState(
+        mutableState.value = ReviewStateModel(
             suggestion = suggestion,
             documentName = document.path.value,
             current = ReviewDrafts.currentOf(document = document, catalog = catalog),
@@ -43,10 +43,12 @@ class ReviewController(
                 acceptFileName = session.state.value.preferences.ai.acceptSuggestedFileNames,
             ),
             categoryPaths = ReviewDrafts.categoryPathsOf(catalog = catalog),
+            folderPaths = ReviewDrafts.folderPathsOf(catalog = catalog),
+            fieldLabels = catalog.settings.fieldDefinitions.associate { it.key to it.label },
         )
     }
 
-    fun update(draft: ReviewDraft) {
+    fun update(draft: ReviewDraftModel) {
         mutableState.update { it?.copy(draft = draft, problem = null) }
     }
 
@@ -64,6 +66,11 @@ class ReviewController(
             session.report(message = OutcomeMessages.of(outcome = outcome, done = "Filed ${review.documentName}"))
             if (outcome !is OperationOutcome.Done) {
                 session.log.error(text = "Approval refused for ${review.documentName}")
+            } else if (outcome.catalog.settings.layout.embedMetadata) {
+                val embedded = services.pdf.embedPdfMetadata(documentId = documentId)
+                if (embedded !is OperationOutcome.Done) {
+                    session.report(message = OutcomeMessages.of(outcome = embedded, done = ""))
+                }
             }
         }
         if (started) {

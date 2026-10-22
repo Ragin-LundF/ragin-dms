@@ -9,7 +9,7 @@ This module handles the user's real documents. A bug here loses data that may ex
 | Package | Purpose |
 |---|---|
 | `dms.storage` | `StorageAdapters`: builds every adapter for one app data directory. |
-| `dms.storage.fs` | `FileSystemDocumentStorage` (file operations in one folder, name collisions), `PathResolver` (the one `RelativePath` ↔ `Path` mapping, NFC lookup), `AtomicFiles`, `ContentHasher`, `StorageIo` (I/O on `Dispatchers.IO`, exceptions to `StorageResult.Failure`). |
+| `dms.storage.fs` | `FileSystemDocumentStorage` (file operations in one folder, name collisions), `PathResolver` (the one `RelativePathModel` ↔ `Path` mapping, NFC lookup), `AtomicFiles`, `ContentHasher`, `StorageIo` (I/O on `Dispatchers.IO`, exceptions to `StorageResult.Failure`). |
 | `dms.storage.catalog` | `FileCatalogRepository`, `CatalogMapper`, `CatalogMigrations`, `CatalogFiles` (file name and conflict copies). DTOs in `dms.storage.catalog.dto`. |
 | `dms.storage.scan` | `FileSystemLibraryScanner`, `ScanCache` (incremental hashing, kept in the app data directory), `IgnoredEntries`, `CloudPlaceholders`. DTOs in `dms.storage.scan.dto`, models in `dms.storage.scan.model`. |
 | `dms.storage.text` | `FileTextStore` for `.dms-text/<documentId>.txt`. |
@@ -32,7 +32,7 @@ Tests use temporary folders, synthetic file names and a recording `SystemTrash`,
 
 The app runs on macOS, Windows and Linux, and one library is often spread over file systems with different rules (APFS, NTFS, SMB network shares, ext4).
 
-- Convert between `RelativePath` (NFC, `/`) and `java.nio.file.Path` in **one** mapper. When resolving a `RelativePath` in a folder, find the existing entry by NFC comparison, because macOS returns NFD names.
+- Convert between `RelativePathModel` (NFC, `/`) and `java.nio.file.Path` in **one** mapper. When resolving a `RelativePathModel` in a folder, find the existing entry by NFC comparison, because macOS returns NFD names.
 - Treat names case-insensitively when checking for collisions; never create two entries that differ only by case.
 - Never build paths by string concatenation; use `Path.resolve`.
 
@@ -55,10 +55,10 @@ One folder is the **primary**, any number are **sync folders**. All are equal in
 - Order (enforced by `Replicator`): primary first, then each sync folder. If the primary fails, abort without touching the others. If a sync folder fails or is offline, the operation goes into the **failed-operation journal** (local app data directory, never inside a library folder) and the next folder continues.
 - Every failure is a `StorageResult.Failure` with a `StorageFailure` reason, never an exception: an offline folder is `FOLDER_UNREACHABLE`, a missing source `NOT_FOUND`, an occupied target `ALREADY_EXISTS`. `RetryFailedOperations` relies on these reasons to drop operations that no longer apply.
 - `copyFile` with `replaceExisting` moves the replaced file to the system trash before writing.
-- All catalog copies carry the same `CatalogRevision` after a successful write. On load, the higher revision wins; equal revisions with different content, and conflict copies, are merged by `CatalogMerger` per document id and reported.
+- All catalog copies carry the same `CatalogRevisionModel` after a successful write. On load, the higher revision wins; equal revisions with different content, and conflict copies, are merged by `CatalogMerger` per document id and reported.
 - **Sync to all destinations**: copy what is missing or different in sync folders from the primary, apply catalog-known renames and moves. Files that exist only in a sync folder are reported, never removed.
 - **Merge all folders**: scan every folder, copy each file missing anywhere into the folders that lack it. Same relative path with different content is a `ContentConflict` — never pick a winner automatically.
-- Folders are compared by the use cases (`SyncFromPrimary`, `MergeAllFolders`, `FileComparison`) on the `FolderSnapshot`s the scanner returns: by NFC relative path, then content hash, then size when a hash is missing.
+- Folders are compared by the use cases (`SyncFromPrimary`, `MergeAllFolders`, `FileComparison`) on the `FolderSnapshotModel`s the scanner returns: by NFC relative path, then content hash, then size when a hash is missing.
 
 ## Scanning
 

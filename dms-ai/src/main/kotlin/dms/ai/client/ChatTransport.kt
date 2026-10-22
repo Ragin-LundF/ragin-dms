@@ -5,7 +5,7 @@ import dms.ai.client.dto.ModelsResponseDto
 import dms.ai.client.model.ChatReply
 import dms.application.port.ai.model.ClassificationFailure
 import dms.application.port.ai.model.ModelList
-import dms.application.port.state.model.AiSettings
+import dms.application.port.state.model.AiSettingsModel
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.plugins.timeout
@@ -29,10 +29,10 @@ import java.net.SocketTimeoutException
  */
 class ChatTransport(
     private val http: HttpClient,
-    private val settings: suspend () -> AiSettings,
+    private val settings: suspend () -> AiSettingsModel,
 ) {
 
-    suspend fun models(settings: AiSettings): ModelList {
+    suspend fun models(settings: AiSettingsModel): ModelList {
         return try {
             val response = http.get(urlString = "${baseOf(settings = settings)}/models") {
                 timeout { requestTimeoutMillis = MODELS_TIMEOUT_MILLIS }
@@ -117,7 +117,7 @@ class ChatTransport(
         return if (timedOut) ClassificationFailure.TIMEOUT else ClassificationFailure.PROVIDER_UNAVAILABLE
     }
 
-    private fun baseOf(settings: AiSettings): String {
+    private fun baseOf(settings: AiSettingsModel): String {
         return settings.baseUrl.trim().trimEnd('/')
     }
 

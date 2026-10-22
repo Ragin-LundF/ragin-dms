@@ -2,9 +2,9 @@ package dms.storage.state
 
 import dms.application.port.state.TaskStore
 import dms.domain.catalog.CatalogMergeConflict
-import dms.domain.classification.ClassificationSuggestion
-import dms.domain.document.DocumentId
-import dms.domain.task.TaskKey
+import dms.domain.classification.model.ClassificationSuggestionModel
+import dms.domain.document.model.DocumentIdModel
+import dms.domain.task.model.TaskKeyModel
 import dms.storage.state.dto.task.TasksDto
 import dms.storage.yaml.YamlFile
 import kotlinx.coroutines.Dispatchers
@@ -23,18 +23,18 @@ class FileTaskStore(path: Path) : TaskStore {
     private val mutex = Mutex()
     private var mergeConflicts: List<CatalogMergeConflict> = emptyList()
 
-    override suspend fun saveSuggestion(suggestion: ClassificationSuggestion) {
+    override suspend fun saveSuggestion(suggestion: ClassificationSuggestionModel) {
         update { tasks ->
             val others = tasks.suggestions.filterNot { it.documentId == suggestion.documentId.value }
             tasks.copy(suggestions = others + SuggestionMapper.toDto(suggestion = suggestion))
         }
     }
 
-    override suspend fun suggestions(): List<ClassificationSuggestion> {
+    override suspend fun suggestions(): List<ClassificationSuggestionModel> {
         return mutex.withLock { read() }.suggestions.map { SuggestionMapper.toDomain(dto = it) }
     }
 
-    override suspend fun removeSuggestion(documentId: DocumentId) {
+    override suspend fun removeSuggestion(documentId: DocumentIdModel) {
         update { tasks -> tasks.copy(suggestions = tasks.suggestions.filterNot { it.documentId == documentId.value }) }
     }
 
@@ -46,12 +46,12 @@ class FileTaskStore(path: Path) : TaskStore {
         return mutex.withLock { mergeConflicts }
     }
 
-    override suspend fun dismiss(key: TaskKey) {
+    override suspend fun dismiss(key: TaskKeyModel) {
         update { tasks -> tasks.copy(dismissed = (tasks.dismissed + key.value).distinct().sorted()) }
     }
 
-    override suspend fun dismissedKeys(): Set<TaskKey> {
-        return mutex.withLock { read() }.dismissed.map { TaskKey(value = it) }.toSet()
+    override suspend fun dismissedKeys(): Set<TaskKeyModel> {
+        return mutex.withLock { read() }.dismissed.map { TaskKeyModel(value = it) }.toSet()
     }
 
     private suspend fun update(change: (TasksDto) -> TasksDto) {

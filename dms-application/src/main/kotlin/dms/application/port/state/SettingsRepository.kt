@@ -1,18 +1,18 @@
 package dms.application.port.state
 
-import dms.application.port.state.model.Preferences
-import dms.domain.library.LibraryFolders
+import dms.application.port.state.model.PreferencesModel
+import dms.domain.library.model.LibraryFoldersModel
 
 /** Settings of this device. Folder locations differ per device and are never stored in the catalog. */
 interface SettingsRepository {
 
     /** The configured library folders, or `null` before the first configuration. */
-    suspend fun loadLibraryFolders(): LibraryFolders?
+    suspend fun loadLibraryFolders(): LibraryFoldersModel?
 
-    suspend fun saveLibraryFolders(folders: LibraryFolders)
+    suspend fun saveLibraryFolders(folders: LibraryFoldersModel)
 
     /** The preferences of this device, with defaults for everything never set. */
-    suspend fun loadPreferences(): Preferences
+    suspend fun loadPreferences(): PreferencesModel
 
-    suspend fun savePreferences(preferences: Preferences)
+    suspend fun savePreferences(preferences: PreferencesModel)
 }

@@ -11,7 +11,7 @@ import dms.application.port.storage.model.StorageResult
 import dms.application.sync.Replicator
 import dms.application.sync.model.Replication
 import dms.domain.library.FileNamePolicy
-import dms.domain.library.RelativePath
+import dms.domain.library.model.RelativePathModel
 
 /** Creates an empty folder in every library folder. The catalog does not change. */
 class CreateFolder(
@@ -22,7 +22,7 @@ class CreateFolder(
     private val activity: ActivityRecorder,
 ) {
 
-    suspend operator fun invoke(path: RelativePath): OperationOutcome {
+    suspend operator fun invoke(path: RelativePathModel): OperationOutcome {
         val library = store.current() ?: return OperationOutcome.LibraryNotOpen
         val violation = FileNamePolicy.check(name = path.fileName)
         if (violation != null) {

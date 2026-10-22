@@ -1,5 +1,9 @@
 package dms.domain.library
 
+import dms.domain.library.model.FolderLocationModel
+import dms.domain.library.model.LibraryFolderIdModel
+import dms.domain.library.model.LibraryFolderModel
+import dms.domain.library.model.LibraryFoldersModel
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -11,7 +15,7 @@ class LibraryFoldersTest {
     private val main = folder(id = "main", role = FolderRole.PRIMARY)
     private val backup = folder(id = "backup", role = FolderRole.SYNC)
     private val share = folder(id = "share", role = FolderRole.SYNC)
-    private val folders = LibraryFolders(folders = listOf(main, backup))
+    private val folders = LibraryFoldersModel(folders = listOf(main, backup))
 
     @Test
     fun `primary and sync folders are separated`() {
@@ -21,9 +25,9 @@ class LibraryFoldersTest {
 
     @Test
     fun `exactly one primary is required`() {
-        assertFailsWith<IllegalArgumentException> { LibraryFolders(folders = listOf(backup)) }
+        assertFailsWith<IllegalArgumentException> { LibraryFoldersModel(folders = listOf(backup)) }
         assertFailsWith<IllegalArgumentException> {
-            LibraryFolders(folders = listOf(main, main.copy(id = LibraryFolderId(value = "second"))))
+            LibraryFoldersModel(folders = listOf(main, main.copy(id = LibraryFolderIdModel(value = "second"))))
         }
     }
 
@@ -53,11 +57,11 @@ class LibraryFoldersTest {
         assertEquals(expected = listOf(main.id), actual = switched.syncFolders.map { it.id })
     }
 
-    private fun folder(id: String, role: FolderRole): LibraryFolder {
-        return LibraryFolder(
-            id = LibraryFolderId(value = id),
+    private fun folder(id: String, role: FolderRole): LibraryFolderModel {
+        return LibraryFolderModel(
+            id = LibraryFolderIdModel(value = id),
             displayName = id,
-            location = FolderLocation(value = "/tmp/$id"),
+            location = FolderLocationModel(value = "/tmp/$id"),
             role = role,
         )
     }

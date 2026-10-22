@@ -1,6 +1,6 @@
 package dms.domain.document
 
-import dms.domain.library.RelativePath
+import dms.domain.library.model.RelativePathModel
 import java.util.Locale
 
 /**
@@ -26,7 +26,7 @@ enum class DocumentKind(val readableByAi: Boolean) {
             "xlsx" to OFFICE,
         )
 
-        fun of(path: RelativePath): DocumentKind {
+        fun of(path: RelativePathModel): DocumentKind {
             val extension = path.fileName.substringAfterLast(delimiter = '.', missingDelimiterValue = "")
             return BY_EXTENSION[extension.lowercase(Locale.ROOT)] ?: OTHER
         }

@@ -14,12 +14,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import dms.application.port.assistant.model.ChatRole
-import dms.application.port.assistant.model.ChatTurn
+import dms.application.port.assistant.model.ChatTurnModel
 import dms.ui.theme.Spacing
 
 /** One message: the user's on the right, the AI's on the left; both can be selected and copied. */
 @Composable
-fun ChatBubble(turn: ChatTurn) {
+fun ChatBubble(turn: ChatTurnModel) {
     val mine = turn.role == ChatRole.USER
     val colors = MaterialTheme.colorScheme
     Box(

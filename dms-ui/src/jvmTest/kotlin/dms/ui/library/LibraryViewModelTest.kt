@@ -1,14 +1,14 @@
 package dms.ui.library
 
-import dms.domain.library.RelativePath
-import dms.domain.taxonomy.TagName
+import dms.domain.library.model.RelativePathModel
+import dms.domain.taxonomy.model.TagNameModel
 import dms.ui.document.InspectorViewModel
-import dms.ui.document.model.MetadataDraft
+import dms.ui.document.model.MetadataDraftModel
 import dms.ui.library.drag.model.DragItem
 import dms.ui.library.drag.model.DropTarget
 import dms.ui.library.model.LibrarySelection
-import dms.ui.library.model.LibraryUiState
-import dms.ui.library.model.YearFilter
+import dms.ui.library.model.LibraryUiStateModel
+import dms.ui.library.model.YearFilterModel
 import dms.ui.library.sidebar.model.SidebarGroup
 import dms.ui.library.sidebar.model.ToggleTarget
 import dms.ui.support.TestApp
@@ -68,9 +68,9 @@ class LibraryViewModelTest {
             inspector.addTag(document = documentOf(state = library.state.value), raw = " Tax ")
             app.idle()
             val tagged = library.state.first { it.tags.isNotEmpty() }
-            assertEquals(expected = setOf(TagName.of(raw = "Tax")), actual = documentOf(state = tagged).tags)
+            assertEquals(expected = setOf(TagNameModel.of(raw = "Tax")), actual = documentOf(state = tagged).tags)
 
-            inspector.removeTag(document = documentOf(state = tagged), tag = TagName.of(raw = "tax"))
+            inspector.removeTag(document = documentOf(state = tagged), tag = TagNameModel.of(raw = "tax"))
             app.idle()
             assertEquals(expected = emptySet(), actual = documentOf(state = library.state.value).tags)
         }
@@ -107,14 +107,14 @@ class LibraryViewModelTest {
 
             inspector.saveMetadata(
                 document = document,
-                draft = MetadataDraft(title = "Sample", documentDate = "2024-02-30"),
+                draft = MetadataDraftModel(title = "Sample", documentDate = "2024-02-30"),
             )
             app.idle()
             assertNull(actual = documentOf(state = library.state.value).metadata.title)
 
             inspector.saveMetadata(
                 document = document,
-                draft = MetadataDraft(title = "Sample", documentDate = "2024-02-01"),
+                draft = MetadataDraftModel(title = "Sample", documentDate = "2024-02-01"),
             )
             app.idle()
             val saved = documentOf(state = library.state.first { documentOf(state = it).metadata.title != null })
@@ -142,14 +142,14 @@ class LibraryViewModelTest {
             val inspector = InspectorViewModel(services = app.services, session = app.session, platform = app.platform)
             inspector.saveMetadata(
                 document = documentOf(state = library.state.value),
-                draft = MetadataDraft(title = "Sample", documentDate = "2019-05-01"),
+                draft = MetadataDraftModel(title = "Sample", documentDate = "2019-05-01"),
             )
             app.idle()
             library.state.first { it.years == listOf(2019) }
 
-            library.filterYear(year = YearFilter(year = 2020))
+            library.filterYear(year = YearFilterModel(year = 2020))
             val none = library.state.value.documents.size
-            library.filterYear(year = YearFilter(year = 2020, andEarlier = true))
+            library.filterYear(year = YearFilterModel(year = 2020, andEarlier = true))
 
             assertEquals(expected = 0, actual = none)
             assertEquals(expected = 1, actual = library.state.value.documents.size)
@@ -178,7 +178,7 @@ class LibraryViewModelTest {
 
             library.drop(
                 item = DragItem.DraggedDocument(document = documentOf(state = library.state.value)),
-                target = DropTarget.Folder(path = RelativePath.ROOT),
+                target = DropTarget.Folder(path = RelativePathModel.ROOT),
             )
             app.idle()
 
@@ -204,18 +204,38 @@ class LibraryViewModelTest {
             app.idle()
             library.drop(
                 item = DragItem.DraggedDocument(document = documentOf(state = library.state.value)),
-                target = DropTarget.Tag(tag = TagName.of(raw = "tax")),
+                target = DropTarget.Tag(tag = TagNameModel.of(raw = "tax")),
             )
             app.idle()
 
             val filed = documentOf(state = library.state.first { documentOf(state = it).tags.isNotEmpty() })
             assertEquals(expected = category.id, actual = filed.categoryId)
-            assertEquals(expected = setOf(TagName.of(raw = "tax")), actual = filed.tags)
+            assertEquals(expected = setOf(TagNameModel.of(raw = "tax")), actual = filed.tags)
 
             library.drop(item = DragItem.DraggedDocument(document = filed), target = DropTarget.Uncategorized)
             app.idle()
             val unfiled = library.state.first { documentOf(state = it).categoryId == null }
             assertEquals(expected = 1, actual = unfiled.uncategorizedCount)
+        }
+    }
+
+    @Test
+    fun `adding a subcategory from the menu puts it below that category, whatever is selected`() {
+        UiTest.run { app ->
+            val library = libraryWithOneFile(app = app)
+            library.newCategory()
+            library.dialogs.submit(text = "Invoices")
+            app.idle()
+            val invoices = library.state.first { it.categories.isNotEmpty() }.categories.single().category
+            library.select(selection = LibrarySelection.Recent)
+
+            library.newSubcategory(parent = invoices)
+            library.dialogs.submit(text = "Energy")
+            app.idle()
+
+            val catalog = app.services.library.catalog.first { it?.categories?.size == 2 }
+            val energy = catalog?.categories?.values?.single { it.name == "Energy" }
+            assertEquals(expected = invoices.id, actual = energy?.parentId)
         }
     }
 
@@ -264,7 +284,7 @@ class LibraryViewModelTest {
         return library
     }
 
-    private fun documentOf(state: LibraryUiState): dms.domain.document.Document {
+    private fun documentOf(state: LibraryUiStateModel): dms.domain.document.model.DocumentModel {
         return checkNotNull(value = state.inspected)
     }
 }

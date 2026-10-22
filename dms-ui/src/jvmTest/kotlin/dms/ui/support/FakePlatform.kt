@@ -2,8 +2,8 @@ package dms.ui.support
 
 import androidx.compose.ui.draganddrop.DragAndDropEvent
 import androidx.compose.ui.graphics.ImageBitmap
-import dms.domain.library.FolderLocation
-import dms.domain.library.RelativePath
+import dms.domain.library.model.FolderLocationModel
+import dms.domain.library.model.RelativePathModel
 import dms.ui.PlatformActions
 import java.nio.file.Path
 
@@ -25,7 +25,7 @@ class FakePlatform : PlatformActions {
         return nextFiles
     }
 
-    override fun locate(folder: FolderLocation, path: RelativePath): String {
+    override fun locate(folder: FolderLocationModel, path: RelativePathModel): String {
         return Path.of(folder.value).resolve(path.value).toString()
     }
 

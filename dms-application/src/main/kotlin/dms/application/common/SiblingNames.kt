@@ -1,10 +1,11 @@
 package dms.application.common
 
+import dms.application.common.model.LibrarySnapshotModel
 import dms.application.port.storage.DocumentStorage
 import dms.application.port.storage.model.StorageFailure
 import dms.application.port.storage.model.StorageResult
 import dms.domain.library.FileNamePolicy
-import dms.domain.library.RelativePath
+import dms.domain.library.model.RelativePathModel
 
 /**
  * The names a new entry in a folder must not clash with: what the primary folder holds there, plus
@@ -13,7 +14,7 @@ import dms.domain.library.RelativePath
 class SiblingNames(private val storage: DocumentStorage) {
 
     /** The names directly inside [parent], or the failure that kept the primary from listing them. */
-    suspend fun of(library: LibrarySnapshot, parent: RelativePath): StorageResult<Set<String>> {
+    suspend fun of(library: LibrarySnapshotModel, parent: RelativePathModel): StorageResult<Set<String>> {
         val listed = storage.listNames(folder = library.folders.primary, path = parent)
         if (listed is StorageResult.Failure && listed.reason != StorageFailure.NOT_FOUND) {
             return listed
@@ -28,8 +29,12 @@ class SiblingNames(private val storage: DocumentStorage) {
      * `true` if nothing else in its folder has the name of [target]. [moving] is the entry being moved
      * or renamed there, which does not clash with itself, so a rename that only changes the case works.
      */
-    suspend fun isFree(library: LibrarySnapshot, target: RelativePath, moving: RelativePath?): StorageResult<Boolean> {
-        val parent = target.parent ?: RelativePath.ROOT
+    suspend fun isFree(
+        library: LibrarySnapshotModel,
+        target: RelativePathModel,
+        moving: RelativePathModel?,
+    ): StorageResult<Boolean> {
+        val parent = target.parent ?: RelativePathModel.ROOT
         val siblings = of(library = library, parent = parent)
         if (siblings is StorageResult.Failure) {
             return siblings

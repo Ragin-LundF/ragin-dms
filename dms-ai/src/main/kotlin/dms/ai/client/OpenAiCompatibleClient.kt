@@ -5,20 +5,20 @@ import dms.ai.prompt.SuggestionMapper
 import dms.application.port.ai.AiServer
 import dms.application.port.ai.DocumentClassifier
 import dms.application.port.ai.model.ClassificationFailure
-import dms.application.port.ai.model.ClassificationRequest
+import dms.application.port.ai.model.ClassificationRequestModel
 import dms.application.port.ai.model.ClassificationResult
 import dms.application.port.ai.model.DocumentContent
 import dms.application.port.ai.model.ModelList
-import dms.application.port.state.model.AiSettings
+import dms.application.port.state.model.AiSettingsModel
 
 /** Classifies documents and lists the models of any server with the OpenAI chat completions API. */
 class OpenAiCompatibleClient(private val transport: ChatTransport) : DocumentClassifier, AiServer {
 
-    override suspend fun models(settings: AiSettings): ModelList {
+    override suspend fun models(settings: AiSettingsModel): ModelList {
         return transport.models(settings = settings)
     }
 
-    override suspend fun suggest(request: ClassificationRequest): ClassificationResult {
+    override suspend fun suggest(request: ClassificationRequestModel): ClassificationResult {
         val images = request.content is DocumentContent.PageImages
         val reply = transport.complete(hasImages = images, structured = true) { model ->
             ChatRequestBuilder.build(model = model, request = request)

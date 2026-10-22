@@ -12,8 +12,8 @@ import dms.application.port.system.Clock
 import dms.application.port.system.IdGenerator
 import dms.application.sync.Replicator
 import dms.domain.change.DetectedChange
-import dms.domain.document.Document
-import dms.domain.document.DocumentId
+import dms.domain.document.model.DocumentIdModel
+import dms.domain.document.model.DocumentModel
 
 /**
  * Catalogs a file the scan found but the catalog does not know, and copies it into every folder that
@@ -49,8 +49,8 @@ class AdoptNewFile(
             targets = library.folders.syncFolders.filter { it.id !in change.presentIn },
             operation = FolderOperation.CopyFromPrimary(path = change.path),
         )
-        val document = Document(
-            id = DocumentId(value = ids.newId()),
+        val document = DocumentModel(
+            id = DocumentIdModel(value = ids.newId()),
             path = change.path,
             contentHash = contentHash,
             size = change.size,

@@ -1,12 +1,12 @@
 package dms.storage.state
 
-import dms.application.port.state.model.AiSettings
-import dms.application.port.state.model.Preferences
-import dms.domain.library.FolderLocation
+import dms.application.port.state.model.AiSettingsModel
+import dms.application.port.state.model.PreferencesModel
 import dms.domain.library.FolderRole
-import dms.domain.library.LibraryFolder
-import dms.domain.library.LibraryFolderId
-import dms.domain.library.LibraryFolders
+import dms.domain.library.model.FolderLocationModel
+import dms.domain.library.model.LibraryFolderIdModel
+import dms.domain.library.model.LibraryFolderModel
+import dms.domain.library.model.LibraryFoldersModel
 import kotlinx.coroutines.test.runTest
 import tools.jackson.core.JacksonException
 import java.nio.file.Files
@@ -37,7 +37,7 @@ class FileSettingsRepositoryTest {
     @Test
     fun `the library folders survive a restart`() {
         runTest {
-            val folders = LibraryFolders(
+            val folders = LibraryFoldersModel(
                 folders = listOf(
                     folder(id = "primary", location = "/data/library", role = FolderRole.PRIMARY),
                     folder(id = "sync", location = "C:\\Users\\Example\\Library", role = FolderRole.SYNC),
@@ -54,14 +54,14 @@ class FileSettingsRepositoryTest {
     fun `preferences default to adding new files and are kept apart from the folders`() {
         runTest {
             val repository = FileSettingsRepository(path = path)
-            val folders = LibraryFolders(
+            val folders = LibraryFoldersModel(
                 folders = listOf(folder(id = "primary", location = "/data/library", role = FolderRole.PRIMARY)),
             )
-            assertEquals(expected = Preferences(), actual = repository.loadPreferences())
+            assertEquals(expected = PreferencesModel(), actual = repository.loadPreferences())
 
-            val preferences = Preferences(
+            val preferences = PreferencesModel(
                 addNewFilesWhileScanning = false,
-                ai = AiSettings(
+                ai = AiSettingsModel(
                     baseUrl = "http://localhost:9999/v1",
                     model = "sample-model",
                     preferVisionForPdfs = true,
@@ -86,11 +86,11 @@ class FileSettingsRepositoryTest {
         }
     }
 
-    private fun folder(id: String, location: String, role: FolderRole): LibraryFolder {
-        return LibraryFolder(
-            id = LibraryFolderId(value = id),
+    private fun folder(id: String, location: String, role: FolderRole): LibraryFolderModel {
+        return LibraryFolderModel(
+            id = LibraryFolderIdModel(value = id),
             displayName = "Folder $id",
-            location = FolderLocation(value = location),
+            location = FolderLocationModel(value = location),
             role = role,
         )
     }

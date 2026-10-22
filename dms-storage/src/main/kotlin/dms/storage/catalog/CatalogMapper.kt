@@ -1,22 +1,26 @@
 package dms.storage.catalog
 
-import dms.domain.catalog.Catalog
-import dms.domain.catalog.CatalogRevision
-import dms.domain.catalog.LibraryId
-import dms.domain.document.ClassificationRecord
+import dms.domain.catalog.model.CatalogModel
+import dms.domain.catalog.model.CatalogRevisionModel
+import dms.domain.catalog.model.LibraryIdModel
 import dms.domain.document.ClassificationSource
-import dms.domain.document.ContentHash
-import dms.domain.document.Document
-import dms.domain.document.DocumentId
-import dms.domain.document.DocumentMetadata
-import dms.domain.library.RelativePath
-import dms.domain.taxonomy.Category
-import dms.domain.taxonomy.CategoryId
-import dms.domain.taxonomy.TagName
+import dms.domain.document.model.ClassificationRecordModel
+import dms.domain.document.model.ContentHashModel
+import dms.domain.document.model.DocumentIdModel
+import dms.domain.document.model.DocumentMetadataModel
+import dms.domain.document.model.DocumentModel
+import dms.domain.library.model.RelativePathModel
+import dms.domain.link.model.DocumentLinkModel
+import dms.domain.retention.model.RetentionModel
+import dms.domain.taxonomy.model.CategoryIdModel
+import dms.domain.taxonomy.model.CategoryModel
+import dms.domain.taxonomy.model.TagNameModel
 import dms.storage.catalog.dto.CatalogDto
 import dms.storage.catalog.dto.CategoryDto
 import dms.storage.catalog.dto.ClassificationDto
 import dms.storage.catalog.dto.DocumentDto
+import dms.storage.catalog.dto.LinkDto
+import dms.storage.catalog.dto.RetentionDto
 import java.time.Instant
 import java.time.LocalDate
 import java.util.Locale
@@ -29,10 +33,10 @@ import java.util.Locale
 object CatalogMapper {
 
     /** The file content for [catalog]; fields only known to newer versions are taken over from [previous]. */
-    fun toDto(catalog: Catalog, previous: CatalogDto?): CatalogDto {
+    fun toDto(catalog: CatalogModel, previous: CatalogDto?): CatalogDto {
         val previousDocuments = previous?.documents.orEmpty().associateBy { it.id }
         val previousCategories = previous?.categories.orEmpty().associateBy { it.id }
-        val dto = CatalogDto(
+        val base = CatalogDto(
             formatVersion = CatalogMigrations.CURRENT_VERSION,
             libraryId = catalog.libraryId.value,
             revision = catalog.revision.value,
@@ -51,28 +55,62 @@ object CatalogMapper {
                     mapped.unknownFields += previousDocuments[mapped.id]?.unknownFields.orEmpty()
                     mapped
                 },
+            links = catalog.links
+                .sortedWith(compareBy({ it.first.value }, { it.second.value }))
+                .map { LinkDto(first = it.first.value, second = it.second.value, label = it.label) },
         )
+        // copy() does not carry the unknown fields, so they are added last.
+        val dto = SettingsMapper.withSettings(dto = base, settings = catalog.settings)
         dto.unknownFields += previous?.unknownFields.orEmpty()
         return dto
     }
 
     /** The catalog in [dto]. Throws [IllegalArgumentException] if the file breaks a catalog rule. */
-    fun toDomain(dto: CatalogDto): Catalog {
+    fun toDomain(dto: CatalogDto): CatalogModel {
         val documents = dto.documents.map { toDomain(document = it) }
-        return Catalog(
-            libraryId = LibraryId(value = dto.libraryId),
-            revision = CatalogRevision(value = dto.revision),
+        return CatalogModel(
+            libraryId = LibraryIdModel(value = dto.libraryId),
+            revision = CatalogRevisionModel(value = dto.revision),
             documents = documents.associateBy { it.id },
             categories = dto.categories.map { toDomain(category = it) }.associateBy { it.id },
-            tags = dto.tags.map { TagName.of(raw = it) }.toSet() + documents.flatMap { it.tags },
+            tags = dto.tags.map { TagNameModel.of(raw = it) }.toSet() + documents.flatMap { it.tags },
+            links = linksOf(dto = dto, documents = documents.map { it.id }.toSet()),
+            settings = SettingsMapper.toDomain(dto = dto),
         )
     }
 
-    private fun toDto(category: Category): CategoryDto {
-        return CategoryDto(id = category.id.value, name = category.name, parentId = category.parentId?.value)
+    /**
+     * The links between documents the file has. An older version that removed a document keeps the
+     * links it did not understand, so links to missing documents are dropped here instead of making
+     * the whole file unreadable.
+     */
+    private fun linksOf(dto: CatalogDto, documents: Set<DocumentIdModel>): Set<DocumentLinkModel> {
+        return dto.links
+            .filter { link ->
+                DocumentIdModel(value = link.first) in documents && DocumentIdModel(value = link.second) in documents
+            }
+            .filter { it.first != it.second }
+            .map { link ->
+                DocumentLinkModel.of(
+                    first = DocumentIdModel(value = link.first),
+                    second = DocumentIdModel(value = link.second),
+                    label = link.label?.takeIf { it.isNotBlank() },
+                )
+            }
+            .distinctBy { it.first to it.second }
+            .toSet()
     }
 
-    private fun toDto(document: Document): DocumentDto {
+    private fun toDto(category: CategoryModel): CategoryDto {
+        return CategoryDto(
+            id = category.id.value,
+            name = category.name,
+            parentId = category.parentId?.value,
+            retentionYears = category.retentionYears,
+        )
+    }
+
+    private fun toDto(document: DocumentModel): DocumentDto {
         return DocumentDto(
             id = document.id.value,
             path = document.path.value,
@@ -91,42 +129,56 @@ object CatalogMapper {
                     confirmedAt = record.confirmedAt.toString(),
                 )
             },
+            fields = FieldMapper.toDto(fields = document.fields),
+            note = document.note,
+            retention = document.retention?.let {
+                RetentionDto(keepUntil = it.keepUntil?.toString(), settledAt = it.settledAt?.toString())
+            },
         )
     }
 
-    private fun toDomain(category: CategoryDto): Category {
-        return Category(
-            id = CategoryId(value = category.id),
+    private fun toDomain(category: CategoryDto): CategoryModel {
+        return CategoryModel(
+            id = CategoryIdModel(value = category.id),
             name = category.name,
-            parentId = category.parentId?.let { CategoryId(value = it) },
+            parentId = category.parentId?.let { CategoryIdModel(value = it) },
+            retentionYears = category.retentionYears,
         )
     }
 
-    private fun toDomain(document: DocumentDto): Document {
-        return Document(
-            id = DocumentId(value = document.id),
-            path = RelativePath.of(raw = document.path),
-            contentHash = ContentHash.fromHex(hex = document.contentHash),
+    private fun toDomain(document: DocumentDto): DocumentModel {
+        return DocumentModel(
+            id = DocumentIdModel(value = document.id),
+            path = RelativePathModel.of(raw = document.path),
+            contentHash = ContentHashModel.fromHex(hex = document.contentHash),
             size = document.size,
             addedAt = Instant.parse(document.addedAt),
-            metadata = DocumentMetadata(
+            metadata = DocumentMetadataModel(
                 title = document.title,
                 documentDate = document.documentDate?.let { LocalDate.parse(it) },
                 correspondent = document.correspondent,
             ),
-            categoryId = document.categoryId?.let { CategoryId(value = it) },
-            tags = document.tags.map { TagName.of(raw = it) }.toSet(),
+            categoryId = document.categoryId?.let { CategoryIdModel(value = it) },
+            tags = document.tags.map { TagNameModel.of(raw = it) }.toSet(),
             classification = document.classification?.let { record ->
-                ClassificationRecord(
+                ClassificationRecordModel(
                     source = ClassificationSource.valueOf(record.source),
                     model = record.model,
                     confirmedAt = Instant.parse(record.confirmedAt),
                 )
             },
+            fields = FieldMapper.toDomain(fields = document.fields),
+            note = document.note?.takeIf { it.isNotBlank() },
+            retention = document.retention?.let { retention ->
+                RetentionModel(
+                    keepUntil = retention.keepUntil?.let { LocalDate.parse(it) },
+                    settledAt = retention.settledAt?.let { Instant.parse(it) },
+                ).takeUnless { it.isEmpty }
+            },
         )
     }
 
-    private fun sortedTags(tags: Set<TagName>): List<String> {
+    private fun sortedTags(tags: Set<TagNameModel>): List<String> {
         return tags.sorted().map { it.value }
     }
 }

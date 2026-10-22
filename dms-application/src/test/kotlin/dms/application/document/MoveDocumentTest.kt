@@ -3,7 +3,7 @@ package dms.application.document
 import dms.application.TestLibrary
 import dms.application.common.OperationOutcome
 import dms.domain.library.FileNameViolation
-import dms.domain.library.RelativePath
+import dms.domain.library.model.RelativePathModel
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -17,7 +17,7 @@ class MoveDocumentTest {
             val library = TestLibrary()
             library.open()
             val document = library.add(path = "letters/a.pdf", content = "alpha")
-            val target = RelativePath.of(raw = "archive/2024/a.pdf")
+            val target = RelativePathModel.of(raw = "archive/2024/a.pdf")
 
             assertIs<OperationOutcome.Done>(value = library.moveDocument(documentId = document.id, newPath = target))
 
@@ -37,7 +37,7 @@ class MoveDocumentTest {
 
             val outcome = library.moveDocument(
                 documentId = document.id,
-                newPath = RelativePath.of(raw = "letters/A.pdf"),
+                newPath = RelativePathModel.of(raw = "letters/A.pdf"),
             )
 
             assertIs<OperationOutcome.Done>(value = outcome)
@@ -53,7 +53,10 @@ class MoveDocumentTest {
             library.add(path = "letters/a.pdf", content = "alpha")
             val other = library.add(path = "letters/b.pdf", content = "beta")
 
-            val outcome = library.moveDocument(documentId = other.id, newPath = RelativePath.of(raw = "letters/A.PDF"))
+            val outcome = library.moveDocument(
+                documentId = other.id,
+                newPath = RelativePathModel.of(raw = "letters/A.PDF"),
+            )
 
             assertEquals(expected = OperationOutcome.NameTaken, actual = outcome)
             assertEquals(
@@ -72,7 +75,7 @@ class MoveDocumentTest {
 
             val outcome = library.moveDocument(
                 documentId = document.id,
-                newPath = RelativePath.of(raw = "letters/a?.pdf"),
+                newPath = RelativePathModel.of(raw = "letters/a?.pdf"),
             )
 
             assertEquals(

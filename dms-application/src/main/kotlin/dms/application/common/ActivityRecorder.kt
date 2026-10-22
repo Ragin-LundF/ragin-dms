@@ -1,7 +1,7 @@
 package dms.application.common
 
 import dms.application.port.state.ActivityLog
-import dms.application.port.state.model.ActivityEntry
+import dms.application.port.state.model.ActivityEntryModel
 import dms.application.port.state.model.ActivityKind
 import dms.application.port.system.Clock
 
@@ -12,6 +12,6 @@ class ActivityRecorder(
 ) {
 
     suspend fun record(kind: ActivityKind, subject: String) {
-        activity.record(entry = ActivityEntry(at = clock.now(), kind = kind, subject = subject))
+        activity.record(entry = ActivityEntryModel(at = clock.now(), kind = kind, subject = subject))
     }
 }

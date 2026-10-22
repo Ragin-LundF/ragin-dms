@@ -1,17 +1,19 @@
 package dms.domain.change
 
 import dms.domain.TestData
-import dms.domain.document.Document
-import dms.domain.library.LibraryFolderId
-import dms.domain.library.RelativePath
+import dms.domain.change.model.FileFactsModel
+import dms.domain.change.model.FolderSnapshotModel
+import dms.domain.document.model.DocumentModel
+import dms.domain.library.model.LibraryFolderIdModel
+import dms.domain.library.model.RelativePathModel
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class ChangeDetectorTest {
 
-    private val main = LibraryFolderId(value = "main")
-    private val backup = LibraryFolderId(value = "backup")
+    private val main = LibraryFolderIdModel(value = "main")
+    private val backup = LibraryFolderIdModel(value = "backup")
     private val report = TestData.document(id = "d1", path = "projects/report.pdf", hashSeed = 1, size = 10)
     private val catalog = TestData.catalogWith(report)
 
@@ -27,17 +29,17 @@ class ChangeDetectorTest {
 
     @Test
     fun `an unhashed file with the catalogued size counts as unchanged`() {
-        val unhashed = FileFacts(size = 10, contentHash = null)
-        val snapshot = FolderSnapshot(folderId = main, files = mapOf(report.path to unhashed))
+        val unhashed = FileFactsModel(size = 10, contentHash = null)
+        val snapshot = FolderSnapshotModel(folderId = main, files = mapOf(report.path to unhashed))
 
         assertTrue(actual = ChangeDetector.detect(catalog = catalog, snapshots = listOf(snapshot)).isEmpty())
     }
 
     @Test
     fun `different content in one folder is a modification of that folder`() {
-        val snapshot = FolderSnapshot(
+        val snapshot = FolderSnapshotModel(
             folderId = backup,
-            files = mapOf(report.path to FileFacts(size = 11, contentHash = TestData.hash(seed = 2))),
+            files = mapOf(report.path to FileFactsModel(size = 11, contentHash = TestData.hash(seed = 2))),
         )
 
         val change = ChangeDetector.detect(catalog = catalog, snapshots = listOf(snapshot)).single()
@@ -56,10 +58,10 @@ class ChangeDetectorTest {
 
     @Test
     fun `a file found under another path with the same content is a move`() {
-        val moved = RelativePath.of(raw = "archive/report.pdf")
-        val snapshot = FolderSnapshot(
+        val moved = RelativePathModel.of(raw = "archive/report.pdf")
+        val snapshot = FolderSnapshotModel(
             folderId = main,
-            files = mapOf(moved to FileFacts(size = 10, contentHash = report.contentHash)),
+            files = mapOf(moved to FileFactsModel(size = 10, contentHash = report.contentHash)),
         )
 
         val change = ChangeDetector.detect(catalog = catalog, snapshots = listOf(snapshot)).single()
@@ -127,12 +129,18 @@ class ChangeDetectorTest {
 
     @Test
     fun `an uncatalogued file with different content per folder is a conflict`() {
-        val path = RelativePath.of(raw = "inbox/scan.pdf")
-        val inMain = FileFacts(size = 5, contentHash = TestData.hash(seed = 4))
-        val inBackup = FileFacts(size = 6, contentHash = TestData.hash(seed = 5))
+        val path = RelativePathModel.of(raw = "inbox/scan.pdf")
+        val inMain = FileFactsModel(size = 5, contentHash = TestData.hash(seed = 4))
+        val inBackup = FileFactsModel(size = 6, contentHash = TestData.hash(seed = 5))
         val snapshots = listOf(
-            FolderSnapshot(folderId = main, files = mapOf(report.path to facts(document = report), path to inMain)),
-            FolderSnapshot(folderId = backup, files = mapOf(report.path to facts(document = report), path to inBackup)),
+            FolderSnapshotModel(
+                folderId = main,
+                files = mapOf(report.path to facts(document = report), path to inMain),
+            ),
+            FolderSnapshotModel(
+                folderId = backup,
+                files = mapOf(report.path to facts(document = report), path to inBackup),
+            ),
         )
 
         val change = ChangeDetector.detect(catalog = catalog, snapshots = snapshots).single()
@@ -162,11 +170,11 @@ class ChangeDetectorTest {
         )
     }
 
-    private fun snapshotOf(folderId: LibraryFolderId, vararg documents: Document): FolderSnapshot {
-        return FolderSnapshot(folderId = folderId, files = documents.associate { it.path to facts(document = it) })
+    private fun snapshotOf(folderId: LibraryFolderIdModel, vararg documents: DocumentModel): FolderSnapshotModel {
+        return FolderSnapshotModel(folderId = folderId, files = documents.associate { it.path to facts(document = it) })
     }
 
-    private fun facts(document: Document): FileFacts {
-        return FileFacts(size = document.size, contentHash = document.contentHash)
+    private fun facts(document: DocumentModel): FileFactsModel {
+        return FileFactsModel(size = document.size, contentHash = document.contentHash)
     }
 }

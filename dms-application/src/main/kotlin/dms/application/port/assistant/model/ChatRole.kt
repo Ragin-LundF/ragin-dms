@@ -1,6 +1,6 @@
 package dms.application.port.assistant.model
 
-/** Who wrote a [ChatTurn]. */
+/** Who wrote a [ChatTurnModel]. */
 enum class ChatRole {
     USER,
     ASSISTANT,

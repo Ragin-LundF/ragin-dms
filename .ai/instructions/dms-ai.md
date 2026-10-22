@@ -8,11 +8,11 @@ Use this file when touching `dms-ai`: LLM providers, prompts, structured output,
 |---|---|
 | `dms.ai` | `AiAdapters`: builds the HTTP client and hands out the client and the reader. Tests pass a Ktor `MockEngine`. |
 | `dms.ai.client` | `ChatTransport`: the HTTP side of OpenAI-compatible APIs (LM Studio, Ollama's `/v1`, OpenAI): `/models`, `/chat/completions`, the model choice (`ModelChoice` skips embedding models when no model is set), error mapping, and `AnswerText`, which drops `<think>` blocks. `ChatRequestBuilder` builds the bodies with text and image parts. `OpenAiCompatibleClient` implements `DocumentClassifier` and `AiServer`. DTOs in `dms.ai.client.dto`. |
-| `dms.ai.assistant` | `OpenAiAssistant` (implements `DocumentAssistant`): summary, tags and questions about one document, free-text answers. `TagAnswerParser` turns a free-text tag answer into `TagName`s. |
-| `dms.ai.prompt` | The answer schema, the prompt texts, the naming convention detected from file names, the tax tag (`TaxTag`), and the mapping of the answer to a `ClassificationSuggestion`. `PromptTemplates` loads and fills the templates in `src/main/resources/prompts/` (`classification`, `summary`, `tags`, `chat`, each with a `-request` user part where needed). |
+| `dms.ai.assistant` | `OpenAiAssistant` (implements `DocumentAssistant`): summary, tags and questions about one document, free-text answers. `TagAnswerParser` turns a free-text tag answer into `TagNameModel`s. |
+| `dms.ai.prompt` | The answer schema, the prompt texts, the naming convention detected from file names, the tax tag (`TaxTag`), and the mapping of the answer to a `ClassificationSuggestionModel`. `PromptTemplates` loads and fills the templates in `src/main/resources/prompts/` (`classification`, `summary`, `tags`, `chat`, each with a `-request` user part where needed). |
 | `dms.ai.read` | `FileContentReader` (implements `DocumentContentReader`): PDF (PDFBox: text layer or rendered pages), images, Office (Apache POI). |
 
-The provider settings (`AiSettings`: base URL, model, timeout, "prefer vision for PDFs") are a port model in `dms-application` and are stored per device by `dms-storage`. The client reads them for every request, so a change in Settings applies at once.
+The provider settings (`AiSettingsModel`: base URL, model, timeout, "prefer vision for PDFs") are a port model in `dms-application` and are stored per device by `dms-storage`. The client reads them for every request, so a change in Settings applies at once.
 
 ## Provider rules
 
@@ -26,7 +26,7 @@ The provider settings (`AiSettings`: base URL, model, timeout, "prefer vision fo
 
 - Request **structured output** (JSON schema via `response_format`) and validate it against the schema before mapping. Invalid output becomes a typed failure, never a partly filled suggestion.
 - Give the model the **existing taxonomy** (categories and tags from the catalog), the folder tree, and the library's **naming convention**, detected at runtime from the existing file names (never hard-coded). Instruct it to prefer existing values. New categories or tags are allowed but marked as new so the UI can highlight them.
-- The classifier returns a `ClassificationSuggestion`. It never writes to the catalog or renames files — the user approves on the dashboard, then a use case applies it.
+- The classifier returns a `ClassificationSuggestionModel`. It never writes to the catalog or renames files — the user approves on the dashboard, then a use case applies it.
 - Suggested file names go through the domain's `FileNamePolicy` before they are shown.
 - When images were sent, the schema also asks for a plain-text transcription; it is stored in `.dms-text/` for search.
 - Keep prompts in resource files (`src/main/resources/prompts/*.md`), not in string literals, so they can be read and tuned without touching code.

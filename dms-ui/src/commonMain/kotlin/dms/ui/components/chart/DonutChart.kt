@@ -13,14 +13,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import dms.ui.components.chart.model.ChartSlice
+import dms.ui.components.chart.model.ChartSliceModel
 import dms.ui.theme.Spacing
 import kotlin.math.roundToInt
 
 /** A donut with the total in its centre and a legend that names every slice with its count and share. */
 @Composable
 fun DonutChart(
-    slices: List<ChartSlice>,
+    slices: List<ChartSliceModel>,
     centerValue: String,
     centerLabel: String,
     modifier: Modifier = Modifier,

@@ -9,8 +9,8 @@ import dms.application.port.storage.model.FolderOperation
 import dms.application.port.storage.model.StorageFailure
 import dms.application.port.storage.model.StorageResult
 import dms.application.sync.Replicator
-import dms.domain.library.LibraryFolderId
-import dms.domain.library.RelativePath
+import dms.domain.library.model.LibraryFolderIdModel
+import dms.domain.library.model.RelativePathModel
 
 /**
  * Makes the version of a path in one folder the version of every folder: for a content
@@ -25,8 +25,8 @@ class KeepVersion(
 ) {
 
     suspend operator fun invoke(
-        path: RelativePath,
-        sourceFolderId: LibraryFolderId,
+        path: RelativePathModel,
+        sourceFolderId: LibraryFolderIdModel,
         confirmed: Boolean,
     ): OperationOutcome {
         if (!confirmed) {

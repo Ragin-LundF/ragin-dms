@@ -1,0 +1,17 @@
+package dms.domain.document.model
+
+import dms.domain.document.ClassificationSource
+import java.time.Instant
+
+/** Provenance of a document's categorization: who suggested it, with which model, confirmed when. */
+data class ClassificationRecordModel(
+    val source: ClassificationSource,
+    val model: String?,
+    val confirmedAt: Instant,
+) {
+    init {
+        require(value = source != ClassificationSource.AI || !model.isNullOrBlank()) {
+            "An AI classification must name its model"
+        }
+    }
+}

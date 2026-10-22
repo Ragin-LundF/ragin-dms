@@ -19,14 +19,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import dms.application.port.state.model.ActivityEntry
+import dms.application.port.state.model.ActivityEntryModel
 import dms.ui.components.surface.AppCard
 import dms.ui.components.surface.CardTitle
 import dms.ui.theme.Spacing
 
 /** What the tool did recently on this device, newest first. */
 @Composable
-fun ActivityPanel(entries: List<ActivityEntry>, modifier: Modifier = Modifier) {
+fun ActivityPanel(entries: List<ActivityEntryModel>, modifier: Modifier = Modifier) {
     val colors = MaterialTheme.colorScheme
     AppCard(modifier = modifier) {
         CardTitle(title = "Recent activity", icon = Icons.Rounded.Timeline, tint = colors.tertiary)

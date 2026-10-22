@@ -8,14 +8,14 @@ import androidx.compose.runtime.Composable
 import dms.ui.library.drag.DocumentDrag
 import dms.ui.library.drag.DropTargetArea
 import dms.ui.library.drag.model.DropTarget
-import dms.ui.library.model.FolderEntry
+import dms.ui.library.model.FolderEntryModel
 import dms.ui.library.model.LibrarySelection
-import dms.ui.library.sidebar.model.TreeToggle
+import dms.ui.library.sidebar.model.TreeToggleModel
 
 /** One folder of the folder tree, with a +/- for its subfolders; documents dropped on it move into it. */
 @Composable
 fun FolderItem(
-    entry: FolderEntry,
+    entry: FolderEntryModel,
     selection: LibrarySelection,
     drag: DocumentDrag,
     onToggle: () -> Unit,
@@ -35,7 +35,7 @@ fun FolderItem(
             depth = entry.depth,
             selected = selected,
             dropHovered = hovered,
-            toggle = TreeToggle(
+            toggle = TreeToggleModel(
                 expanded = entry.expanded.takeIf { entry.hasChildren && !entry.path.isRoot },
                 onToggle = onToggle,
             ),

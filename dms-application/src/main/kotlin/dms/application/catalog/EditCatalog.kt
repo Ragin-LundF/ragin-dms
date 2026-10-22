@@ -6,13 +6,13 @@ import dms.application.common.OperationOutcome
 import dms.application.library.CatalogStore
 import dms.application.port.state.model.ActivityKind
 import dms.application.port.system.IdGenerator
-import dms.domain.catalog.Catalog
 import dms.domain.catalog.CatalogRejection
 import dms.domain.catalog.CatalogUpdate
-import dms.domain.document.DocumentId
-import dms.domain.taxonomy.Category
-import dms.domain.taxonomy.CategoryId
-import dms.domain.taxonomy.TagName
+import dms.domain.catalog.model.CatalogModel
+import dms.domain.document.model.DocumentIdModel
+import dms.domain.taxonomy.model.CategoryIdModel
+import dms.domain.taxonomy.model.CategoryModel
+import dms.domain.taxonomy.model.TagNameModel
 
 /**
  * Applies one manual change to metadata, categories or tags and saves the catalog to every library
@@ -32,7 +32,7 @@ class EditCatalog(
         return outcome
     }
 
-    private fun apply(catalog: Catalog, edit: CatalogEdit): CatalogUpdate {
+    private fun apply(catalog: CatalogModel, edit: CatalogEdit): CatalogUpdate {
         return when (edit) {
             is CatalogEdit.UpdateMetadata -> catalog.updateMetadata(
                 documentId = edit.documentId,
@@ -47,7 +47,11 @@ class EditCatalog(
             is CatalogEdit.AddTags -> changeTags(catalog = catalog, documentId = edit.documentId) { it + edit.tags }
             is CatalogEdit.RemoveTags -> changeTags(catalog = catalog, documentId = edit.documentId) { it - edit.tags }
             is CatalogEdit.AddCategory -> catalog.addCategory(
-                category = Category(id = CategoryId(value = ids.newId()), name = edit.name, parentId = edit.parentId),
+                category = CategoryModel(
+                    id = CategoryIdModel(value = ids.newId()),
+                    name = edit.name,
+                    parentId = edit.parentId,
+                ),
             )
 
             is CatalogEdit.RenameCategory -> catalog.renameCategory(categoryId = edit.categoryId, name = edit.name)
@@ -59,9 +63,9 @@ class EditCatalog(
     }
 
     private fun changeTags(
-        catalog: Catalog,
-        documentId: DocumentId,
-        change: (Set<TagName>) -> Set<TagName>,
+        catalog: CatalogModel,
+        documentId: DocumentIdModel,
+        change: (Set<TagNameModel>) -> Set<TagNameModel>,
     ): CatalogUpdate {
         val document = catalog.documents[documentId]
             ?: return CatalogUpdate.Rejected(reason = CatalogRejection.DOCUMENT_NOT_FOUND)

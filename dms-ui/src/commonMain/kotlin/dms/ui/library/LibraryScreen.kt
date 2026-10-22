@@ -21,6 +21,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import dms.ui.PlatformActions
+import dms.ui.components.layout.ResizeHandle
 import dms.ui.document.InspectorPanel
 import dms.ui.document.InspectorViewModel
 import dms.ui.library.documents.DocumentArea
@@ -36,6 +37,7 @@ import dms.ui.theme.Spacing
 @Composable
 fun LibraryScreen(viewModel: LibraryViewModel, inspector: InspectorViewModel, platform: PlatformActions) {
     val state by viewModel.state.collectAsState()
+    val sidebarWidth by viewModel.sidebarWidth.width.collectAsState()
     val busyReason = state.busy?.let { "Wait until \"$it\" finishes" }
     val drag = remember(viewModel) { DocumentDrag(onDrop = viewModel::drop) }
     var origin by remember { mutableStateOf(value = Offset.Zero) }
@@ -46,9 +48,9 @@ fun LibraryScreen(viewModel: LibraryViewModel, inspector: InspectorViewModel, pl
                 busyReason = busyReason,
                 drag = drag,
                 viewModel = viewModel,
-                modifier = Modifier.width(width = Spacing.sidebarWidth).fillMaxHeight(),
+                modifier = Modifier.width(width = sidebarWidth).fillMaxHeight(),
             )
-            VerticalDivider()
+            ResizeHandle(onResize = viewModel.sidebarWidth::resize)
             Column(
                 modifier = Modifier.weight(weight = 1f).fillMaxHeight().padding(all = Spacing.xlarge),
                 verticalArrangement = Arrangement.spacedBy(space = Spacing.large),
@@ -62,6 +64,8 @@ fun LibraryScreen(viewModel: LibraryViewModel, inspector: InspectorViewModel, pl
                     onLayout = viewModel::setLayout,
                     onAddFiles = { viewModel.addFiles() },
                     onNewFolder = viewModel::newFolder,
+                    onSaveSmartFolder = viewModel.smartFolders::saveCurrent,
+                    onExport = { viewModel.export.openCurrentView(title = state.title) },
                 )
                 DocumentArea(
                     state = state,

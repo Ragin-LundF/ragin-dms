@@ -3,6 +3,7 @@ package dms.ui.system
 import dms.application.port.system.Clock
 import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneId
 
 /** The clock of this device. */
 class SystemClock : Clock {
@@ -13,5 +14,9 @@ class SystemClock : Clock {
 
     override fun today(): LocalDate {
         return LocalDate.now()
+    }
+
+    override fun zone(): ZoneId {
+        return ZoneId.systemDefault()
     }
 }

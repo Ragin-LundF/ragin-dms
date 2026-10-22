@@ -23,13 +23,13 @@ import dms.ui.components.surface.AppCard
 import dms.ui.components.surface.CardTitle
 import dms.ui.components.surface.IconBadge
 import dms.ui.dashboard.model.FolderHealth
-import dms.ui.dashboard.model.FolderStatus
+import dms.ui.dashboard.model.FolderStatusModel
 import dms.ui.theme.AppColors
 import dms.ui.theme.Spacing
 
 /** The library folders with their role and whether they can be reached. */
 @Composable
-fun FolderPanel(folders: List<FolderStatus>, modifier: Modifier = Modifier) {
+fun FolderPanel(folders: List<FolderStatusModel>, modifier: Modifier = Modifier) {
     val colors = MaterialTheme.colorScheme
     AppCard(modifier = modifier.fillMaxWidth()) {
         CardTitle(title = "Library folders", icon = Icons.Rounded.Storage, tint = colors.secondary)

@@ -4,11 +4,11 @@ import dms.application.TestLibrary
 import dms.application.classification.model.SuggestOutcome
 import dms.application.fake.ai.FakeClassifier
 import dms.application.port.ai.model.ClassificationResult
-import dms.domain.classification.ClassificationSuggestion
 import dms.domain.classification.SuggestedCategory
-import dms.domain.classification.SuggestedTag
-import dms.domain.taxonomy.CategoryId
-import dms.domain.taxonomy.TagName
+import dms.domain.classification.model.ClassificationSuggestionModel
+import dms.domain.classification.model.SuggestedTagModel
+import dms.domain.taxonomy.model.CategoryIdModel
+import dms.domain.taxonomy.model.TagNameModel
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -25,12 +25,12 @@ class SuggestClassificationTest {
             library.open()
             val document = library.add(path = "inbox/scan-001.pdf", content = "scan")
             library.classifier.result = ClassificationResult.Suggested(
-                suggestion = ClassificationSuggestion(
+                suggestion = ClassificationSuggestionModel(
                     documentId = document.id,
                     model = FakeClassifier.MODEL,
                     title = "Synthetic statement",
-                    category = SuggestedCategory.Existing(categoryId = CategoryId(value = "unknown")),
-                    tags = listOf(SuggestedTag(name = TagName.of(raw = "Tax"), isNew = false)),
+                    category = SuggestedCategory.Existing(categoryId = CategoryIdModel(value = "unknown")),
+                    tags = listOf(SuggestedTagModel(name = TagNameModel.of(raw = "Tax"), isNew = false)),
                 ),
             )
 

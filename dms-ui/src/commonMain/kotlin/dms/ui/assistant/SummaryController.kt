@@ -1,8 +1,8 @@
 package dms.ui.assistant
 
 import dms.application.assistant.model.AnswerOutcome
-import dms.domain.document.Document
-import dms.ui.assistant.model.SummaryState
+import dms.domain.document.model.DocumentModel
+import dms.ui.assistant.model.SummaryStateModel
 import dms.ui.review.AiMessages
 import dms.ui.service.AppServices
 import kotlinx.coroutines.CoroutineScope
@@ -21,17 +21,17 @@ class SummaryController(
     private val scope: CoroutineScope,
 ) {
 
-    private val mutableState = MutableStateFlow<SummaryState?>(value = null)
+    private val mutableState = MutableStateFlow<SummaryStateModel?>(value = null)
     private var job: Job? = null
 
-    val state: StateFlow<SummaryState?> = mutableState.asStateFlow()
+    val state: StateFlow<SummaryStateModel?> = mutableState.asStateFlow()
 
-    fun open(document: Document) {
+    fun open(document: DocumentModel) {
         job?.cancel()
-        mutableState.value = SummaryState(document = document)
+        mutableState.value = SummaryStateModel(document = document)
         job = scope.launch {
             val outcome = services.ai.summarizeDocument(documentId = document.id)
-            mutableState.value = SummaryState(
+            mutableState.value = SummaryStateModel(
                 document = document,
                 working = false,
                 text = (outcome as? AnswerOutcome.Answered)?.text,

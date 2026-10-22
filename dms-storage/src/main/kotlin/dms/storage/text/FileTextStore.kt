@@ -3,8 +3,8 @@ package dms.storage.text
 import dms.application.port.storage.TextStore
 import dms.application.port.storage.model.StorageFailure
 import dms.application.port.storage.model.StorageResult
-import dms.domain.document.DocumentId
-import dms.domain.library.LibraryFolder
+import dms.domain.document.model.DocumentIdModel
+import dms.domain.library.model.LibraryFolderModel
 import dms.storage.fs.AtomicFiles
 import dms.storage.fs.PathResolver
 import dms.storage.fs.StorageIo
@@ -21,7 +21,11 @@ import java.nio.file.Path
  */
 class FileTextStore : TextStore {
 
-    override suspend fun write(folder: LibraryFolder, documentId: DocumentId, text: String): StorageResult<Unit> {
+    override suspend fun write(
+        folder: LibraryFolderModel,
+        documentId: DocumentIdModel,
+        text: String,
+    ): StorageResult<Unit> {
         return StorageIo.run {
             val root = PathResolver.root(folder = folder)
                 ?: return@run StorageIo.failure(reason = StorageFailure.FOLDER_UNREACHABLE)
@@ -31,7 +35,7 @@ class FileTextStore : TextStore {
         }
     }
 
-    override suspend fun read(folder: LibraryFolder, documentId: DocumentId): String? {
+    override suspend fun read(folder: LibraryFolderModel, documentId: DocumentIdModel): String? {
         return withContext(context = Dispatchers.IO) {
             val root = PathResolver.root(folder = folder)
             val file = root?.let { fileOf(root = it, documentId = documentId) }
@@ -43,7 +47,7 @@ class FileTextStore : TextStore {
         }
     }
 
-    private fun fileOf(root: Path, documentId: DocumentId): Path {
+    private fun fileOf(root: Path, documentId: DocumentIdModel): Path {
         return root.resolve(TEXT_FOLDER).resolve("${documentId.value}.txt")
     }
 
