@@ -2,7 +2,7 @@
 
 All notable changes to ragin-dms are listed here.
 
-## 1.2.0 - Unreleased
+## 1.2.0
 
 ### A new look for the library
 
