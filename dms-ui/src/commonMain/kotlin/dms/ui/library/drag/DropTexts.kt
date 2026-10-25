@@ -9,6 +9,16 @@ import dms.ui.library.model.CategoryEntryModel
 object DropTexts {
 
     fun action(item: DragItem, target: DropTarget, categories: List<CategoryEntryModel>): String {
+        if (item is DragItem.DraggedFolder) {
+            return when (target) {
+                is DropTarget.Folder -> "Move into ${target.path.value.ifEmpty { "the top level" }}"
+                is DropTarget.Category,
+                DropTarget.TopLevelCategory,
+                DropTarget.Uncategorized,
+                is DropTarget.Tag,
+                -> "Drop on a folder"
+            }
+        }
         if (item is DragItem.DraggedCategory) {
             return when (target) {
                 is DropTarget.Category -> "Move into ${nameOf(categoryId = target.categoryId, categories = categories)}"

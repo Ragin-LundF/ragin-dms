@@ -3,7 +3,6 @@ package dms.ui.inbox
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dms.application.common.OperationOutcome
-import dms.application.library.model.outcome.DashboardOutcome
 import dms.domain.catalog.model.CatalogModel
 import dms.domain.classification.model.ClassificationSuggestionModel
 import dms.domain.document.model.DocumentIdModel
@@ -29,9 +28,7 @@ import dms.ui.session.model.SessionStateModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -70,12 +67,8 @@ class InboxViewModel(
 
     init {
         viewModelScope.launch {
-            session.state.map { it.revision to it.lastScan }.distinctUntilChanged().collectLatest { (_, scan) ->
-                val tasks = when (val outcome = services.library.buildDashboard(scan = scan)) {
-                    is DashboardOutcome.Built -> outcome.dashboard.tasks
-                    DashboardOutcome.LibraryNotOpen -> emptyList()
-                }
-                suggestions.value = tasks.filterIsInstance<OpenTask.ReviewSuggestion>()
+            session.dashboard.collect { dashboard ->
+                suggestions.value = dashboard?.tasks.orEmpty().filterIsInstance<OpenTask.ReviewSuggestion>()
                     .associate { it.suggestion.documentId to it.suggestion }
             }
         }

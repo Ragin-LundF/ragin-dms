@@ -10,6 +10,7 @@ import dms.domain.field.FieldPresets
 import dms.domain.field.FieldType
 import dms.domain.field.FieldValue
 import dms.domain.field.FieldValues
+import dms.domain.field.model.FieldDefinitionModel
 import dms.domain.field.model.FieldKeyModel
 import dms.domain.retention.model.RetentionModel
 import dms.domain.rule.RuleCondition
@@ -34,8 +35,8 @@ import java.util.Locale
 import java.util.UUID
 
 /**
- * The details of the document in the inspector beyond its metadata: custom fields, the note, the
- * linked documents and the opt-in retention. The inspector's view model owns it; every change is one
+ * The details of the document in the quickLookViewModel beyond its metadata: custom fields, the note, the
+ * linked documents and the opt-in retention. The quickLookViewModel's view model owns it; every change is one
  * catalog change through the session.
  */
 class DetailsController(
@@ -75,18 +76,34 @@ class DetailsController(
             }
             val value = FieldValues.parse(type = definition.type, raw = raw, defaultCurrency = currency)
             if (value == null) {
-                session.report(
-                    message = UiMessageModel(
-                        text = "\"${definition.label}\": ${hintOf(type = definition.type)}",
-                        isError = true,
-                    ),
-                )
+                reportMismatch(definition = definition)
                 return
             }
             values[key] = value
         }
         val kept = document.fields.filterKeys { catalog.settings.field(key = it) == null }
         edit(edit = DetailEdit.SetFields(documentId = document.id, fields = kept + values))
+    }
+
+    /**
+     * Saves the typed value of one field and keeps the others; empty removes it. `false` when the
+     * value does not fit the field's type, which the message names, or the field is gone.
+     */
+    fun saveField(document: DocumentModel, key: FieldKeyModel, typed: String): Boolean {
+        val catalog = services.library.catalog.value ?: return false
+        val definition = catalog.settings.field(key = key) ?: return false
+        if (typed.isBlank()) {
+            edit(edit = DetailEdit.SetFields(documentId = document.id, fields = document.fields - key))
+            return true
+        }
+        val currency = catalog.settings.layout.defaultCurrency
+        val value = FieldValues.parse(type = definition.type, raw = typed, defaultCurrency = currency)
+        if (value == null) {
+            reportMismatch(definition = definition)
+            return false
+        }
+        edit(edit = DetailEdit.SetFields(documentId = document.id, fields = document.fields + (key to value)))
+        return true
     }
 
     fun saveNote(document: DocumentModel, note: String) {
@@ -225,6 +242,11 @@ class DetailsController(
         return listOfNotNull(document.path.value, document.metadata.title, document.metadata.correspondent)
             .joinToString(separator = " ")
             .lowercase(Locale.ROOT)
+    }
+
+    private fun reportMismatch(definition: FieldDefinitionModel) {
+        val text = "\"${definition.label}\": ${hintOf(type = definition.type)}"
+        session.report(message = UiMessageModel(text = text, isError = true))
     }
 
     private fun hintOf(type: FieldType): String {

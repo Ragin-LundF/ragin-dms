@@ -17,6 +17,7 @@ import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
 import dms.storage.platform.AppDataDirectory
 import dms.ui.components.layout.LocalResizePointerIcon
+import dms.ui.library.LibraryCommands
 import dms.ui.model.Screen
 import dms.ui.platform.DesktopPlatformActions
 import dms.ui.platform.HostOs
@@ -38,6 +39,7 @@ fun main() {
     application {
         val scope = rememberCoroutineScope()
         val session = remember { LibrarySession(services = container.services, scope = scope) }
+        val libraryCommands = remember { LibraryCommands() }
         val palette = remember { CommandPalette(services = container.services, session = session, scope = scope) }
         var screen by remember { mutableStateOf(value = Screen.DASHBOARD) }
         var logVisible by remember { mutableStateOf(value = false) }
@@ -55,12 +57,13 @@ fun main() {
                     onScreenChange = { screen = it },
                     onLogVisibleChange = { logVisible = it },
                     onGoTo = { palette.open() },
+                    libraryCommands = libraryCommands,
                 )
                 CompositionLocalProvider(
                     LocalAppLogo provides AppIcon.painter,
                     LocalResizePointerIcon provides PointerIcon(cursor = Cursor(Cursor.E_RESIZE_CURSOR)),
                     LocalTitleBarInset provides MacTitleBar.inset,
-                    LocalCommandKey provides if (HostOs.isMac) "⌘" else "Ctrl+",
+                    LocalCommandKey provides HostOs.commandLabel,
                 ) {
                     App(
                         services = container.services,
@@ -71,6 +74,7 @@ fun main() {
                         logVisible = logVisible,
                         onLogVisibleChange = { logVisible = it },
                         palette = palette,
+                        libraryCommands = libraryCommands,
                     )
                 }
             }

@@ -6,5 +6,5 @@ enum class SortColumn {
     CATEGORY,
     CORRESPONDENT,
     DATE,
-    SIZE,
+    AMOUNT,
 }

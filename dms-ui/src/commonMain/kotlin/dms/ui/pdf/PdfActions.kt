@@ -21,7 +21,7 @@ import kotlinx.coroutines.launch
 import java.util.Locale
 
 /**
- * Making a scan searchable and merging PDFs, from the inspector. "Precise OCR" is offered while the
+ * Making a scan searchable and merging PDFs, from the quickLookViewModel. "Precise OCR" is offered while the
  * OCR program is installed on this device.
  */
 class PdfActions(

@@ -1,39 +1,42 @@
 package dms.ui.library.sidebar
 
-import androidx.compose.foundation.lazy.LazyListScope
-import androidx.compose.foundation.lazy.items
+import androidx.compose.runtime.Composable
 import dms.ui.library.LibraryViewModel
 import dms.ui.library.model.LibrarySelection
 import dms.ui.library.model.LibraryUiStateModel
 import dms.ui.library.sidebar.item.SmartFolderItem
 import dms.ui.library.sidebar.model.SidebarGroup
-import dms.ui.library.sidebar.model.ToggleTarget
 
-/** The smart folders of the sidebar; "+" adds the standard ones the library does not have yet. */
-fun LazyListScope.smartFolderEntries(state: LibraryUiStateModel, busyReason: String?, viewModel: LibraryViewModel) {
-    val expanded = SidebarGroup.SMART_FOLDERS !in state.collapsedGroups
-    item(key = "smart-folders") {
-        SidebarSection(
-            title = "Smart folders",
-            expanded = expanded,
-            onToggle = { viewModel.toggle(target = ToggleTarget.Group(group = SidebarGroup.SMART_FOLDERS)) },
-            addLabel = "Add the standard smart folders",
-            busyReason = busyReason,
-            onAdd = viewModel.smartFolders::addPresets,
-        )
-    }
-    if (!expanded) {
+/**
+ * The "Saved views" section: the catalog's smart folders under their new name; "+" adds the standard
+ * ones the library does not have yet. The rail always shows them.
+ */
+@Composable
+fun SmartFolderEntries(state: LibraryUiStateModel, folded: Boolean, busyReason: String?, viewModel: LibraryViewModel) {
+    val expanded = SidebarGroup.SAVED_VIEWS !in state.collapsedGroups
+    SidebarSection(
+        title = "Saved views",
+        expanded = expanded,
+        folded = folded,
+        onToggle = { viewModel.toggleSection(group = SidebarGroup.SAVED_VIEWS) },
+        addLabel = "Add the standard saved views",
+        busyReason = busyReason,
+        onAdd = viewModel.smartFolders::addPresets,
+    )
+    if (!expanded && !folded) {
         return
     }
-    items(items = state.smartFolders, key = { "smart:${it.id.value}" }) { entry ->
+    state.smartFolders.forEach { entry ->
+        val selection = LibrarySelection.SmartFolder(id = entry.id)
         SmartFolderItem(
             entry = entry,
-            selection = state.selection,
+            selected = state.selection == selection,
+            folded = folded,
             busyReason = busyReason,
             smartFolders = viewModel.smartFolders,
             onExport = {
                 viewModel.smartFolders.searchOf(id = entry.id)?.let { viewModel.export.openSmartFolder(search = it) }
             },
-        ) { viewModel.select(selection = LibrarySelection.SmartFolder(id = entry.id)) }
+        ) { viewModel.select(selection = selection) }
     }
 }

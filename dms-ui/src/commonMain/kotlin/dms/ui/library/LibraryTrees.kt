@@ -17,13 +17,13 @@ object LibraryTrees {
      */
     fun folders(
         documents: Collection<DocumentModel>,
-        createdFolders: Set<RelativePathModel>,
+        foldersOnDisk: Set<RelativePathModel>,
         expanded: Set<RelativePathModel>? = null,
     ): List<FolderEntryModel> {
         val withDocuments = documents.flatMap { ancestorsOf(path = it.path) }
-        val created = createdFolders.flatMap { selfAndAncestors(folder = it) }
+        val onDisk = foldersOnDisk.flatMap { selfAndAncestors(folder = it) }
         // Sorting by segments keeps every folder directly above its subfolders.
-        val folders = (withDocuments + created).toSet().sortedWith(
+        val folders = (withDocuments + onDisk).toSet().sortedWith(
             comparator = compareBy { path -> path.segments.joinToString(separator = "\u0000").lowercase(Locale.ROOT) },
         )
         val root = FolderEntryModel(

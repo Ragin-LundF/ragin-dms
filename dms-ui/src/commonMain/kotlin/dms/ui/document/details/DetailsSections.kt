@@ -10,7 +10,7 @@ import dms.ui.components.ActionButtons
 import dms.ui.components.SectionHeader
 import dms.ui.components.model.ActionButtonModel
 
-/** The inspector's sections for fields, a rule from the document, and retention. */
+/** The quickLookViewModel's sections for fields, a rule from the document, and retention. */
 @Composable
 fun DetailsSections(
     document: DocumentModel,

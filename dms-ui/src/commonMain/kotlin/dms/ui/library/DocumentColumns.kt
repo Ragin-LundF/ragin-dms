@@ -10,7 +10,7 @@ object DocumentColumns {
     const val TAGS: Float = 1.6f
     const val CORRESPONDENT: Float = 1.4f
     const val DATE: Float = 0.9f
-    const val SIZE: Float = 0.7f
+    const val AMOUNT: Float = 0.9f
     val padding: Dp = Spacing.medium
     val rowPadding: Dp = Spacing.small
     val gap: Dp = Spacing.medium

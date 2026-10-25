@@ -7,6 +7,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
+import dms.ui.library.LibraryCommands
 import dms.ui.model.Screen
 import dms.ui.service.AppServices
 import dms.ui.session.LibrarySession
@@ -25,6 +26,7 @@ fun ScreenContent(
     screen: Screen,
     onScreenChange: (Screen) -> Unit,
     palette: CommandPalette,
+    libraryCommands: LibraryCommands,
 ) {
     val settings = viewModel {
         SettingsViewModel(services = services, session = session, platform = platform)
@@ -53,6 +55,7 @@ fun ScreenContent(
             settings = settings,
             onScreenChange = onScreenChange,
             palette = palette,
+            libraryCommands = libraryCommands,
         )
     }
 }

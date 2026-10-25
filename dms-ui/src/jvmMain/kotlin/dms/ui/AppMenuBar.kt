@@ -6,6 +6,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.window.FrameWindowScope
 import androidx.compose.ui.window.MenuBar
+import dms.ui.library.LibraryCommands
 import dms.ui.model.Screen
 import dms.ui.platform.ActionShortcuts
 import dms.ui.platform.HostOs
@@ -24,6 +25,7 @@ fun FrameWindowScope.AppMenuBar(
     onScreenChange: (Screen) -> Unit,
     onLogVisibleChange: (Boolean) -> Unit,
     onGoTo: () -> Unit,
+    libraryCommands: LibraryCommands,
 ) {
     val state by session.state.collectAsState()
     val idle = state.busy == null && state.status is LibraryStatus.Open
@@ -54,6 +56,7 @@ fun FrameWindowScope.AppMenuBar(
                 onClick = { cancellable?.let { session.cancel(lane = it.lane) } },
             )
         }
+        LibraryMenu(commands = libraryCommands)
         Menu(text = "View") {
             Item(text = "Go to…", shortcut = HostOs.shortcut(key = Key.K), onClick = onGoTo)
             Separator()

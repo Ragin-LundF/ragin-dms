@@ -5,7 +5,6 @@ import androidx.lifecycle.viewModelScope
 import dms.application.common.OperationOutcome
 import dms.application.library.model.DashboardModel
 import dms.application.library.model.FolderStateModel
-import dms.application.library.model.outcome.DashboardOutcome
 import dms.application.resolution.model.MoveDecision
 import dms.domain.catalog.model.CatalogModel
 import dms.domain.change.DetectedChange
@@ -47,12 +46,9 @@ import dms.ui.session.model.UiMessageModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.launch
 import java.time.ZoneId
 
 /**
@@ -66,7 +62,7 @@ class DashboardViewModel(
     private val platform: PlatformActions,
 ) : ViewModel(), TaskHandler {
 
-    private val dashboard = MutableStateFlow<DashboardModel?>(value = null)
+    private val dashboard: StateFlow<DashboardModel?> = session.dashboard
     private val filter = MutableStateFlow<TaskGroup?>(value = null)
 
     val dialogs: DialogController = DialogController()
@@ -89,19 +85,6 @@ class DashboardViewModel(
     ) { built, sessionState, group ->
         toUiState(dashboard = built, sessionState = sessionState, filter = group)
     }.stateIn(scope = viewModelScope, started = SharingStarted.Eagerly, initialValue = DashboardUiStateModel())
-
-    init {
-        viewModelScope.launch {
-            val scans = session.state.map { it.lastScan to it.revision }.distinctUntilChanged()
-            combine(flow = scans, flow2 = services.library.catalog) { (scan, _), _ -> scan }
-                .collectLatest { scan ->
-                    dashboard.value = when (val outcome = services.library.buildDashboard(scan = scan)) {
-                        is DashboardOutcome.Built -> outcome.dashboard
-                        DashboardOutcome.LibraryNotOpen -> null
-                    }
-                }
-        }
-    }
 
     fun setFilter(group: TaskGroup?) {
         filter.value = group

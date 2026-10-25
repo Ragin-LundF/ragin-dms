@@ -2,7 +2,9 @@ package dms.ui.session
 
 import dms.application.common.OperationOutcome
 import dms.application.inbox.model.CollectInboxOutcome
+import dms.application.library.model.DashboardModel
 import dms.application.library.model.ScanResultModel
+import dms.application.library.model.outcome.DashboardOutcome
 import dms.application.library.model.outcome.OpenLibraryOutcome
 import dms.application.library.model.outcome.ScanOutcome
 import dms.application.port.state.model.PreferencesModel
@@ -19,13 +21,17 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.mapLatest
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.Duration
@@ -46,8 +52,33 @@ class LibrarySession(
     private val mutableState = MutableStateFlow(value = SessionStateModel())
     private val mutableProgress = MutableStateFlow<Map<OperationLane, OperationProgressModel>>(value = emptyMap())
     private val running = ConcurrentHashMap<OperationLane, Job>()
+    private val preferencesWriter = PreferencesWriter(settings = services.library.settings)
 
     val state: StateFlow<SessionStateModel> = mutableState.asStateFlow()
+
+    /**
+     * The dashboard of the open library, built once whenever the catalog, the last scan or an operation
+     * changes, and read by every screen that needs it (dashboard, inbox, navigation, Needs review, quick
+     * look); `null` while no library is open.
+     */
+    val dashboard: StateFlow<DashboardModel?> = combine(
+        flow = mutableState.map { it.lastScan to it.revision }.distinctUntilChanged(),
+        flow2 = services.library.catalog,
+    ) { (scan, _), _ -> scan }
+        .mapLatest { scan ->
+            when (val outcome = services.library.buildDashboard(scan = scan)) {
+                is DashboardOutcome.Built -> outcome.dashboard
+                DashboardOutcome.LibraryNotOpen -> null
+            }
+        }
+        .stateIn(scope = scope, started = SharingStarted.Eagerly, initialValue = null)
+
+    /** The panel layout of the library, saved beside every lane. */
+    val layout: LayoutPreferences = LayoutPreferences(
+        state = mutableState,
+        writer = preferencesWriter,
+        scope = scope,
+    )
 
     /**
      * How far the running operations are, by lane. Kept apart from [state], because it changes with
@@ -87,12 +118,14 @@ class LibrarySession(
         updatePreferences { it.copy(addNewFilesWhileScanning = enabled) }
     }
 
-    /** Saves the preferences of this device; the one writer of them. */
+    /** Saves the preferences of this device; together with [layout] the one writer of them. */
     fun updatePreferences(change: (PreferencesModel) -> PreferencesModel) {
         perform(label = "Saving the preferences") {
-            val preferences = change(mutableState.value.preferences)
-            services.library.settings.savePreferences(preferences = preferences)
-            mutableState.update { it.copy(preferences = preferences) }
+            preferencesWriter.write(
+                current = { mutableState.value.preferences },
+                change = change,
+                publish = { saved -> mutableState.update { it.copy(preferences = saved) } },
+            )
         }
     }
 

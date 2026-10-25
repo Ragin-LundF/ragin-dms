@@ -20,8 +20,6 @@ object Spacing {
     val sidebarWidth: Dp = Dp(value = 264f)
     val sidebarMinWidth: Dp = Dp(value = 200f)
     val sidebarMaxWidth: Dp = Dp(value = 600f)
-    val inspectorWidth: Dp = Dp(value = 320f)
-    val inspectorPreviewHeight: Dp = Dp(value = 190f)
     val dialogWidth: Dp = Dp(value = 480f)
     val contentMaxWidth: Dp = Dp(value = 1480f)
     val logHeight: Dp = Dp(value = 220f)

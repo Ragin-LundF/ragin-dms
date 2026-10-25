@@ -52,6 +52,9 @@ import dms.application.fake.system.FixedClock
 import dms.application.fake.system.SequentialIds
 import dms.application.folder.CreateFolder
 import dms.application.folder.MoveFolder
+import dms.application.folder.ReadFolderEntries
+import dms.application.folder.ReadFolders
+import dms.application.folder.TrashFolder
 import dms.application.inbox.CollectInbox
 import dms.application.inbox.ConfigureInbox
 import dms.application.inbox.FileInboxDocument
@@ -231,6 +234,14 @@ class TestLibrary {
         storage = folders,
         replicator = replicator,
         names = names,
+        activity = activity,
+    )
+    val readFolderEntries: ReadFolderEntries = ReadFolderEntries(store = store, storage = folders)
+    val readFolders: ReadFolders = ReadFolders(store = store, storage = folders)
+    val trashFolder: TrashFolder = TrashFolder(
+        store = store,
+        replicator = replicator,
+        tasks = tasks,
         activity = activity,
     )
     val moveFolder: MoveFolder = MoveFolder(

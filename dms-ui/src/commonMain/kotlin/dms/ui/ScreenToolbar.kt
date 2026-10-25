@@ -63,10 +63,10 @@ fun ScreenToolbar(
                     menuLabel = "More library actions",
                     busyReason = busy,
                 )
-                AddFilesButton(busyReason = busy, onClick = library::addFilesToTopLevel)
+                AddFilesButton(busyReason = busy, onClick = library.files::addFilesToTopLevel)
             }
 
-            Screen.LIBRARY -> AddFilesButton(busyReason = busy, onClick = library::addFiles)
+            Screen.LIBRARY -> AddFilesButton(busyReason = busy, onClick = library.files::addFiles)
 
             Screen.INBOX,
             Screen.TASKS,

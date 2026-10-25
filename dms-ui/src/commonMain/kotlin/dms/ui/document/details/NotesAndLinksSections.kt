@@ -15,7 +15,7 @@ import dms.domain.document.model.DocumentModel
 import dms.ui.components.SectionHeader
 import dms.ui.document.details.model.LinkCandidateModel
 
-/** The inspector's sections for the note, the linked documents and the related ones. */
+/** The quickLookViewModel's sections for the note, the linked documents and the related ones. */
 @Composable
 fun NotesAndLinksSections(
     document: DocumentModel,

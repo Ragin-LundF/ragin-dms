@@ -6,17 +6,20 @@ import dms.domain.classification.model.ClassificationSuggestionModel
 import dms.domain.field.FieldValues
 import dms.ui.components.format.DateTexts
 
-/** The values of a suggestion as short chip texts, in the order the review dialog shows them. */
+/**
+ * The values of a suggestion as short chip texts, in the order the review dialog shows them: exactly
+ * the values that accepting it unchanged applies, so the file name only with [acceptFileName].
+ */
 object SuggestionValues {
 
-    fun of(suggestion: ClassificationSuggestionModel, catalog: CatalogModel): List<String> {
+    fun of(suggestion: ClassificationSuggestionModel, catalog: CatalogModel, acceptFileName: Boolean): List<String> {
         val labels = catalog.settings.fieldDefinitions.associate { it.key to it.label }
         return listOfNotNull(
-            suggestion.title?.let { "title: $it" },
+            suggestion.title?.takeIf { it.isNotBlank() }?.let { "title: $it" },
             suggestion.category?.let { categoryText(category = it, catalog = catalog) },
-            suggestion.correspondent?.let { "correspondent: $it" },
+            suggestion.correspondent?.takeIf { it.isNotBlank() }?.let { "correspondent: $it" },
             suggestion.documentDate?.let { "date: ${DateTexts.absolute(date = it)}" },
-            suggestion.fileName?.let { "name: $it" },
+            suggestion.fileName?.takeIf { acceptFileName && it.isNotBlank() }?.let { "name: $it" },
             suggestion.targetFolder?.let { "folder: ${it.path.value}" },
         ) + suggestion.tags.map { "+ ${it.name.value}" } +
             suggestion.fields.map { (key, value) ->

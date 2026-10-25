@@ -60,7 +60,7 @@ fun ScanningCard(
         }
         Text(
             text = "A new document's date comes from its file name (such as 2024-03-15 or 15.03.2024), " +
-                "else from the file's creation date. You can change it in the inspector.",
+                "else from the file's creation date. You can change it in the quickLookViewModel.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(top = Spacing.large, bottom = Spacing.medium),

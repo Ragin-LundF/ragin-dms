@@ -7,6 +7,7 @@ import dms.application.port.storage.ScanListener
 import dms.application.port.storage.TextStore
 import dms.application.port.storage.model.CatalogLoad
 import dms.application.port.storage.model.ExternalFileModel
+import dms.application.port.storage.model.FolderEntriesModel
 import dms.application.port.storage.model.StorageFailure
 import dms.application.port.storage.model.StorageResult
 import dms.domain.catalog.model.CatalogModel
@@ -215,6 +216,30 @@ class FakeFolders : DocumentStorage, LibraryScanner, CatalogRepository, TextStor
         val entries = filesOf(folderId = folder.id).keys + directories[folder.id].orEmpty()
         val names = entries.filter { it.isInside(folder = path) }.map { it.segments[depth] }.distinct()
         return StorageResult.Success(value = names)
+    }
+
+    override suspend fun listFolders(folder: LibraryFolderModel): StorageResult<Set<RelativePathModel>> {
+        return when (val listed = listEntries(folder = folder, path = RelativePathModel.ROOT)) {
+            is StorageResult.Success -> StorageResult.Success(value = listed.value.folders)
+            is StorageResult.Failure -> listed
+        }
+    }
+
+    override suspend fun listEntries(
+        folder: LibraryFolderModel,
+        path: RelativePathModel,
+    ): StorageResult<FolderEntriesModel> {
+        unreachableFailure(folder = folder)?.let { return it }
+        if (!path.isRoot && !isDirectory(folderId = folder.id, path = path)) {
+            return failure(reason = StorageFailure.NOT_FOUND)
+        }
+        val files = filesOf(folderId = folder.id).keys.filter { path.isRoot || it.isInside(folder = path) }.toSet()
+        val explicit = directories[folder.id].orEmpty().filter { path.isRoot || it.isInside(folder = path) }
+        val parents = (files + explicit).flatMap { entry ->
+            generateSequence(seed = entry.parent) { it.parent }
+                .filter { !it.isRoot && (path.isRoot || it.isInside(folder = path)) }
+        }
+        return StorageResult.Success(value = FolderEntriesModel(folders = (explicit + parents).toSet(), files = files))
     }
 
     // --- LibraryScanner

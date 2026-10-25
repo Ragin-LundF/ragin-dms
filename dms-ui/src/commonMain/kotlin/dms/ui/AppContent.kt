@@ -21,6 +21,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import dms.ui.library.LibraryCommands
 import dms.ui.model.Screen
 import dms.ui.service.AppServices
 import dms.ui.session.LibrarySession
@@ -41,6 +42,7 @@ fun AppContent(
     logVisible: Boolean,
     onLogVisibleChange: (Boolean) -> Unit,
     palette: CommandPalette,
+    libraryCommands: LibraryCommands,
 ) {
     val sessionState by session.state.collectAsState()
     val progress by session.progress.collectAsState()
@@ -81,6 +83,7 @@ fun AppContent(
                         screen = screen,
                         onScreenChange = onScreenChange,
                         palette = palette,
+                        libraryCommands = libraryCommands,
                     )
                 }
                 if (logVisible) {

@@ -34,6 +34,9 @@ import dms.application.document.TrashNewFile
 import dms.application.export.ExportDocuments
 import dms.application.folder.CreateFolder
 import dms.application.folder.MoveFolder
+import dms.application.folder.ReadFolderEntries
+import dms.application.folder.ReadFolders
+import dms.application.folder.TrashFolder
 import dms.application.inbox.CollectInbox
 import dms.application.inbox.ConfigureInbox
 import dms.application.inbox.FileInboxDocument
@@ -251,6 +254,14 @@ class AppContainer(
                 storage = storage,
                 replicator = replicator,
                 names = names,
+                activity = activity,
+            ),
+            readFolderEntries = ReadFolderEntries(store = store, storage = storage),
+            readFolders = ReadFolders(store = store, storage = storage),
+            trashFolder = TrashFolder(
+                store = store,
+                replicator = replicator,
+                tasks = adapters.tasks,
                 activity = activity,
             ),
             editCatalog = EditCatalog(store = store, activity = activity, ids = ids),

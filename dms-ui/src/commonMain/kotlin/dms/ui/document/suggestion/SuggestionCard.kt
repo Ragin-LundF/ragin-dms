@@ -30,12 +30,18 @@ import dms.ui.theme.Spacing
 
 /**
  * A suggestion of the AI that waits for this document's review, in the AI's gradient frame: its
- * [values] as chips, "Review…" to open the review and "Dismiss" to reject it, which waits for a busy
- * library ([busyReason]).
+ * [values] as chips, "Accept all" to apply exactly these values, "Edit…" to open the review and
+ * "Dismiss" to reject it. Accepting and dismissing wait for a busy library ([busyReason]).
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun SuggestionCard(values: List<String>, busyReason: String?, onReview: () -> Unit, onDismiss: () -> Unit) {
+fun SuggestionCard(
+    values: List<String>,
+    busyReason: String?,
+    onAccept: () -> Unit,
+    onEdit: () -> Unit,
+    onDismiss: () -> Unit,
+) {
     val colors = MaterialTheme.colorScheme
     val shape = MaterialTheme.shapes.large
     val frame = BorderStroke(width = Spacing.hairline, brush = Brush.linearGradient(colors = AppColors.aiGradient))
@@ -58,7 +64,7 @@ fun SuggestionCard(values: List<String>, busyReason: String?, onReview: () -> Un
                 tint = colors.primary,
                 modifier = Modifier.size(size = Spacing.icon),
             )
-            Text(text = "AI suggestion", style = MaterialTheme.typography.titleSmall)
+            Text(text = "Suggested by AI", style = MaterialTheme.typography.titleSmall)
         }
         FlowRow(
             horizontalArrangement = Arrangement.spacedBy(space = Spacing.xsmall),
@@ -68,7 +74,13 @@ fun SuggestionCard(values: List<String>, busyReason: String?, onReview: () -> Un
         }
         ActionButtons(
             buttons = listOf(
-                ActionButtonModel(label = "Review…", style = ButtonStyle.TONAL, onClick = onReview),
+                ActionButtonModel(
+                    label = "Accept all",
+                    style = ButtonStyle.FILLED,
+                    disabledReason = busyReason,
+                    onClick = onAccept,
+                ),
+                ActionButtonModel(label = "Edit…", style = ButtonStyle.OUTLINED, onClick = onEdit),
                 ActionButtonModel(
                     label = "Dismiss",
                     style = ButtonStyle.TEXT,

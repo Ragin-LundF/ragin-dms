@@ -45,7 +45,7 @@ class PaletteCommands(
             PaletteAction.SYNC_ALL -> dashboard.syncToAllDestinations()
             PaletteAction.RETRY_FAILED -> session.retryFailedOperations()
             PaletteAction.DETECT_DATES -> session.detectDocumentDates()
-            PaletteAction.ADD_FILES -> library.addFilesToTopLevel()
+            PaletteAction.ADD_FILES -> library.files.addFilesToTopLevel()
             PaletteAction.MERGE_ALL -> dashboard.mergeAllFolders()
             // The AI batches show their progress and results on the dashboard, so it comes to the front.
             PaletteAction.TAG_UNTAGGED -> onDashboard { dashboard.aiBatches.tagAll() }

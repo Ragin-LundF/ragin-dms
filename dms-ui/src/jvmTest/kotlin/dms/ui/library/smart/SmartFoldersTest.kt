@@ -41,7 +41,7 @@ class SmartFoldersTest {
             app.idle()
 
             val saved = SampleLibrary.catalog(app = app).settings.savedSearches.single()
-            assertEquals(expected = "Save as smart folder", actual = title)
+            assertEquals(expected = "Save view", actual = title)
             assertEquals(expected = "Tax papers", actual = saved.name)
             assertEquals(expected = current, actual = saved.query)
             assertEquals(expected = UiMessageModel(text = "Saved Tax papers"), actual = app.session.state.value.message)
@@ -138,7 +138,7 @@ class SmartFoldersTest {
             app.idle()
 
             assertEquals(expected = "all", actual = kept?.name)
-            assertEquals(expected = "Delete smart folder \"all\"", actual = title)
+            assertEquals(expected = "Delete saved view \"all\"", actual = title)
             assertNull(actual = smartFolders.searchOf(id = id))
             assertEquals(expected = 1, actual = SampleLibrary.catalog(app = app).documents.size)
         }

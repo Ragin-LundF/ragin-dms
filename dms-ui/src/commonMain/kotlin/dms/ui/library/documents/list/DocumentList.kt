@@ -2,6 +2,7 @@ package dms.ui.library.documents.list
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -17,27 +18,32 @@ import androidx.compose.ui.text.style.TextAlign
 import dms.domain.document.model.DocumentIdModel
 import dms.domain.library.model.LibraryFolderIdModel
 import dms.ui.library.DocumentColumns
+import dms.ui.library.documents.GroupHeader
+import dms.ui.library.documents.model.DocumentClick
+import dms.ui.library.documents.model.DocumentGroupModel
 import dms.ui.library.documents.model.DocumentSortModel
 import dms.ui.library.documents.model.SortColumn
 import dms.ui.library.drag.DocumentDrag
 import dms.ui.library.drag.DraggableDocument
-import dms.ui.library.model.DocumentRowModel
 import dms.ui.preview.ThumbnailLoader
+import dms.ui.theme.LibrarySizes
 import dms.ui.theme.Spacing
 
 /**
- * The documents as rows under a header that stays in place while the rows scroll; a click on a column
- * title sorts by it. Each row can be dragged onto the sidebar.
+ * The documents as rows under a header that stays in place while the rows scroll, grouped like the
+ * grid; a click on a column title sorts by it. Each row can be dragged onto a folder.
  */
 @Composable
 fun DocumentList(
-    rows: List<DocumentRowModel>,
+    groups: List<DocumentGroupModel>,
+    selected: Set<DocumentIdModel>,
     inspected: DocumentIdModel?,
     sort: DocumentSortModel?,
     folderId: LibraryFolderIdModel?,
     thumbnails: ThumbnailLoader,
     drag: DocumentDrag,
-    onInspect: (DocumentIdModel) -> Unit,
+    onClick: (DocumentIdModel, DocumentClick) -> Unit,
+    onToggle: (DocumentIdModel) -> Unit,
     onSort: (SortColumn) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -45,17 +51,27 @@ fun DocumentList(
         ListHeader(sort = sort, onSort = onSort)
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
         LazyColumn(
-            modifier = Modifier.padding(top = Spacing.xsmall),
+            contentPadding = PaddingValues(bottom = Spacing.xxlarge * 3),
             verticalArrangement = Arrangement.spacedBy(space = Spacing.hairline),
         ) {
-            items(items = rows, key = { it.document.id.value }) { row ->
-                DraggableDocument(drag = drag, document = row.document) {
-                    DocumentListRow(
-                        row = row,
-                        selected = row.document.id == inspected,
-                        folderId = folderId,
-                        thumbnails = thumbnails,
-                    ) { onInspect(row.document.id) }
+            groups.forEach { group ->
+                stickyHeader(key = "group:${group.title}") {
+                    GroupHeader(title = group.title, count = group.rows.size)
+                }
+                items(items = group.rows, key = { it.document.id.value }) { row ->
+                    val id = row.document.id
+                    DraggableDocument(drag = drag, document = row.document) {
+                        DocumentListRow(
+                            row = row,
+                            selected = id in selected,
+                            inspected = id == inspected,
+                            selecting = selected.isNotEmpty(),
+                            folderId = folderId,
+                            thumbnails = thumbnails,
+                            onClick = { click -> onClick(id, click) },
+                            onToggle = { onToggle(id) },
+                        )
+                    }
                 }
             }
         }
@@ -68,6 +84,7 @@ private fun ListHeader(sort: DocumentSortModel?, onSort: (SortColumn) -> Unit) {
         modifier = Modifier.fillMaxWidth().padding(horizontal = DocumentColumns.padding, vertical = Spacing.small),
         horizontalArrangement = Arrangement.spacedBy(space = DocumentColumns.gap),
     ) {
+        Spacer(modifier = Modifier.width(width = LibrarySizes.selectionCircle))
         Spacer(modifier = Modifier.width(width = DocumentColumns.thumbnailWidth))
         HeaderCell(
             text = "Name",
@@ -85,7 +102,7 @@ private fun ListHeader(sort: DocumentSortModel?, onSort: (SortColumn) -> Unit) {
         )
         HeaderCell(text = "Tags", modifier = Modifier.weight(weight = DocumentColumns.TAGS))
         HeaderCell(
-            text = "Correspondent",
+            text = "From",
             modifier = Modifier.weight(weight = DocumentColumns.CORRESPONDENT),
             column = SortColumn.CORRESPONDENT,
             sort = sort,
@@ -99,9 +116,9 @@ private fun ListHeader(sort: DocumentSortModel?, onSort: (SortColumn) -> Unit) {
             onSort = onSort,
         )
         HeaderCell(
-            text = "Size",
-            modifier = Modifier.weight(weight = DocumentColumns.SIZE),
-            column = SortColumn.SIZE,
+            text = "Amount",
+            modifier = Modifier.weight(weight = DocumentColumns.AMOUNT),
+            column = SortColumn.AMOUNT,
             sort = sort,
             onSort = onSort,
             textAlign = TextAlign.End,

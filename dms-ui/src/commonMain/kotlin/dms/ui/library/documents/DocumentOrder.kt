@@ -34,10 +34,11 @@ object DocumentOrder {
     private fun hasValue(row: DocumentRowModel, column: SortColumn): Boolean {
         val metadata = row.document.metadata
         return when (column) {
-            SortColumn.NAME, SortColumn.SIZE -> true
+            SortColumn.NAME -> true
             SortColumn.CATEGORY -> row.categoryName != null
             SortColumn.CORRESPONDENT -> metadata.correspondent != null
             SortColumn.DATE -> metadata.documentDate != null
+            SortColumn.AMOUNT -> row.amount != null
         }
     }
 
@@ -47,7 +48,7 @@ object DocumentOrder {
             SortColumn.CATEGORY -> compareBy { lowercase(text = it.categoryName.orEmpty()) }
             SortColumn.CORRESPONDENT -> compareBy { lowercase(text = it.document.metadata.correspondent.orEmpty()) }
             SortColumn.DATE -> compareBy { it.document.metadata.documentDate }
-            SortColumn.SIZE -> compareBy { it.document.size }
+            SortColumn.AMOUNT -> compareBy { it.amount?.amount }
         }
     }
 

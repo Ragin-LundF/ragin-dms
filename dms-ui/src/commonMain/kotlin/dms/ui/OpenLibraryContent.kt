@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -18,9 +19,10 @@ import dms.ui.ask.AskViewModel
 import dms.ui.dashboard.DashboardScreen
 import dms.ui.dashboard.DashboardViewModel
 import dms.ui.dashboard.TasksScreen
-import dms.ui.document.InspectorViewModel
+import dms.ui.document.QuickLookViewModel
 import dms.ui.inbox.InboxScreen
 import dms.ui.inbox.InboxViewModel
+import dms.ui.library.LibraryCommands
 import dms.ui.library.LibraryScreen
 import dms.ui.library.LibraryViewModel
 import dms.ui.library.model.LibrarySelection
@@ -48,18 +50,25 @@ fun OpenLibraryContent(
     settings: SettingsViewModel,
     onScreenChange: (Screen) -> Unit,
     palette: CommandPalette,
+    libraryCommands: LibraryCommands,
 ) {
-    val library = viewModel { LibraryViewModel(services = services, session = session, platform = platform) }
+    val quickLookViewModel = viewModel {
+        QuickLookViewModel(services = services, session = session, platform = platform)
+    }
+    // One quick look for the whole library: the documents, the folder view and the keys all open the same.
+    val library = viewModel {
+        LibraryViewModel(
+            services = services,
+            session = session,
+            platform = platform,
+            quickLook = quickLookViewModel.quickLook,
+        )
+    }
     val dashboard = viewModel { DashboardViewModel(services = services, session = session, platform = platform) }
+    ConnectedCommands(commands = libraryCommands, library = library)
     val restructure = viewModel { RestructureViewModel(services = services, session = session) }
     val ask = viewModel { AskViewModel(services = services, session = session) }
-    val restructureRequest by dashboard.organize.restructureRequests.collectAsState()
-    LaunchedEffect(key1 = restructureRequest) {
-        val folder = restructureRequest ?: return@LaunchedEffect
-        dashboard.organize.consumeRestructureRequest()
-        restructure.start(folder = folder)
-        onScreenChange(Screen.RESTRUCTURE)
-    }
+    RestructureRequests(dashboard = dashboard, restructure = restructure, onScreenChange = onScreenChange)
     val openDocument: (DocumentIdModel) -> Unit = { documentId ->
         library.reveal(documentId = documentId)
         onScreenChange(Screen.LIBRARY)
@@ -96,17 +105,21 @@ fun OpenLibraryContent(
                 Screen.ASK -> AskScreen(viewModel = ask, onOpenDocument = openDocument)
                 Screen.RESTRUCTURE -> RestructureScreen(viewModel = restructure)
                 Screen.TASKS -> TasksScreen(viewModel = dashboard)
-                Screen.LIBRARY -> LibraryScreen(
-                    viewModel = library,
-                    inspector = viewModel {
-                        InspectorViewModel(services = services, session = session, platform = platform)
-                    },
-                    platform = platform,
-                )
+                Screen.LIBRARY ->
+                    LibraryScreen(viewModel = library, quickLookViewModel = quickLookViewModel, platform = platform)
 
                 Screen.SETTINGS -> SettingsScreen(viewModel = settings)
             }
         }
+    }
+}
+
+/** Lets the "Documents" menu reach [library] while it is shown. */
+@Composable
+private fun ConnectedCommands(commands: LibraryCommands, library: LibraryViewModel) {
+    DisposableEffect(key1 = library) {
+        commands.connect(viewModel = library)
+        onDispose { commands.connect(viewModel = null) }
     }
 }
 
@@ -121,7 +134,7 @@ private fun Dashboard(
     DashboardScreen(
         viewModel = dashboard,
         platform = platform,
-        onAddFiles = { files -> library.addFiles(locations = files, target = RelativePathModel.ROOT) },
+        onAddFiles = { files -> library.files.addFiles(locations = files, target = RelativePathModel.ROOT) },
         onOpen = { selection, query ->
             library.show(selection = selection, query = query)
             onScreenChange(Screen.LIBRARY)
@@ -134,4 +147,20 @@ private fun Dashboard(
         onShowAllTasks = { onScreenChange(Screen.TASKS) },
         onOpenInbox = { onScreenChange(Screen.INBOX) },
     )
+}
+
+/** Opens the restructure assistant on the folder a dashboard task asks for. */
+@Composable
+private fun RestructureRequests(
+    dashboard: DashboardViewModel,
+    restructure: RestructureViewModel,
+    onScreenChange: (Screen) -> Unit,
+) {
+    val restructureRequest by dashboard.organize.restructureRequests.collectAsState()
+    LaunchedEffect(key1 = restructureRequest) {
+        val folder = restructureRequest ?: return@LaunchedEffect
+        dashboard.organize.consumeRestructureRequest()
+        restructure.start(folder = folder)
+        onScreenChange(Screen.RESTRUCTURE)
+    }
 }

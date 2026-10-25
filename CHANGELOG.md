@@ -4,6 +4,25 @@ All notable changes to ragin-dms are listed here.
 
 ## 1.2.0 - Unreleased
 
+### A new look for the library
+
+- Optimized the whole app for a calmer, clearer look, with a new font and matching light and dark
+  themes.
+- The library has a new sidebar with All documents, Inbox, Needs review, Added this month, Folders and
+  your saved views. You can resize it or fold it into a narrow bar, and the app remembers your choice.
+- Search and filter in one place: type to search, and narrow the results by category, tag, year,
+  sender, type or folder. Save any combination as a view.
+- See your documents as page previews or as a list, grouped by month, category or sender.
+- Select several documents at once to give them a category or tag, move them or put them in the trash.
+- Folders work like a file manager: a folder tree, new folders named in place, and folders you can
+  rename, move by dragging, search in and delete. Before deleting, the app tells you exactly what goes
+  to the trash.
+- Quick look shows a document's preview and key facts beside the list. You can edit them right there
+  and accept the AI's suggestions in one click.
+- Work faster with the keyboard: "/" to search, Space for quick look, the arrow keys to go to the next
+  or previous document, and more. Every shortcut is also listed in the new "Documents" menu.
+- The Trash entry is gone from the sidebar. Deleted documents are in your system's trash.
+
 ### Safer with several computers
 
 - Saving the catalog no longer overwrites changes another computer saved in the meantime. The app
