@@ -20,7 +20,7 @@ class DetectDocumentDatesTest {
             library.folders.put(folder = library.primary, path = "unknown.pdf", content = "gamma")
             library.folders.creationDays[RelativePathModel.of(raw = "created.pdf")] = LocalDate.parse("2019-06-01")
 
-            library.scanLibrary(addNewFiles = true)
+            library.scanned(addNewFiles = true)
 
             val named = dateOf(library = library, path = "15.03.2024 Sample.pdf")
             assertEquals(expected = LocalDate.parse("2024-03-15"), actual = named)
@@ -37,7 +37,7 @@ class DetectDocumentDatesTest {
             library.open()
             library.folders.put(folder = library.primary, path = "2021-02-03 Sample.pdf", content = "alpha")
             library.folders.put(folder = library.primary, path = "other.pdf", content = "beta")
-            library.scanLibrary(addNewFiles = true)
+            library.scanned(addNewFiles = true)
             library.folders.creationDays[RelativePathModel.of(raw = "other.pdf")] = LocalDate.parse("2018-01-01")
 
             val dated = library.detectDocumentDates()

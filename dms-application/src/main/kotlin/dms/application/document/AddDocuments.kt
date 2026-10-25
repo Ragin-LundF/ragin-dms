@@ -4,6 +4,7 @@ import dms.application.common.ActivityRecorder
 import dms.application.common.OperationOutcome
 import dms.application.common.SiblingNames
 import dms.application.common.model.LibrarySnapshotModel
+import dms.application.document.model.AddDocumentsOutcome
 import dms.application.document.model.AddedFileModel
 import dms.application.library.CatalogStore
 import dms.application.port.state.model.ActivityKind
@@ -38,8 +39,11 @@ class AddDocuments(
     private val ids: IdGenerator,
 ) {
 
-    suspend operator fun invoke(files: List<ExternalFileModel>, targetFolder: RelativePathModel): List<AddedFileModel> {
-        return files.map { add(file = it, targetFolder = targetFolder) }
+    suspend operator fun invoke(files: List<ExternalFileModel>, targetFolder: RelativePathModel): AddDocumentsOutcome {
+        if (store.current() == null) {
+            return AddDocumentsOutcome.LibraryNotOpen
+        }
+        return AddDocumentsOutcome.Added(files = files.map { add(file = it, targetFolder = targetFolder) })
     }
 
     private suspend fun add(file: ExternalFileModel, targetFolder: RelativePathModel): AddedFileModel {

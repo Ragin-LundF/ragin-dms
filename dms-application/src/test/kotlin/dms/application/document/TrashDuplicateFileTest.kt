@@ -52,7 +52,7 @@ class TrashDuplicateFileTest {
     }
 
     private suspend fun newFileOf(library: TestLibrary): DetectedChange.NewFile {
-        val scan = assertNotNull(actual = library.scanLibrary())
+        val scan = assertNotNull(actual = library.scanned())
         return scan.changes.filterIsInstance<DetectedChange.NewFile>().single()
     }
 }

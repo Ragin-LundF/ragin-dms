@@ -19,14 +19,14 @@ class PromptTextsTest {
     }
 
     @Test
-    fun `the user prompt carries the file name and the cut text`() {
-        val text = "x".repeat(n = PromptTexts.MAX_TEXT_CHARACTERS + 50)
+    fun `the user prompt carries the file name and the text as the reader cut it`() {
+        val text = "x".repeat(n = 500)
 
         val user = PromptTexts.user(request = Requests.request(), text = text)
 
         assertFalse(actual = "{{" in user)
         assertTrue(actual = user.startsWith(prefix = "Current file name: scan-001.pdf"))
-        assertFalse(actual = "x".repeat(n = PromptTexts.MAX_TEXT_CHARACTERS + 1) in user)
+        assertTrue(actual = user.endsWith(suffix = text))
     }
 
     @Test

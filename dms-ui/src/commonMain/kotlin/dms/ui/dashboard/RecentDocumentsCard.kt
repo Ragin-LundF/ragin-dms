@@ -22,6 +22,7 @@ import dms.ui.components.FullViewButton
 import dms.ui.components.surface.AppCard
 import dms.ui.components.surface.CardTitle
 import dms.ui.components.surface.KindBadge
+import dms.ui.dashboard.panel.ActivityTexts
 import dms.ui.dashboard.stats.model.RecentDocumentModel
 import dms.ui.theme.Spacing
 

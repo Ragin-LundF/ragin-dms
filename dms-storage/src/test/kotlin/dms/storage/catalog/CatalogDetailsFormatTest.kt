@@ -1,6 +1,7 @@
 package dms.storage.catalog
 
 import dms.application.port.storage.model.CatalogLoad
+import dms.application.port.storage.model.StorageResult
 import dms.domain.catalog.CatalogUpdate
 import dms.domain.catalog.model.CatalogModel
 import dms.domain.catalog.model.LibraryIdModel
@@ -69,7 +70,7 @@ class CatalogDetailsFormatTest {
         runTest {
             val catalog = detailedCatalog()
 
-            repository.save(folder = folder, catalog = catalog)
+            save(catalog = catalog)
 
             assertEquals(expected = CatalogLoad.Found(catalog = catalog), actual = repository.load(folder = folder))
         }
@@ -78,7 +79,7 @@ class CatalogDetailsFormatTest {
     @Test
     fun `a note is written as a block and values as plain text`() {
         runTest {
-            repository.save(folder = folder, catalog = detailedCatalog())
+            save(catalog = detailedCatalog())
 
             val text = Files.readString(file)
             assertTrue(actual = text.contains(other = "note: |-\n    Paid on time.\n    Second line"))
@@ -91,7 +92,7 @@ class CatalogDetailsFormatTest {
     fun `a library without the new fields writes none of them`() {
         runTest {
             val plain = CatalogModel.empty(libraryId = LibraryIdModel(value = "library-1"))
-            repository.save(folder = folder, catalog = plain)
+            save(catalog = plain)
 
             val text = Files.readString(file)
             listOf("layout", "fieldDefinitions", "savedSearches", "rules", "correspondents", "links").forEach {
@@ -163,13 +164,13 @@ class CatalogDetailsFormatTest {
     fun `unknown fields next to the new ones are still kept`() {
         runTest {
             val catalog = detailedCatalog()
-            repository.save(folder = folder, catalog = catalog)
+            save(catalog = catalog)
             val withFuture = Files.readString(file)
                 .replace(oldValue = "revision: ", newValue = "futureSetting: kept\nrevision: ")
             Files.writeString(file, withFuture)
 
             val update = catalog.setNote(documentId = DocumentIdModel(value = "doc-b"), note = "Changed")
-            repository.save(folder = folder, catalog = assertIs<CatalogUpdate.Applied>(value = update).catalog)
+            save(catalog = assertIs<CatalogUpdate.Applied>(value = update).catalog)
 
             val text = Files.readString(file)
             assertTrue(actual = text.contains(other = "futureSetting: kept"))
@@ -184,6 +185,11 @@ class CatalogDetailsFormatTest {
         type = FieldType.TEXT,
     )
     private val tax = TagNameModel.of(raw = "Tax")
+
+    /** Saves [catalog] as a change based on its own revision, the case of every save in this test. */
+    private suspend fun save(catalog: CatalogModel): StorageResult<Unit> {
+        return repository.save(folder = folder, catalog = catalog, basedOn = catalog.revision)
+    }
 
     private fun detailedCatalog(): CatalogModel {
         val first = document(id = "doc-a", path = "a.pdf", content = "alpha")

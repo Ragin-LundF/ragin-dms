@@ -1,6 +1,7 @@
 package dms.application.sync
 
 import dms.application.TestLibrary
+import dms.application.sync.model.RetryOutcome
 import dms.application.sync.model.RetryReportModel
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
@@ -18,7 +19,7 @@ class RetryFailedOperationsTest {
             library.add(path = "letters/a.pdf", content = "alpha")
             library.folders.unreachable -= library.syncB.id
 
-            val report = library.retryFailedOperations()
+            val report = library.retried()
 
             assertEquals(expected = RetryReportModel(succeeded = 2), actual = report)
             assertEquals(
@@ -40,7 +41,7 @@ class RetryFailedOperationsTest {
             library.trashDocument(documentId = document.id, confirmed = true)
             library.folders.unreachable -= library.syncB.id
 
-            val report = library.retryFailedOperations()
+            val report = library.retried()
 
             assertEquals(expected = RetryReportModel(succeeded = 3, dropped = 1), actual = report)
             assertTrue(actual = library.folders.paths(folder = library.syncB).isEmpty())
@@ -56,10 +57,17 @@ class RetryFailedOperationsTest {
             library.folders.unreachable += library.syncB.id
             library.add(path = "letters/a.pdf", content = "alpha")
 
-            val report = library.retryFailedOperations()
+            val report = library.retried()
 
             assertEquals(expected = RetryReportModel(stillPending = 2), actual = report)
             assertEquals(expected = 2, actual = library.journal.pending().size)
+        }
+    }
+
+    @Test
+    fun `nothing is retried while no library is open`() {
+        runTest {
+            assertEquals(expected = RetryOutcome.LibraryNotOpen, actual = TestLibrary().retryFailedOperations())
         }
     }
 }

@@ -29,7 +29,10 @@ fun LibraryProblem(status: LibraryStatus, onRetry: () -> Unit, onOpenSettings: (
         }
 
         is LibraryStatus.Failed -> "The library could not be opened: ${status.detail ?: "unknown error"}"
-        else -> "The library is not open."
+        LibraryStatus.Loading,
+        LibraryStatus.NotConfigured,
+        is LibraryStatus.Open,
+        -> "The library is not open."
     }
     EmptyState(
         icon = Icons.Rounded.CloudOff,

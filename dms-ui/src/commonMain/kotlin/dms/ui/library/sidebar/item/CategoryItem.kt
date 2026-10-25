@@ -34,16 +34,16 @@ fun CategoryItem(
     val category = entry.category
     val actions = listOf(
         ActionButtonModel(label = "Add Subcategory", icon = Icons.Rounded.Add) {
-            viewModel.newSubcategory(parent = category)
+            viewModel.taxonomy.newCategory(parentId = category.id)
         },
         ActionButtonModel(label = "Rename", icon = Icons.Rounded.Edit) {
-            viewModel.renameCategory(category = category)
+            viewModel.taxonomy.renameCategory(category = category)
         },
         ActionButtonModel(
             label = "Delete",
             icon = Icons.Rounded.Delete,
             disabledReason = "Documents still use this category".takeIf { entry.documentCount > 0 },
-        ) { viewModel.removeCategory(category = category) },
+        ) { viewModel.taxonomy.removeCategory(category = category) },
     )
     DropTargetArea(drag = drag, target = DropTarget.Category(categoryId = category.id)) { hovered ->
         DraggableItem(drag = drag, item = DragItem.DraggedCategory(category = category)) {

@@ -59,7 +59,11 @@ class AiBatches(
                             session.log.info(text = "The AI found nothing new for $name")
                         }
 
-                        else -> session.log.error(text = AiMessages.of(outcome = outcome, name = name).text)
+                        SuggestOutcome.LibraryNotOpen,
+                        SuggestOutcome.NotFound,
+                        is SuggestOutcome.NotReadable,
+                        is SuggestOutcome.Failed,
+                        -> session.log.error(text = AiMessages.of(outcome = outcome, name = name).text)
                     }
                     failure = (progress.outcome as? SuggestOutcome.Failed)
                         ?.takeIf { it.reason == ClassificationFailure.PROVIDER_UNAVAILABLE }

@@ -20,7 +20,7 @@ Browser and mobile targets are out of scope. Do not add `expect`/`actual` indire
 
 ## Package layout
 
-Feature packages: `ui.dashboard`, `ui.library`, `ui.document` (inspector), `ui.review`, `ui.sync`, `ui.search`, `ui.settings`. Each is organised the same way:
+Feature packages: `ui.dashboard`, `ui.library`, `ui.document` (inspector), `ui.review`, `ui.sync`, `ui.search`, `ui.settings`, `ui.inbox`, `ui.restructure` (the restructure assistant), `ui.ask` (questions to the whole library), `ui.export`, `ui.pdf` (page editor) and `ui.preview` (thumbnails). Each is organised the same way:
 
 | Package | Holds |
 |---|---|
@@ -42,6 +42,10 @@ Feature packages: `ui.dashboard`, `ui.library`, `ui.document` (inspector), `ui.r
 - `ui.library.LibraryFilter` decides which documents the library shows: the sidebar selection (a folder, category, tag, "Uncategorized" or "Recently added"), the `YearFilterModel` and the text filter. A document's year is the one of its document date, or of when it was added; the dashboard's year chart counts the same way, so a click on a year opens exactly those documents.
 - The library sidebar folds: each section (`SidebarGroup`) and every folder or category with children has a boxed +/- (`components.FoldToggle`). Subfolders and subcategories start folded; selecting one unfolds its parents. Sidebar entries live in `library.sidebar.item`.
 - `ui.assistant` holds what the AI does with one document beside the library's operations, because it only reads: `SummaryController`/`SummaryDialog` and the conversation (`ChatController`, `ChatDialog`). The inspector view model owns both. Tagging and classifying store suggestions and therefore run through `LibrarySession.perform` in the `AI` lane and the review dialog.
+- `ui.library.taxonomy.TaxonomyController` creates, renames, moves and deletes categories and tags for the library screen; `ui.document.details.DetailsController` edits fields, note, links and retention.
+- `ui.session.NameInput` and `ui.session.DateInput` turn what the user typed into names and dates, with one message each. Use them, and the domain's `parse` functions (`TagNameModel.parse`, `RelativePathModel.parse`), instead of catching exceptions.
+- AWT and Swing types stay in `jvmMain`; `commonMain` gets what it needs through `PlatformActions` or a `CompositionLocal` set in `Main` (for example `LocalResizePointerIcon`).
+- The `when` over `OpenTask`, an outcome type, `ActivityKind`, `CatalogRejection` or `LibraryStatus` names every case, also in helpers, never `else`.
 - `ui.dashboard.AiBatches` runs "Tag with AI" and "Classify with AI" over the library; `ui.dashboard.hero` holds the gradient header with its buttons.
 - `ui.settings.ai` holds the AI settings card: server address, model, timeout, "Read PDFs as images", and the connection test that lists the server's models. Saving goes through `LibrarySession.updatePreferences`, the one writer of the preferences.
 - UI tests run the real `AppContainer` with a `FakeAiServer` (a Ktor `MockEngine`) in place of LM Studio; tests never call a real AI server.

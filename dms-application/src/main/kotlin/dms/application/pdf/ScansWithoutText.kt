@@ -1,11 +1,11 @@
 package dms.application.pdf
 
 import dms.application.library.CatalogStore
+import dms.application.pdf.model.ScansOutcome
 import dms.application.port.pdf.PdfEditor
 import dms.application.port.storage.model.StorageResult
 import dms.domain.document.DocumentKind
 import dms.domain.document.model.ContentHashModel
-import dms.domain.document.model.DocumentIdModel
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -21,9 +21,9 @@ class ScansWithoutText(
     private val mutex = Mutex()
     private val known = HashMap<ContentHashModel, Boolean>()
 
-    suspend operator fun invoke(): List<DocumentIdModel> {
-        val library = store.current() ?: return emptyList()
-        return mutex.withLock {
+    suspend operator fun invoke(): ScansOutcome {
+        val library = store.current() ?: return ScansOutcome.LibraryNotOpen
+        val scans = mutex.withLock {
             library.catalog.documents.values
                 .filter { it.kind == DocumentKind.PDF }
                 .filter { document ->
@@ -37,5 +37,6 @@ class ScansWithoutText(
                 .sortedBy { it.path.value }
                 .map { it.id }
         }
+        return ScansOutcome.Found(documentIds = scans)
     }
 }

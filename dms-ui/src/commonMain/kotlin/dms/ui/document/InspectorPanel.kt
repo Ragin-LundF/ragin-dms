@@ -20,6 +20,9 @@ import dms.ui.components.SectionHeader
 import dms.ui.components.model.ActionButtonModel
 import dms.ui.components.model.ButtonStyle
 import dms.ui.document.details.DetailsSections
+import dms.ui.document.edit.CategoryPicker
+import dms.ui.document.edit.MetadataEditor
+import dms.ui.document.edit.TagEditor
 import dms.ui.library.model.CategoryEntryModel
 import dms.ui.pdf.PdfSection
 import dms.ui.theme.Spacing

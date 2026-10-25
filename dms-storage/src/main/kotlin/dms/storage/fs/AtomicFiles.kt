@@ -3,9 +3,11 @@ package dms.storage.fs
 import dms.application.port.storage.model.StorageFailure
 import dms.application.port.storage.model.StorageResult
 import dms.domain.change.model.FileFactsModel
+import dms.domain.library.TemporaryNames
 import java.nio.ByteBuffer
 import java.nio.channels.FileChannel
 import java.nio.file.AtomicMoveNotSupportedException
+import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
@@ -18,11 +20,10 @@ import java.util.UUID
  */
 object AtomicFiles {
 
-    const val TEMP_PREFIX: String = ".dms-tmp-"
-
     /**
      * Copies [source] to [target], which must not exist, verifies the copy by hash and keeps the
-     * modification time.
+     * modification time. An entry that appears at [target] meanwhile is never replaced: the result is
+     * [StorageFailure.ALREADY_EXISTS].
      */
     fun copy(source: Path, target: Path): StorageResult<FileFactsModel> {
         Files.createDirectories(target.parent)
@@ -33,7 +34,14 @@ object AtomicFiles {
                 return StorageResult.Failure(reason = StorageFailure.VERIFICATION_FAILED)
             }
             Files.setLastModifiedTime(temp, Files.getLastModifiedTime(source))
-            moveIntoPlace(temp = temp, target = target, replace = false)
+            // Hashing a large file takes long; check again for a clash that appeared meanwhile.
+            if (PathResolver.clashing(directory = target.parent, name = target.fileName.toString()) != null) {
+                return StorageResult.Failure(reason = StorageFailure.ALREADY_EXISTS)
+            }
+            val placed = moveWithoutReplacing(temp = temp, target = target)
+            if (placed is StorageResult.Failure) {
+                return placed
+            }
             return StorageResult.Success(value = FileFactsModel(size = Files.size(target), contentHash = sourceHash))
         } finally {
             Files.deleteIfExists(temp)
@@ -52,7 +60,7 @@ object AtomicFiles {
                 }
                 channel.force(true)
             }
-            moveIntoPlace(temp = temp, target = target, replace = true)
+            moveReplacing(temp = temp, target = target)
         } finally {
             Files.deleteIfExists(temp)
         }
@@ -60,18 +68,29 @@ object AtomicFiles {
 
     /** A sibling name for a temporary file or an intermediate rename. */
     fun tempFileFor(target: Path): Path {
-        return target.resolveSibling(TEMP_PREFIX + UUID.randomUUID())
+        return target.resolveSibling(TemporaryNames.PREFIX + UUID.randomUUID())
     }
 
-    private fun moveIntoPlace(temp: Path, target: Path, replace: Boolean) {
+    /**
+     * Moves [temp] to [target] unless something is there. Never with `ATOMIC_MOVE`: on macOS and Linux
+     * that is `rename(2)`, which replaces an existing target without asking. [temp] lies in the target's
+     * directory, so the move is still a single rename.
+     */
+    internal fun moveWithoutReplacing(temp: Path, target: Path): StorageResult<Unit> {
+        return try {
+            Files.move(temp, target)
+            StorageResult.Success(value = Unit)
+        } catch (exception: FileAlreadyExistsException) {
+            StorageResult.Failure(reason = StorageFailure.ALREADY_EXISTS, detail = exception.message)
+        }
+    }
+
+    /** Replaces [target] with [temp] in one step, where the file system supports it. */
+    private fun moveReplacing(temp: Path, target: Path) {
         try {
             Files.move(temp, target, StandardCopyOption.ATOMIC_MOVE)
         } catch (ignored: AtomicMoveNotSupportedException) {
-            if (replace) {
-                Files.move(temp, target, StandardCopyOption.REPLACE_EXISTING)
-            } else {
-                Files.move(temp, target)
-            }
+            Files.move(temp, target, StandardCopyOption.REPLACE_EXISTING)
         }
     }
 }

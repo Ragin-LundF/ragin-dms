@@ -1,7 +1,7 @@
 package dms.application.library
 
 import dms.application.TestLibrary
-import dms.application.library.model.OpenLibraryOutcome
+import dms.application.library.model.outcome.OpenLibraryOutcome
 import dms.domain.catalog.CatalogUpdate
 import dms.domain.catalog.model.CatalogModel
 import dms.domain.catalog.model.LibraryIdModel

@@ -34,13 +34,27 @@ class TagNameModel private constructor(val value: String) : Comparable<TagNameMo
 
         private val WHITESPACE = Regex(pattern = "\\s+")
 
+        /** The tag for [raw]; throws [IllegalArgumentException] for a blank or too long one. */
         fun of(raw: String): TagNameModel {
-            val cleaned = Normalizer.normalize(raw, Normalizer.Form.NFC)
-                .trim()
-                .replace(regex = WHITESPACE, replacement = " ")
+            val cleaned = clean(raw = raw)
             require(value = cleaned.isNotEmpty()) { "Tag must not be blank" }
             require(value = cleaned.length <= MAX_LENGTH) { "Tag is longer than $MAX_LENGTH characters" }
             return TagNameModel(value = cleaned)
+        }
+
+        /** The tag for text typed by a user or written by the AI, or `null` if it is blank or too long. */
+        fun parse(raw: String): TagNameModel? {
+            val cleaned = clean(raw = raw)
+            if (cleaned.isEmpty() || cleaned.length > MAX_LENGTH) {
+                return null
+            }
+            return TagNameModel(value = cleaned)
+        }
+
+        private fun clean(raw: String): String {
+            return Normalizer.normalize(raw, Normalizer.Form.NFC)
+                .trim()
+                .replace(regex = WHITESPACE, replacement = " ")
         }
     }
 }

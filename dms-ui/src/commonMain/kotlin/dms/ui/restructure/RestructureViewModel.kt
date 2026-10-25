@@ -2,7 +2,9 @@ package dms.ui.restructure
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import dms.application.common.OperationOutcome
 import dms.application.restructure.model.PlanOutcome
+import dms.application.restructure.model.RestructureHistoryOutcome
 import dms.application.restructure.model.RestructureOutcome
 import dms.application.restructure.model.RestructureScope
 import dms.domain.library.model.RelativePathModel
@@ -74,7 +76,10 @@ class RestructureViewModel(
             )
         }
         viewModelScope.launch {
-            val history = services.organize.reverseRestructure.history()
+            val history = when (val outcome = services.organize.listRestructureHistory()) {
+                is RestructureHistoryOutcome.Listed -> outcome.names
+                RestructureHistoryOutcome.LibraryNotOpen -> emptyList()
+            }
             mutableState.update { it.copy(history = history) }
         }
     }
@@ -146,8 +151,10 @@ class RestructureViewModel(
             session.report(
                 message = OutcomeMessages.of(outcome = outcome, done = "Saved $template as the default template"),
             )
+            if (outcome is OperationOutcome.Done) {
+                mutableState.update { it.copy(savedTemplate = template) }
+            }
         }
-        mutableState.update { it.copy(savedTemplate = template) }
     }
 
     fun apply() {
@@ -216,6 +223,8 @@ class RestructureViewModel(
                 val parts = listOfNotNull(
                     "Moved ${outcome.moved} documents",
                     "${outcome.failed.size} could not be moved".takeIf { outcome.failed.isNotEmpty() },
+                    "${outcome.notCatalogued.size} moved, but the catalog could not be saved; run a scan"
+                        .takeIf { outcome.notCatalogued.isNotEmpty() },
                     "${outcome.skipped} changed since and stayed".takeIf { outcome.skipped > 0 },
                     "${outcome.pendingFolders.size} folders wait in the journal"
                         .takeIf { outcome.pendingFolders.isNotEmpty() },
@@ -223,10 +232,11 @@ class RestructureViewModel(
                 session.report(
                     message = UiMessageModel(
                         text = parts.joinToString(separator = "; "),
-                        isError = outcome.failed.isNotEmpty(),
+                        isError = outcome.failed.isNotEmpty() || outcome.notCatalogued.isNotEmpty(),
                     ),
                 )
                 outcome.failed.forEach { session.log.error(text = "Not moved: ${it.from}") }
+                outcome.notCatalogued.forEach { session.log.error(text = "Moved, not catalogued: ${it.to}") }
                 offerRemoval(folders = outcome.emptyFolders)
             }
         }

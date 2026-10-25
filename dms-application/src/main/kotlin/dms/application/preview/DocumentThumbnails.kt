@@ -3,6 +3,7 @@ package dms.application.preview
 import dms.application.library.CatalogStore
 import dms.application.port.ai.DocumentPreviewer
 import dms.application.port.ai.model.PageImageModel
+import dms.application.preview.model.ThumbnailOutcome
 import dms.domain.library.model.LibraryFolderIdModel
 import dms.domain.library.model.RelativePathModel
 import kotlinx.coroutines.sync.Mutex
@@ -31,16 +32,17 @@ class DocumentThumbnails(
         }
     }
 
-    suspend operator fun invoke(folderId: LibraryFolderIdModel, path: RelativePathModel): PageImageModel? {
-        val folder = store.current()?.folders?.find(id = folderId) ?: return null
+    suspend operator fun invoke(folderId: LibraryFolderIdModel, path: RelativePathModel): ThumbnailOutcome {
+        val folder = store.current()?.folders?.find(id = folderId) ?: return ThumbnailOutcome.FolderNotFound
         val key = folderId to path
-        return mutex.withLock {
+        val image = mutex.withLock {
             if (cache.containsKey(key)) {
                 cache[key]
             } else {
                 previewer.thumbnail(folder = folder, path = path, maxSide = MAX_SIDE).also { cache[key] = it }
             }
         }
+        return image?.let { ThumbnailOutcome.Rendered(image = it) } ?: ThumbnailOutcome.NoPicture
     }
 
     private companion object {

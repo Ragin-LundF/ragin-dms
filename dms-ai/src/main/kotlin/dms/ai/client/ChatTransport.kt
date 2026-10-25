@@ -18,6 +18,7 @@ import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.http.isSuccess
+import io.ktor.serialization.ContentConvertException
 import kotlinx.serialization.json.JsonObject
 import java.io.IOException
 import java.net.SocketTimeoutException
@@ -45,7 +46,10 @@ class ChatTransport(
         } catch (exception: IOException) {
             ModelList.Unavailable(reason = failureOf(exception = exception), detail = exception.message)
         } catch (exception: IllegalArgumentException) {
-            // An unresolvable host, an invalid URL, or an answer that is no model list.
+            // An unresolvable host or an invalid URL.
+            ModelList.Unavailable(reason = ClassificationFailure.PROVIDER_UNAVAILABLE, detail = exception.message)
+        } catch (exception: ContentConvertException) {
+            // An answer that is no model list; Ktor wraps every deserialization error in this.
             ModelList.Unavailable(reason = ClassificationFailure.PROVIDER_UNAVAILABLE, detail = exception.message)
         }
     }
@@ -79,6 +83,9 @@ class ChatTransport(
             ChatReply.Failed(reason = failureOf(exception = exception), detail = exception.message)
         } catch (exception: IllegalArgumentException) {
             ChatReply.Failed(reason = ClassificationFailure.INVALID_RESPONSE, detail = exception.message)
+        } catch (exception: ContentConvertException) {
+            // An answer that is no JSON or not the chat schema; Ktor wraps every deserialization error in this.
+            ChatReply.Failed(reason = ClassificationFailure.INVALID_RESPONSE, detail = exception.message)
         }
     }
 
@@ -111,7 +118,8 @@ class ChatTransport(
         return "HTTP ${response.status.value}: ${response.bodyAsText().take(n = DETAIL_LENGTH)}"
     }
 
-    private fun failureOf(exception: IOException): ClassificationFailure {
+    /** A timeout, or an unreachable server for every other I/O failure. */
+    internal fun failureOf(exception: IOException): ClassificationFailure {
         val timedOut = exception is SocketTimeoutException ||
             exception::class.simpleName.orEmpty().contains(other = "Timeout")
         return if (timedOut) ClassificationFailure.TIMEOUT else ClassificationFailure.PROVIDER_UNAVAILABLE

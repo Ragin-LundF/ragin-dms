@@ -1,6 +1,7 @@
 package dms.ui.library.smart
 
 import dms.application.search.SavedSearchPresets
+import dms.application.search.model.FindOutcome
 import dms.domain.catalog.model.CatalogModel
 import dms.domain.document.model.DocumentIdModel
 import dms.domain.query.model.DocumentQueryModel
@@ -54,7 +55,10 @@ class SmartFolders(
                 matchesState.value = if (query == null || !query.needsContent) {
                     null
                 } else {
-                    services.library.searchContents.search(query = query).map { it.id }.toSet()
+                    when (val found = services.library.findDocuments(query = query)) {
+                        is FindOutcome.Found -> found.documents.map { it.id }.toSet()
+                        FindOutcome.LibraryNotOpen -> emptySet()
+                    }
                 }
             }
         }

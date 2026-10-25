@@ -4,6 +4,8 @@ import dms.application.port.storage.model.StorageFailure
 import dms.application.port.storage.model.StorageResult
 import dms.domain.change.model.FileFactsModel
 import dms.domain.document.model.ContentHashModel
+import dms.domain.library.FileNamePolicy
+import dms.domain.library.TemporaryNames
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.apache.pdfbox.Loader
@@ -14,7 +16,6 @@ import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Files
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
-import java.nio.file.StandardCopyOption
 import java.security.MessageDigest
 import java.util.HexFormat
 import java.util.UUID
@@ -26,7 +27,6 @@ import java.util.UUID
  */
 object PdfFiles {
 
-    private const val TEMP_PREFIX = ".dms-tmp-"
     private const val BUFFER_SIZE = 64 * 1024
 
     suspend fun <T> io(block: () -> StorageResult<T>): StorageResult<T> {
@@ -50,32 +50,63 @@ object PdfFiles {
 
     /** Saves [document] as [target], which must not exist yet, and returns the facts of the written file. */
     fun save(document: PDDocument, target: Path): StorageResult<FileFactsModel> {
-        if (Files.exists(target)) {
+        if (isTaken(target = target)) {
             return StorageResult.Failure(reason = StorageFailure.ALREADY_EXISTS)
         }
         Files.createDirectories(target.parent)
-        val temp = target.resolveSibling(TEMP_PREFIX + UUID.randomUUID())
+        val temp = target.resolveSibling(TemporaryNames.PREFIX + UUID.randomUUID())
         try {
             document.save(temp.toFile())
-            Files.move(temp, target, StandardCopyOption.ATOMIC_MOVE)
+            return place(temp = temp, target = target)
         } finally {
             Files.deleteIfExists(temp)
         }
-        return StorageResult.Success(value = factsOf(file = target))
     }
 
-    /** Moves a finished [temp] file to [target], which must not exist yet. */
+    /**
+     * Moves a finished [temp] file to [target], which must not exist yet, not even with another case.
+     * The check runs right before the move, and the move itself never replaces anything.
+     */
     fun place(temp: Path, target: Path): StorageResult<FileFactsModel> {
-        if (Files.exists(target)) {
+        if (isTaken(target = target)) {
             return StorageResult.Failure(reason = StorageFailure.ALREADY_EXISTS)
         }
         Files.createDirectories(target.parent)
-        Files.move(temp, target, StandardCopyOption.ATOMIC_MOVE)
+        val moved = moveWithoutReplacing(temp = temp, target = target)
+        if (moved is StorageResult.Failure) {
+            return moved
+        }
         return StorageResult.Success(value = factsOf(file = target))
     }
 
+    /**
+     * Moves [temp] to [target] unless something is there. Never with `ATOMIC_MOVE`: on macOS and Linux
+     * that is `rename(2)`, which replaces an existing target without asking. [temp] lies in the target's
+     * directory, so the move is still a single rename.
+     */
+    internal fun moveWithoutReplacing(temp: Path, target: Path): StorageResult<Unit> {
+        return try {
+            Files.move(temp, target)
+            StorageResult.Success(value = Unit)
+        } catch (exception: FileAlreadyExistsException) {
+            StorageResult.Failure(reason = StorageFailure.ALREADY_EXISTS, detail = exception.message)
+        }
+    }
+
     fun tempFor(target: Path): Path {
-        return target.resolveSibling(TEMP_PREFIX + UUID.randomUUID() + ".pdf")
+        return target.resolveSibling(TemporaryNames.PREFIX + UUID.randomUUID() + ".pdf")
+    }
+
+    /** Whether an entry next to [target] has its name, ignoring case and normalization. */
+    private fun isTaken(target: Path): Boolean {
+        val directory = target.parent
+        if (!Files.isDirectory(directory)) {
+            return false
+        }
+        val name = target.fileName.toString()
+        return Files.newDirectoryStream(directory).use { entries ->
+            entries.any { FileNamePolicy.isSameName(first = it.fileName.toString(), second = name) }
+        }
     }
 
     fun factsOf(file: Path): FileFactsModel {

@@ -25,13 +25,13 @@ import dms.ui.pdf.PdfActions
 import dms.ui.review.AiMessages
 import dms.ui.review.ReviewController
 import dms.ui.service.AppServices
+import dms.ui.session.DateInput
 import dms.ui.session.LibrarySession
 import dms.ui.session.NameInput
 import dms.ui.session.OutcomeMessages
 import dms.ui.session.model.OperationLane
 import dms.ui.session.model.UiMessageModel
 import kotlinx.coroutines.flow.StateFlow
-import java.time.LocalDate
 
 /**
  * Changes to the one document shown in the inspector: metadata, category, tags, name, place; and
@@ -66,11 +66,9 @@ class InspectorViewModel(
         }
 
     fun saveMetadata(document: DocumentModel, draft: MetadataDraftModel) {
-        val date = draft.documentDate.trim()
-            .takeIf { it.isNotEmpty() }
-            ?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
+        val date = draft.documentDate.takeIf { it.isNotBlank() }?.let { DateInput.parse(raw = it) }
         if (draft.documentDate.isNotBlank() && date == null) {
-            session.report(message = UiMessageModel(text = "The date must look like 2024-01-31", isError = true))
+            session.report(message = UiMessageModel(text = DateInput.PROBLEM, isError = true))
             return
         }
         val metadata = DocumentMetadataModel(
@@ -89,7 +87,7 @@ class InspectorViewModel(
         if (raw.isBlank()) {
             return
         }
-        val tag = runCatching { TagNameModel.of(raw = raw) }.getOrNull()
+        val tag = TagNameModel.parse(raw = raw)
         if (tag == null) {
             session.report(
                 message = UiMessageModel(
@@ -112,7 +110,11 @@ class InspectorViewModel(
         session.perform(label = "Classifying $name with AI", lane = OperationLane.AI, cancellable = true) {
             when (val outcome = services.ai.suggestClassification(documentId = document.id)) {
                 is SuggestOutcome.Suggested -> review.open(suggestion = outcome.suggestion)
-                else -> session.report(message = AiMessages.of(outcome = outcome, name = name))
+                SuggestOutcome.LibraryNotOpen,
+                SuggestOutcome.NotFound,
+                is SuggestOutcome.NotReadable,
+                is SuggestOutcome.Failed,
+                -> session.report(message = AiMessages.of(outcome = outcome, name = name))
             }
         }
     }
@@ -128,7 +130,11 @@ class InspectorViewModel(
                     review.open(suggestion = outcome.suggestion)
                 }
 
-                else -> session.report(message = AiMessages.of(outcome = outcome, name = name))
+                SuggestOutcome.LibraryNotOpen,
+                SuggestOutcome.NotFound,
+                is SuggestOutcome.NotReadable,
+                is SuggestOutcome.Failed,
+                -> session.report(message = AiMessages.of(outcome = outcome, name = name))
             }
         }
     }
@@ -152,7 +158,7 @@ class InspectorViewModel(
         )
         dialogs.askText(request = request) { raw ->
             val folder = raw.trim().trim('/', '\\')
-            val parent = runCatching { RelativePathModel.of(raw = folder) }.getOrNull()
+            val parent = RelativePathModel.parse(raw = folder)
             val problem = folder.takeIf { it.isNotEmpty() }
                 ?.split('/')
                 ?.firstNotNullOfOrNull { NameInput.problem(raw = it) }

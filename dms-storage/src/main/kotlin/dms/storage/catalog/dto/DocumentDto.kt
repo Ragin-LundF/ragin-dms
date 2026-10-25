@@ -38,8 +38,8 @@ data class DocumentDto(
     val fields: Map<String, FieldValueDto> = emptyMap(),
     val note: String? = null,
     val retention: RetentionDto? = null,
-) {
+) : ExtensibleDto {
     @get:JsonAnyGetter
     @field:JsonAnySetter
-    val unknownFields: MutableMap<String, Any?> = linkedMapOf()
+    override val unknownFields: MutableMap<String, Any?> = linkedMapOf()
 }

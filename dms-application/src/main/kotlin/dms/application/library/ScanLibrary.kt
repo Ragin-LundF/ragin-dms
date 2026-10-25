@@ -3,6 +3,7 @@ package dms.application.library
 import dms.application.library.model.ScanProgressModel
 import dms.application.library.model.ScanResultModel
 import dms.application.library.model.ScannedFileModel
+import dms.application.library.model.outcome.ScanOutcome
 import dms.application.port.storage.LibraryScanner
 import dms.application.port.storage.ScanListener
 import dms.application.port.storage.model.StorageResult
@@ -14,6 +15,7 @@ import dms.domain.library.model.LibraryFolderIdModel
 import dms.domain.library.model.LibraryFolderModel
 import dms.domain.library.model.RelativePathModel
 import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -41,7 +43,13 @@ class ScanLibrary(
     suspend operator fun invoke(
         addNewFiles: Boolean = false,
         onProgress: (ScanProgressModel) -> Unit = {},
-    ): ScanResultModel? {
+    ): ScanOutcome {
+        val result = scanAll(addNewFiles = addNewFiles, onProgress = onProgress) ?: return ScanOutcome.LibraryNotOpen
+        return ScanOutcome.Scanned(result = result)
+    }
+
+    /** `null` when no library is open, or it was closed during the scan. */
+    private suspend fun scanAll(addNewFiles: Boolean, onProgress: (ScanProgressModel) -> Unit): ScanResultModel? {
         val folders = store.current()?.folders?.folders ?: return null
         val snapshots = mutableListOf<FolderSnapshotModel>()
         val failures = mutableMapOf<LibraryFolderIdModel, StorageResult.Failure>()
@@ -110,7 +118,8 @@ class ScanLibrary(
                 scanner.scan(folder = folder, catalog = catalog, listener = listener)
             } finally {
                 scanning.set(false)
-                adder?.cancel()
+                // Waits for an add still running, so the last one below never runs at the same time.
+                withContext(context = NonCancellable) { adder?.cancelAndJoin() }
                 addFound(found = found)
             }
         }

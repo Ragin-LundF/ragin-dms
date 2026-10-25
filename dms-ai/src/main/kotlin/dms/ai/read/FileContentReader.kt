@@ -22,16 +22,18 @@ class FileContentReader(
 ) : DocumentContentReader {
 
     override suspend fun read(folder: LibraryFolderModel, document: DocumentModel): DocumentContent {
-        val preferVision = settings().preferVisionForPdfs
+        val ai = settings()
+        val preferVision = ai.preferVisionForPdfs
+        val limit = ai.inputCharacters
         return withContext(context = Dispatchers.IO) {
             val file = locate(folder, document.path) ?: return@withContext DocumentContent.NotReadable(
                 reason = "The file is missing in ${folder.displayName}",
             )
             try {
                 when (document.kind) {
-                    DocumentKind.PDF -> PdfContent.read(file = file, preferVision = preferVision)
+                    DocumentKind.PDF -> PdfContent.read(file = file, preferVision = preferVision, limit = limit)
                     DocumentKind.IMAGE -> ImageContent.read(file = file)
-                    DocumentKind.OFFICE -> OfficeContent.read(file = file)
+                    DocumentKind.OFFICE -> OfficeContent.read(file = file, limit = limit)
                     DocumentKind.OTHER -> DocumentContent.NotReadable(reason = "This file type is not sent to the AI")
                 }
             } catch (exception: IOException) {

@@ -27,6 +27,7 @@ import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class FileCatalogRepositoryTest {
@@ -48,7 +49,7 @@ class FileCatalogRepositoryTest {
         runTest {
             val catalog = sampleCatalog()
 
-            repository.save(folder = folder, catalog = catalog)
+            save(catalog = catalog)
 
             assertEquals(expected = CatalogLoad.Found(catalog = catalog), actual = repository.load(folder = folder))
         }
@@ -59,9 +60,9 @@ class FileCatalogRepositoryTest {
         runTest {
             val catalog = sampleCatalog()
 
-            repository.save(folder = folder, catalog = catalog)
+            save(catalog = catalog)
             val first = Files.readAllBytes(file)
-            repository.save(folder = folder, catalog = catalog)
+            save(catalog = catalog)
 
             assertContentEquals(expected = first, actual = Files.readAllBytes(file))
             val text = String(first, Charsets.UTF_8)
@@ -79,12 +80,54 @@ class FileCatalogRepositoryTest {
                 documentId = DocumentIdModel(value = "doc-1"),
                 metadata = DocumentMetadataModel(title = "Changed"),
             )
-            repository.save(folder = folder, catalog = assertIs<CatalogUpdate.Applied>(value = update).catalog)
+            save(catalog = assertIs<CatalogUpdate.Applied>(value = update).catalog)
 
             val text = Files.readString(file)
-            assertTrue(actual = text.contains(other = "futureField: kept at the top"))
-            assertTrue(actual = text.contains(other = "futureNote: kept in the document"))
+            listOf(
+                "futureField: kept at the top",
+                "futureNote: kept in the document",
+                "futureLayout: kept in the layout",
+                "futureInbox: kept in the inbox",
+                "futureDefinition: kept in the field definition",
+                "futureSearch: kept in the saved search",
+                "futureQuery: kept in the query",
+                "futureCorrespondent: kept in the correspondent",
+                "futureRule: kept in the rule",
+                "futureAction: kept in the actions",
+                "futureRetention: kept in the retention",
+                "futureLink: kept in the link",
+            ).forEach { kept -> assertTrue(actual = text.contains(other = kept), message = kept) }
             assertTrue(actual = text.contains(other = "title: Changed"))
+        }
+    }
+
+    @Test
+    fun `a catalog based on an older revision does not overwrite a newer file`() {
+        runTest {
+            val base = sampleCatalog()
+            val newer = assertIs<CatalogUpdate.Applied>(value = base.addTag(name = "other device")).catalog
+            save(catalog = newer)
+            val written = Files.readString(file)
+            val stale = assertIs<CatalogUpdate.Applied>(value = base.addTag(name = "this device")).catalog
+
+            val result = repository.save(folder = folder, catalog = stale, basedOn = base.revision)
+
+            assertEquals(expected = StorageFailure.CATALOG_CHANGED, actual = StorageResults.failureOf(result = result))
+            assertEquals(expected = written, actual = Files.readString(file))
+        }
+    }
+
+    @Test
+    fun `a catalog based on the revision on disk is written`() {
+        runTest {
+            val base = sampleCatalog()
+            save(catalog = base)
+            val next = assertIs<CatalogUpdate.Applied>(value = base.addTag(name = "this device")).catalog
+
+            val result = repository.save(folder = folder, catalog = next, basedOn = base.revision)
+
+            assertIs<StorageResult.Success<*>>(value = result)
+            assertEquals(expected = CatalogLoad.Found(catalog = next), actual = repository.load(folder = folder))
         }
     }
 
@@ -95,7 +138,7 @@ class FileCatalogRepositoryTest {
             Files.writeString(file, newer)
 
             val load = repository.load(folder = folder)
-            val save = repository.save(folder = folder, catalog = sampleCatalog())
+            val save = save(catalog = sampleCatalog())
 
             assertEquals(expected = StorageFailure.UNSUPPORTED_FORMAT, actual = failureOf(load = load))
             assertEquals(expected = StorageFailure.UNSUPPORTED_FORMAT, actual = StorageResults.failureOf(result = save))
@@ -110,7 +153,7 @@ class FileCatalogRepositoryTest {
             Files.writeString(file, broken)
 
             val load = repository.load(folder = folder)
-            val save = repository.save(folder = folder, catalog = sampleCatalog())
+            val save = save(catalog = sampleCatalog())
 
             assertEquals(expected = StorageFailure.UNSUPPORTED_FORMAT, actual = failureOf(load = load))
             assertIs<StorageResult.Failure>(value = save)
@@ -122,10 +165,10 @@ class FileCatalogRepositoryTest {
     fun `readable conflict copies are loaded and discarded, unreadable ones stay`() {
         runTest {
             val older = sampleCatalog()
-            repository.save(folder = folder, catalog = older)
+            save(catalog = older)
             Files.copy(file, root.resolve("dms-catalog 2.yaml"))
             val newer = assertIs<CatalogUpdate.Applied>(value = older.addTag(name = "extra")).catalog
-            repository.save(folder = folder, catalog = newer)
+            save(catalog = newer)
             TestFolders.write(file = root.resolve("dms-catalog (conflicted copy).yaml"), content = "revision: [")
 
             val load = repository.load(folder = folder)
@@ -149,6 +192,11 @@ class FileCatalogRepositoryTest {
                 actual = failureOf(load = repository.load(folder = offline)),
             )
         }
+    }
+
+    /** Saves [catalog] as a change based on its own revision, the case of every save in this test. */
+    private suspend fun save(catalog: CatalogModel): StorageResult<Unit> {
+        return repository.save(folder = folder, catalog = catalog, basedOn = catalog.revision)
     }
 
     private fun failureOf(load: CatalogLoad): StorageFailure? {
@@ -194,20 +242,9 @@ class FileCatalogRepositoryTest {
         return assertIs<CatalogUpdate.Applied>(value = update).catalog
     }
 
+    /** A catalog with fields only a newer version knows, in every part that keeps them. */
     private fun catalogWithFutureFields(): String {
-        val hash = TestFolders.hashOf(content = "alpha").value
-        return """
-            formatVersion: 1
-            libraryId: library-1
-            revision: 3
-            futureField: kept at the top
-            documents:
-            - id: doc-1
-              path: a.pdf
-              contentHash: $hash
-              size: 5
-              addedAt: 2024-01-01T10:00:00Z
-              futureNote: kept in the document
-        """.trimIndent() + "\n"
+        val resource = assertNotNull(actual = javaClass.getResourceAsStream("/catalog/future-fields.yaml"))
+        return resource.use { String(it.readAllBytes(), Charsets.UTF_8) }
     }
 }

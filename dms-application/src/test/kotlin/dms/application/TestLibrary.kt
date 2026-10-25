@@ -30,6 +30,8 @@ import dms.application.document.RestoreDocument
 import dms.application.document.TrashDocument
 import dms.application.document.TrashDuplicateFile
 import dms.application.document.TrashNewFile
+import dms.application.document.model.AddDocumentsOutcome
+import dms.application.document.model.AddedFileModel
 import dms.application.export.ExportDocuments
 import dms.application.fake.ai.FakeAssistant
 import dms.application.fake.ai.FakeClassifier
@@ -59,7 +61,12 @@ import dms.application.library.CatalogStore
 import dms.application.library.DetectDocumentDates
 import dms.application.library.OpenLibrary
 import dms.application.library.ScanLibrary
-import dms.application.library.model.OpenLibraryOutcome
+import dms.application.library.model.DashboardModel
+import dms.application.library.model.ScanProgressModel
+import dms.application.library.model.ScanResultModel
+import dms.application.library.model.outcome.DashboardOutcome
+import dms.application.library.model.outcome.OpenLibraryOutcome
+import dms.application.library.model.outcome.ScanOutcome
 import dms.application.pdf.EditPages
 import dms.application.pdf.EmbedPdfMetadata
 import dms.application.pdf.MakeAllSearchable
@@ -68,21 +75,27 @@ import dms.application.pdf.MergeDocuments
 import dms.application.pdf.PdfVersions
 import dms.application.pdf.ScansWithoutText
 import dms.application.pdf.SplitDocument
+import dms.application.port.storage.model.ExternalFileModel
 import dms.application.resolution.DismissTask
 import dms.application.resolution.KeepBothVersions
 import dms.application.resolution.KeepVersion
 import dms.application.resolution.MergeDuplicates
 import dms.application.resolution.ResolveMove
 import dms.application.restructure.ApplyRestructurePlan
+import dms.application.restructure.ListRestructureHistory
 import dms.application.restructure.PlanRestructure
 import dms.application.restructure.RemoveEmptyFolders
 import dms.application.restructure.ReverseRestructure
 import dms.application.rule.AcceptRuleProposal
+import dms.application.search.ContentMatcher
+import dms.application.search.FindDocuments
 import dms.application.search.SearchContents
 import dms.application.sync.MergeAllFolders
 import dms.application.sync.Replicator
 import dms.application.sync.RetryFailedOperations
 import dms.application.sync.SyncFromPrimary
+import dms.application.sync.model.RetryOutcome
+import dms.application.sync.model.RetryReportModel
 import dms.domain.catalog.model.CatalogModel
 import dms.domain.document.model.DocumentIdModel
 import dms.domain.document.model.DocumentModel
@@ -135,7 +148,7 @@ class TestLibrary {
         clock = clock,
         ids = ids,
     )
-    val store: CatalogStore = CatalogStore(settings = settings, replicator = replicator)
+    val store: CatalogStore = CatalogStore(settings = settings, catalogs = folders, replicator = replicator)
     private val activity = ActivityRecorder(activity = activityLog, clock = clock)
     private val names = SiblingNames(storage = folders)
     private val dates = DocumentDates(storage = folders)
@@ -302,12 +315,9 @@ class TestLibrary {
     val suggestTags: SuggestTags = SuggestTags(reading = reading, assistant = assistant, tasks = tasks)
     val tagAllUntagged: TagAllUntagged = TagAllUntagged(store = store, tasks = tasks, suggestTags = suggestTags)
     val askAboutDocument: AskAboutDocument = AskAboutDocument(store = store, reading = reading, assistant = assistant)
-    val searchContents: SearchContents = SearchContents(
-        store = store,
-        reader = reader,
-        texts = folders,
-        clock = clock,
-    )
+    private val matcher: ContentMatcher = ContentMatcher(reader = reader, texts = folders, clock = clock)
+    val searchContents: SearchContents = SearchContents(store = store, matcher = matcher)
+    val findDocuments: FindDocuments = FindDocuments(store = store, matcher = matcher)
 
     val editDocumentDetails: EditDocumentDetails = EditDocumentDetails(store = store, activity = activity)
     val settleRetention: SettleRetention = SettleRetention(store = store, activity = activity, clock = clock)
@@ -315,7 +325,7 @@ class TestLibrary {
     val acceptRuleProposal: AcceptRuleProposal = AcceptRuleProposal(changeSettings = changeSettings, ids = ids)
     val exportDocuments: ExportDocuments = ExportDocuments(
         store = store,
-        search = searchContents,
+        search = matcher,
         writer = exports,
         activity = activity,
         clock = clock,
@@ -371,7 +381,7 @@ class TestLibrary {
     )
     val askLibrary: AskLibrary = AskLibrary(
         store = store,
-        search = searchContents,
+        search = matcher,
         texts = documentTexts,
         embeddings = embeddings,
         vectors = vectorSearch,
@@ -386,7 +396,7 @@ class TestLibrary {
     )
     val collectInbox: CollectInbox = CollectInbox(store = store, adoptNewFile = adoptNewFile)
     val fileInboxDocument: FileInboxDocument = FileInboxDocument(store = store, filing = filing, activity = activity)
-    val planRestructure: PlanRestructure = PlanRestructure(store = store, search = searchContents)
+    val planRestructure: PlanRestructure = PlanRestructure(store = store, search = matcher)
     val applyRestructurePlan: ApplyRestructurePlan = ApplyRestructurePlan(
         store = store,
         storage = folders,
@@ -400,6 +410,7 @@ class TestLibrary {
         plans = plans,
         apply = applyRestructurePlan,
     )
+    val listRestructureHistory: ListRestructureHistory = ListRestructureHistory(store = store, plans = plans)
     val removeEmptyFolders: RemoveEmptyFolders = RemoveEmptyFolders(
         store = store,
         storage = folders,
@@ -422,12 +433,31 @@ class TestLibrary {
     suspend fun add(path: String, content: String): DocumentModel {
         val target = RelativePathModel.of(raw = path)
         val source = folders.external(location = "/outside/${target.fileName}", content = content)
-        val added = addDocuments(
-            files = listOf(source),
-            targetFolder = target.parent ?: RelativePathModel.ROOT,
-        ).single()
+        val added = added(files = listOf(source), targetFolder = target.parent ?: RelativePathModel.ROOT).single()
         assertIs<OperationOutcome.Done>(value = added.outcome)
         return assertNotNull(actual = catalog.findByPath(path = target))
+    }
+
+    /** Scans like [scanLibrary]; `null` while no library is open. */
+    suspend fun scanned(addNewFiles: Boolean = false, onProgress: (ScanProgressModel) -> Unit = {}): ScanResultModel? {
+        val outcome = scanLibrary(addNewFiles = addNewFiles, onProgress = onProgress)
+        return (outcome as? ScanOutcome.Scanned)?.result
+    }
+
+    /** The dashboard [buildDashboard] builds; `null` while no library is open. */
+    suspend fun dashboard(scan: ScanResultModel?): DashboardModel? {
+        return (buildDashboard(scan = scan) as? DashboardOutcome.Built)?.dashboard
+    }
+
+    /** The report of [retryFailedOperations]; `null` while no library is open. */
+    suspend fun retried(): RetryReportModel? {
+        return (retryFailedOperations() as? RetryOutcome.Retried)?.report
+    }
+
+    /** The files [addDocuments] added; fails the test while no library is open. */
+    suspend fun added(files: List<ExternalFileModel>, targetFolder: RelativePathModel): List<AddedFileModel> {
+        val outcome = addDocuments(files = files, targetFolder = targetFolder)
+        return assertIs<AddDocumentsOutcome.Added>(value = outcome).files
     }
 
     private fun folder(id: String, role: FolderRole): LibraryFolderModel {

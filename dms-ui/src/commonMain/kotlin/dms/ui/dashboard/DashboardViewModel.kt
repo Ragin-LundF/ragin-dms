@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import dms.application.common.OperationOutcome
 import dms.application.library.model.DashboardModel
 import dms.application.library.model.FolderStateModel
+import dms.application.library.model.outcome.DashboardOutcome
 import dms.application.resolution.model.MoveDecision
 import dms.domain.catalog.model.CatalogModel
 import dms.domain.change.DetectedChange
@@ -93,7 +94,12 @@ class DashboardViewModel(
         viewModelScope.launch {
             val scans = session.state.map { it.lastScan to it.revision }.distinctUntilChanged()
             combine(flow = scans, flow2 = services.library.catalog) { (scan, _), _ -> scan }
-                .collectLatest { scan -> dashboard.value = services.library.buildDashboard(scan = scan) }
+                .collectLatest { scan ->
+                    dashboard.value = when (val outcome = services.library.buildDashboard(scan = scan)) {
+                        is DashboardOutcome.Built -> outcome.dashboard
+                        DashboardOutcome.LibraryNotOpen -> null
+                    }
+                }
         }
     }
 

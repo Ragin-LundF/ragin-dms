@@ -3,6 +3,7 @@ package dms.ui.inbox
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dms.application.common.OperationOutcome
+import dms.application.library.model.outcome.DashboardOutcome
 import dms.domain.catalog.model.CatalogModel
 import dms.domain.classification.model.ClassificationSuggestionModel
 import dms.domain.document.model.DocumentIdModel
@@ -13,7 +14,7 @@ import dms.domain.restructure.template.TemplateRendering
 import dms.domain.restructure.template.model.PathTemplateModel
 import dms.domain.task.OpenTask
 import dms.ui.components.FileSizes
-import dms.ui.dashboard.ActivityTexts
+import dms.ui.dashboard.panel.ActivityTexts
 import dms.ui.inbox.model.FolderPickModel
 import dms.ui.inbox.model.InboxRowModel
 import dms.ui.inbox.model.InboxUiStateModel
@@ -70,7 +71,10 @@ class InboxViewModel(
     init {
         viewModelScope.launch {
             session.state.map { it.revision to it.lastScan }.distinctUntilChanged().collectLatest { (_, scan) ->
-                val tasks = services.library.buildDashboard(scan = scan)?.tasks.orEmpty()
+                val tasks = when (val outcome = services.library.buildDashboard(scan = scan)) {
+                    is DashboardOutcome.Built -> outcome.dashboard.tasks
+                    DashboardOutcome.LibraryNotOpen -> emptyList()
+                }
                 suggestions.value = tasks.filterIsInstance<OpenTask.ReviewSuggestion>()
                     .associate { it.suggestion.documentId to it.suggestion }
             }

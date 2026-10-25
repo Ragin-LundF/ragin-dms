@@ -2,6 +2,47 @@
 
 All notable changes to ragin-dms are listed here.
 
+## 1.2.0 - Unreleased
+
+### Safer with several computers
+
+- Saving the catalog no longer overwrites changes another computer saved in the meantime. The app
+  combines both versions and then applies your change again.
+- An additional folder that holds a newer catalog is no longer overwritten with an older one.
+- A file that appears at the target while the app copies or saves another file there is never
+  replaced. The copy stops and the existing file stays as it is.
+- If the catalog cannot be saved during a restructure, the files that already moved are kept in the
+  record. You are told to run a scan, and reversing the restructure also moves them back.
+- Values written by a newer version of the app are kept in rules, smart folders, fields, links,
+  retention and the library settings when an older version saves.
+
+### AI
+
+- Choose how much of a document's text is sent to the AI, from 1,000 to 200,000 characters, in the
+  AI settings. Smaller local models need less, larger ones can take more. The default stays 12,000.
+- A broken or unexpected answer from the AI server is reported as an error instead of stopping the
+  action.
+- A server that takes too long to build the index for Ask is reported as a timeout.
+- The documentation now says which servers work: OpenAI-compatible servers that need no API key, such
+  as LM Studio and Ollama.
+
+### Rules
+
+- A rule's target folder always wins over the folder the AI suggests and covers its subfolders. A
+  document that is already in the folder or below it stays where it is.
+
+### Fixes
+
+- A document keeps the value of a field whose definition was removed and can still save its other
+  fields.
+- A question in Ask that is stopped no longer keeps searching forever.
+- A refused export keeps its settings, so you can correct them instead of starting over.
+- A path template only counts as saved once it really was saved.
+- A blank category name is refused with a message. Renaming or removing a category or tag only
+  changes the selection once the change is saved.
+- The page editor closes with a message when no library is open.
+- Dates are checked the same way everywhere, with one message.
+
 ## 1.1.0 - 2026-10-22
 
 ### Inbox

@@ -5,6 +5,7 @@ import dms.application.port.storage.OperationJournal
 import dms.application.port.storage.model.PendingOperationModel
 import dms.application.port.storage.model.StorageFailure
 import dms.application.port.storage.model.StorageResult
+import dms.application.sync.model.RetryOutcome
 import dms.application.sync.model.RetryReportModel
 import dms.domain.library.model.LibraryFolderIdModel
 import dms.domain.library.model.LibraryFoldersModel
@@ -20,16 +21,16 @@ class RetryFailedOperations(
     private val replicator: Replicator,
 ) {
 
-    /** Returns `null` while no library is open. */
-    suspend operator fun invoke(): RetryReportModel? {
-        val library = store.current() ?: return null
-        return journal.pending()
+    suspend operator fun invoke(): RetryOutcome {
+        val library = store.current() ?: return RetryOutcome.LibraryNotOpen
+        val report = journal.pending()
             .sortedBy { it.recordedAt }
             .groupBy { it.folderId }
             .map { (folderId, operations) ->
                 retry(folders = library.folders, folderId = folderId, operations = operations)
             }
             .fold(initial = RetryReportModel()) { total, report -> total + report }
+        return RetryOutcome.Retried(report = report)
     }
 
     private suspend fun retry(

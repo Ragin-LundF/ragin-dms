@@ -1,6 +1,6 @@
 package dms.application.library
 
-import dms.application.library.model.OpenLibraryOutcome
+import dms.application.library.model.outcome.OpenLibraryOutcome
 import dms.application.port.state.SettingsRepository
 import dms.application.port.state.TaskStore
 import dms.application.port.storage.CatalogRepository
@@ -11,6 +11,7 @@ import dms.application.sync.model.Replication
 import dms.domain.catalog.CatalogMerger
 import dms.domain.catalog.model.CatalogMergeResultModel
 import dms.domain.catalog.model.CatalogModel
+import dms.domain.catalog.model.CatalogRevisionModel
 import dms.domain.catalog.model.LibraryIdModel
 import dms.domain.library.model.LibraryFolderIdModel
 import dms.domain.library.model.LibraryFolderModel
@@ -49,6 +50,7 @@ class OpenLibrary(
             listOf(load.catalog) + load.conflictCopies.filter { it.libraryId == libraryId }
         }
         val merge = mergeAll(libraryId = libraryId, copies = copies)
+        val newestSeen = copies.maxOfOrNull { it.revision } ?: CatalogRevisionModel.INITIAL
 
         val outdated = loads.filter { (folder, load) ->
             folder !in foreign && isOutdated(load = load, merged = merge.catalog)
@@ -58,7 +60,8 @@ class OpenLibrary(
         } else {
             // The primary's id wins, so a foreign folder is always a sync folder and can simply be left out.
             val ownFolders = LibraryFoldersModel(folders = folders.folders - foreign)
-            when (val saved = replicator.saveCatalog(folders = ownFolders, catalog = merge.catalog)) {
+            val saved = replicator.saveCatalog(folders = ownFolders, catalog = merge.catalog, basedOn = newestSeen)
+            when (saved) {
                 is Replication.PrimaryFailed -> return OpenLibraryOutcome.PrimaryFailed(failure = saved.failure)
                 is Replication.Done -> saved.pendingFolders
             }

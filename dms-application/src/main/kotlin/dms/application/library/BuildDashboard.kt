@@ -3,6 +3,7 @@ package dms.application.library
 import dms.application.library.model.DashboardModel
 import dms.application.library.model.FolderStateModel
 import dms.application.library.model.ScanResultModel
+import dms.application.library.model.outcome.DashboardOutcome
 import dms.application.port.state.ActivityLog
 import dms.application.port.state.TaskStore
 import dms.application.port.storage.OperationJournal
@@ -29,9 +30,9 @@ class BuildDashboard(
     private val clock: Clock,
 ) {
 
-    /** Returns `null` while no library is open. [scan] is the last scan, if there was one. */
-    suspend operator fun invoke(scan: ScanResultModel?): DashboardModel? {
-        val library = store.current() ?: return null
+    /** [scan] is the last scan, if there was one. */
+    suspend operator fun invoke(scan: ScanResultModel?): DashboardOutcome {
+        val library = store.current() ?: return DashboardOutcome.LibraryNotOpen
         val pending = journal.pending().groupingBy { it.folderId }.eachCount()
         val documents = library.catalog.documents
         val openTasks = buildList {
@@ -58,7 +59,7 @@ class BuildDashboard(
             RuleLearner.proposals(catalog = library.catalog).forEach { add(OpenTask.ReviewLearnedRule(proposal = it)) }
         }
         val dismissed = tasks.dismissedKeys()
-        return DashboardModel(
+        val dashboard = DashboardModel(
             tasks = openTasks.filterNot { it.key in dismissed },
             folders = library.folders.folders.map { folder ->
                 FolderStateModel(
@@ -72,6 +73,7 @@ class BuildDashboard(
             recentActivity = activity.recent(limit = RECENT_ACTIVITY),
             upcoming = DeadlinePlanner.upcoming(catalog = library.catalog, today = clock.today(), limit = UPCOMING),
         )
+        return DashboardOutcome.Built(dashboard = dashboard)
     }
 
     private companion object {

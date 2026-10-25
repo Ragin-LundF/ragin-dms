@@ -8,8 +8,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import dms.ui.dashboard.ActivityPanel
-import dms.ui.dashboard.FolderPanel
+import dms.ui.dashboard.panel.ActivityPanel
+import dms.ui.dashboard.panel.FolderPanel
 import dms.ui.dashboard.model.DashboardUiStateModel
 import dms.ui.dashboard.model.TaskGroup
 import dms.ui.dashboard.task.TaskList

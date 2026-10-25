@@ -4,7 +4,7 @@ import dms.application.common.ActivityRecorder
 import dms.application.common.model.LibrarySnapshotModel
 import dms.application.library.CatalogStore
 import dms.application.library.OpenLibrary
-import dms.application.library.model.OpenLibraryOutcome
+import dms.application.library.model.outcome.OpenLibraryOutcome
 import dms.application.port.state.model.ActivityKind
 import dms.application.port.storage.DocumentStorage
 import dms.application.port.storage.LibraryScanner

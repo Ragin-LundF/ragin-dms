@@ -17,7 +17,7 @@ The app runs on macOS, Windows and Linux. Never assume one platform's file syste
 | `dms-domain` | Entities | Entities, value objects, domain rules: `DocumentModel`, `CatalogModel`, `CategoryModel`, `Tag`, `LibraryFolderModel`, `DetectedChange`, `OpenTask`, typed ids and paths. | nothing |
 | `dms-application` | Use cases | Use cases (`AddDocuments`, `CreateFolder`, `SuggestClassification`, …), the `Replicator` that applies every write to all library folders (primary first, journal for failed sync folders), and the **ports** they need (`DocumentStorage`, `CatalogRepository`, `DocumentClassifier`, `DocumentContentReader`, …). | `dms-domain`, kotlinx-coroutines |
 | `dms-storage` | Adapter | File system access in one folder per call, the catalog file (de)serialization, scanning, the `.dms-text/` store, the journal file. Implements storage ports. | `dms-application` |
-| `dms-ai` | Adapter | LLM client for OpenAI-compatible APIs (LM Studio, Ollama, OpenAI), prompts, reading documents as text or page images (PDFBox, Apache POI). Implements `DocumentClassifier` and `DocumentContentReader`. | `dms-application` |
+| `dms-ai` | Adapter | LLM client for key-less OpenAI-compatible APIs (LM Studio, Ollama), prompts, reading documents as text or page images (PDFBox, Apache POI). Implements `DocumentClassifier` and `DocumentContentReader`. | `dms-application` |
 | `dms-pdf` | Adapter | Writing PDF files with PDFBox: page tools (rotate, delete, reorder, extract, merge), invisible text layers, embedded metadata (document info and XMP), and the installed OCR program (`ocrmypdf`). Implements `PdfEditor` and `OcrTool`. | `dms-application` |
 | `dms-ui` | Frameworks & drivers | Compose Multiplatform desktop UI (single `jvm()` target), view models, theme, and the **composition root** that wires adapters into use cases. | `commonMain`: `dms-domain`, `dms-application`. `jvmMain`: also `dms-storage`, `dms-ai`, `dms-pdf`. |
 
@@ -71,6 +71,6 @@ The build follows the structure of the `rule-engine` project:
 
 - `settings.gradle` declares the modules and repositories; the root `build.gradle` declares plugins with `apply false` and applies shared scripts to all subprojects.
 - Shared build logic lives in `config/gradle/*.gradle` (`java.gradle`, `testing.gradle`, `static_analysis.gradle`, `version_updates.gradle`, `wrapper.gradle`, `packaging-ui.gradle`). Put new cross-module configuration there, not in module build files.
-- All versions live in `gradle/libs.versions.toml`, including plugin versions. Never hard-code a version in a module build file or in `settings.gradle`.
+- All versions live in `gradle/libs.versions.toml`, including plugin versions. Never hard-code a version in a module build file or in `settings.gradle`. The one exception is the foojay toolchain resolver plugin in `settings.gradle`: settings plugins are resolved before the version catalog exists, so its version stays there.
 - `gradle.properties` holds `group`, `version` and `java_version`.
 - Detekt is configured in `config/detekt.yml`.

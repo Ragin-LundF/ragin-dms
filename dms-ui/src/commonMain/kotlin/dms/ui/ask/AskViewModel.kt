@@ -57,7 +57,17 @@ class AskViewModel(
         val text = question.trim().takeIf { it.isNotEmpty() } ?: return
         val scope = scopeQuery()
         entries.update { it + AskEntryModel(question = text, asking = true) }
-        session.perform(label = "Asking the library", lane = OperationLane.AI, cancellable = true) {
+        session.perform(
+            label = "Asking the library",
+            lane = OperationLane.AI,
+            cancellable = true,
+            // Stopped or failed: the question must not keep waiting for an answer that never comes.
+            onEnd = {
+                entries.update { asked ->
+                    asked.map { if (it.asking) it.copy(asking = false, note = "Stopped before an answer") else it }
+                }
+            },
+        ) {
             val entry = entryOf(question = text, outcome = services.ask.askLibrary(question = text, scope = scope))
             entries.update { asked -> asked.dropLast(n = 1) + entry }
         }.also { started ->

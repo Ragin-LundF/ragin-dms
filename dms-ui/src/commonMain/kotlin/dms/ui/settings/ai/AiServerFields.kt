@@ -8,6 +8,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import dms.application.port.state.model.AiSettingsModel
 import dms.ui.settings.ai.model.AiDraftModel
 import dms.ui.theme.Spacing
 
@@ -43,12 +44,23 @@ fun AiServerFields(draft: AiDraftModel, onChange: (AiDraftModel) -> Unit) {
             modifier = Modifier.width(width = 150.dp),
         )
     }
-    OutlinedTextField(
-        value = draft.embeddingModel,
-        onValueChange = { onChange(draft.copy(embeddingModel = it)) },
-        label = { Text(text = "Embedding model for Ask") },
-        placeholder = { Text(text = "First embedding model of the server") },
-        singleLine = true,
-        modifier = Modifier.width(width = 360.dp),
-    )
+    Row(horizontalArrangement = Arrangement.spacedBy(space = Spacing.medium)) {
+        OutlinedTextField(
+            value = draft.embeddingModel,
+            onValueChange = { onChange(draft.copy(embeddingModel = it)) },
+            label = { Text(text = "Embedding model for Ask") },
+            placeholder = { Text(text = "First embedding model of the server") },
+            singleLine = true,
+            modifier = Modifier.width(width = 360.dp),
+        )
+        val range = AiSettingsModel.INPUT_CHARACTERS_RANGE
+        OutlinedTextField(
+            value = draft.inputCharacters,
+            onValueChange = { typed -> onChange(draft.copy(inputCharacters = typed.filter { it.isDigit() })) },
+            label = { Text(text = "Text sent to the AI (characters)") },
+            supportingText = { Text(text = "${range.first} to ${range.last}; less for small models") },
+            singleLine = true,
+            modifier = Modifier.width(width = 260.dp),
+        )
+    }
 }

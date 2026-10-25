@@ -13,6 +13,10 @@ import dms.domain.rule.match.model.RuleResultModel
 /**
  * What the matching rules add to a suggestion: a suggestion of their own when they decided category
  * and correspondent, or their values laid over the AI's, which they override. Tags are united.
+ *
+ * A rule's target folder always wins over the AI's folder and covers its subfolders: a document already
+ * in the target folder or below it stays where it is. A rule whose target is the top level therefore
+ * keeps every document in its place.
  */
 object RuleSuggestions {
 
@@ -41,8 +45,9 @@ object RuleSuggestions {
             tags = (ruleTags + suggestion.tags).distinctBy { it.name },
             correspondent = rules.correspondent ?: suggestion.correspondent,
             fields = suggestion.fields + rules.fields,
-            targetFolder = rules.targetFolder?.let { folderOf(path = it, catalog = catalog) }
-                ?: suggestion.targetFolder,
+            targetFolder = rules.targetFolder?.let { target ->
+                folderOf(target = target, document = catalog.documents[suggestion.documentId], catalog = catalog)
+            } ?: suggestion.targetFolder.takeIf { rules.targetFolder == null },
             targetReason = if (rules.targetFolder != null) null else suggestion.targetReason,
             ruleNotes = rules.sources.mapValues { (_, id) ->
                 catalog.settings.rules.firstOrNull { it.id == id }?.name ?: id.value
@@ -50,11 +55,16 @@ object RuleSuggestions {
         )
     }
 
-    private fun folderOf(path: RelativePathModel, catalog: CatalogModel): SuggestedFolderModel? {
-        if (path.isRoot) {
+    /** The folder to file [document] in for a rule's [target]; `null` when it already lies in or below it. */
+    private fun folderOf(
+        target: RelativePathModel,
+        document: DocumentModel?,
+        catalog: CatalogModel,
+    ): SuggestedFolderModel? {
+        if (document != null && document.path.isInside(folder = target)) {
             return null
         }
-        val exists = catalog.documents.values.any { it.path.isInside(folder = path) }
-        return SuggestedFolderModel(path = path, isNew = !exists)
+        val exists = catalog.documents.values.any { it.path.isInside(folder = target) }
+        return SuggestedFolderModel(path = target, isNew = !exists)
     }
 }

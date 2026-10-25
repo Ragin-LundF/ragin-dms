@@ -66,6 +66,7 @@ class FileSettingsRepositoryTest {
                     model = "sample-model",
                     preferVisionForPdfs = true,
                     acceptSuggestedFileNames = true,
+                    inputCharacters = 30_000,
                 ),
             )
             repository.savePreferences(preferences = preferences)

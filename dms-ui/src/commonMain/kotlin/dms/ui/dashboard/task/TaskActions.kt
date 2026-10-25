@@ -88,50 +88,37 @@ object TaskActions {
                 dismiss,
             )
 
-            is OpenTask.DeadlineDue,
-            is OpenTask.RetentionDue,
-            is OpenTask.RestructureSuggested,
-            is OpenTask.ReviewLearnedRule,
-            -> organizeButtons(task = task, organize = organize, dismiss = dismiss)
-        }
-    }
-
-    /** The buttons of the tasks of deadlines, retention, restructure and learned rules. */
-    private fun organizeButtons(
-        task: OpenTask,
-        organize: OrganizeTaskHandler,
-        dismiss: ActionButtonModel,
-    ): List<ActionButtonModel> {
-        return when (task) {
-            is OpenTask.RetentionDue -> listOf(
-                ActionButtonModel(label = "Mark as done", icon = Icons.Rounded.Check, style = ButtonStyle.TONAL) {
-                    organize.settleRetention(documentIds = listOf(task.documentId))
-                },
-                ActionButtonModel(label = "Move to trash…", icon = Icons.Rounded.Delete) {
-                    organize.trashRetained(documentIds = listOf(task.documentId))
-                },
-            )
-
-            is OpenTask.RestructureSuggested -> listOf(
-                ActionButtonModel(
-                    label = "Restructure…",
-                    icon = Icons.Rounded.AccountTree,
-                    style = ButtonStyle.TONAL,
-                ) {
-                    organize.restructure(folder = task.folder)
-                },
-                dismiss,
-            )
-
+            // The deadline is handled outside the tool; dismissing says so, and a new date brings it back.
+            is OpenTask.DeadlineDue -> listOf(dismiss)
+            is OpenTask.RetentionDue -> retentionButtons(task = task, organize = organize)
+            is OpenTask.RestructureSuggested -> listOf(restructureButton(task = task, organize = organize), dismiss)
             is OpenTask.ReviewLearnedRule -> listOf(
                 ActionButtonModel(label = "Accept rule", icon = Icons.Rounded.Check, style = ButtonStyle.TONAL) {
                     organize.acceptRule(proposal = task.proposal)
                 },
                 dismiss.copy(label = "Reject"),
             )
-
-            else -> listOf(dismiss)
         }
+    }
+
+    private fun restructureButton(
+        task: OpenTask.RestructureSuggested,
+        organize: OrganizeTaskHandler,
+    ): ActionButtonModel {
+        return ActionButtonModel(label = "Restructure…", icon = Icons.Rounded.AccountTree, style = ButtonStyle.TONAL) {
+            organize.restructure(folder = task.folder)
+        }
+    }
+
+    private fun retentionButtons(task: OpenTask.RetentionDue, organize: OrganizeTaskHandler): List<ActionButtonModel> {
+        return listOf(
+            ActionButtonModel(label = "Mark as done", icon = Icons.Rounded.Check, style = ButtonStyle.TONAL) {
+                organize.settleRetention(documentIds = listOf(task.documentId))
+            },
+            ActionButtonModel(label = "Move to trash…", icon = Icons.Rounded.Delete) {
+                organize.trashRetained(documentIds = listOf(task.documentId))
+            },
+        )
     }
 
     /** The files [task] is about, the primary's first; one per folder when their versions differ. */

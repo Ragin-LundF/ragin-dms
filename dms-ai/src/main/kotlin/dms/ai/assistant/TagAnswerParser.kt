@@ -24,7 +24,7 @@ object TagAnswerParser {
             .split(SEPARATORS)
             .map { part -> TRAILING.replace(input = LEADING.replace(input = part, replacement = ""), replacement = "") }
             .filter { it.isNotEmpty() && it.split(' ').size <= MAX_WORDS }
-            .mapNotNull { raw -> runCatching { TagNameModel.of(raw = raw) }.getOrNull() }
+            .mapNotNull { raw -> TagNameModel.parse(raw = raw) }
             .map { known[it] ?: it }
             .distinct()
             .take(n = MAX_TAGS)

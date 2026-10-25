@@ -2,6 +2,7 @@ package dms.application.library
 
 import dms.application.TestLibrary
 import dms.application.library.model.ScanProgressModel
+import dms.application.library.model.outcome.ScanOutcome
 import dms.application.port.state.model.ActivityKind
 import dms.domain.change.DetectedChange
 import dms.domain.library.model.RelativePathModel
@@ -22,7 +23,7 @@ class ScanLibraryTest {
             library.folders.put(folder = library.primary, path = "b.pdf", content = "beta")
             val reported = mutableListOf<ScanProgressModel>()
 
-            library.scanLibrary(onProgress = { reported += it })
+            library.scanned(onProgress = { reported += it })
 
             val primary = reported.filter { it.folderNumber == 1 }
             assertEquals(expected = 3, actual = reported.last().folderCount)
@@ -39,7 +40,7 @@ class ScanLibraryTest {
             library.open()
             library.folders.put(folder = library.primary, path = "a.pdf", content = "alpha")
 
-            val scan = assertNotNull(actual = library.scanLibrary())
+            val scan = assertNotNull(actual = library.scanned())
 
             assertTrue(actual = library.catalog.documents.isEmpty())
             assertEquals(expected = 1, actual = scan.changes.filterIsInstance<DetectedChange.NewFile>().size)
@@ -55,7 +56,7 @@ class ScanLibraryTest {
             library.folders.put(folder = library.primary, path = "copy-of-a.pdf", content = "alpha")
             library.folders.put(folder = library.syncA, path = "inbox/scan.pdf", content = "scan")
 
-            val scan = assertNotNull(actual = library.scanLibrary(addNewFiles = true))
+            val scan = assertNotNull(actual = library.scanned(addNewFiles = true))
 
             val paths = library.catalog.documents.values.map { it.path.value }
             assertEquals(expected = 1, actual = paths.size)
@@ -66,6 +67,13 @@ class ScanLibraryTest {
                 expected = listOf(ActivityKind.DOCUMENT_ADDED),
                 actual = library.activityLog.recent(limit = 10).map { it.kind },
             )
+        }
+    }
+
+    @Test
+    fun `nothing is scanned while no library is open`() {
+        runTest {
+            assertEquals(expected = ScanOutcome.LibraryNotOpen, actual = TestLibrary().scanLibrary())
         }
     }
 }

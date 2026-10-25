@@ -1,6 +1,7 @@
 package dms.ui.preview
 
 import androidx.compose.ui.graphics.ImageBitmap
+import dms.application.preview.model.ThumbnailOutcome
 import dms.domain.library.model.LibraryFolderIdModel
 import dms.domain.library.model.RelativePathModel
 import dms.ui.PlatformActions
@@ -14,7 +15,11 @@ class ThumbnailLoader(
 
     /** The thumbnail of [path] in [folderId], or `null` if the file has none. */
     suspend fun load(folderId: LibraryFolderIdModel, path: RelativePathModel): ImageBitmap? {
-        val image = services.library.thumbnails(folderId = folderId, path = path) ?: return null
-        return platform.decodeImage(bytes = image.bytes)
+        return when (val outcome = services.library.thumbnails(folderId = folderId, path = path)) {
+            is ThumbnailOutcome.Rendered -> platform.decodeImage(bytes = outcome.image.bytes)
+            ThumbnailOutcome.NoPicture,
+            ThumbnailOutcome.FolderNotFound,
+            -> null
+        }
     }
 }

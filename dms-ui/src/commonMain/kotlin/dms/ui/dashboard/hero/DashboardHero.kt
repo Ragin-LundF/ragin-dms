@@ -27,7 +27,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import dms.ui.components.FileSizes
 import dms.ui.components.layout.SearchField
-import dms.ui.dashboard.ActivityTexts
+import dms.ui.dashboard.panel.ActivityTexts
 import dms.ui.dashboard.model.DashboardUiStateModel
 import dms.ui.theme.AppColors
 import dms.ui.theme.Spacing

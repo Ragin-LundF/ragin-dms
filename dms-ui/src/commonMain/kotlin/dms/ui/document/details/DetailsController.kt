@@ -1,5 +1,6 @@
 package dms.ui.document.details
 
+import dms.application.ask.model.RelatedOutcome
 import dms.application.common.OperationOutcome
 import dms.application.document.model.DetailEdit
 import dms.domain.catalog.model.CatalogModel
@@ -22,13 +23,13 @@ import dms.domain.taxonomy.model.CategoryModel
 import dms.ui.document.details.model.LinkCandidateModel
 import dms.ui.document.details.model.LinkPickModel
 import dms.ui.service.AppServices
+import dms.ui.session.DateInput
 import dms.ui.session.LibrarySession
 import dms.ui.session.OutcomeMessages
 import dms.ui.session.model.UiMessageModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import java.time.LocalDate
 import java.util.Locale
 import java.util.UUID
 
@@ -97,9 +98,9 @@ class DetailsController(
 
     /** Sets the keep-until date (`YYYY-MM-DD`), or removes it when empty. A done retention stays done. */
     fun saveKeepUntil(document: DocumentModel, typed: String) {
-        val date = typed.trim().takeIf { it.isNotEmpty() }?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
+        val date = typed.takeIf { it.isNotBlank() }?.let { DateInput.parse(raw = it) }
         if (typed.isNotBlank() && date == null) {
-            session.report(message = UiMessageModel(text = "The date must look like 2030-12-31", isError = true))
+            session.report(message = UiMessageModel(text = DateInput.PROBLEM, isError = true))
             return
         }
         val retention = (document.retention ?: RetentionModel()).copy(keepUntil = date)
@@ -192,7 +193,13 @@ class DetailsController(
     /** The documents closest in meaning, from the index; empty while the index has no entry for it. */
     suspend fun related(document: DocumentModel): List<LinkCandidateModel> {
         val catalog = services.library.catalog.value ?: return emptyList()
-        return services.ask.relatedDocuments(documentId = document.id).mapNotNull { id ->
+        val related = when (val outcome = services.ask.relatedDocuments(documentId = document.id)) {
+            is RelatedOutcome.Found -> outcome.documentIds
+            RelatedOutcome.LibraryNotOpen,
+            RelatedOutcome.NotFound,
+            -> emptyList()
+        }
+        return related.mapNotNull { id ->
             catalog.documents[id]?.let { candidateOf(document = it) }
         }
     }

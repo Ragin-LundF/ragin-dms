@@ -50,7 +50,7 @@ class ResolveMoveTest {
         library.open()
         val document = library.add(path = "letters/a.pdf", content = "alpha")
         library.folders.move(folder = library.syncA, from = document.path, to = moved)
-        val scan = assertNotNull(actual = library.scanLibrary())
+        val scan = assertNotNull(actual = library.scanned())
         return scan.changes.filterIsInstance<DetectedChange.MovedFile>().single()
     }
 }

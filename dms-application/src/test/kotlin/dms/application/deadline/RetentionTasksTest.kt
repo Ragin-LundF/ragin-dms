@@ -24,7 +24,7 @@ class RetentionTasksTest {
             library.open()
             library.add(path = "old.pdf", content = "a")
 
-            val dashboard = assertNotNull(actual = library.buildDashboard(scan = null))
+            val dashboard = assertNotNull(actual = library.dashboard(scan = null))
 
             assertTrue(actual = dashboard.tasks.none { it is OpenTask.RetentionDue })
         }
@@ -47,11 +47,11 @@ class RetentionTasksTest {
             }
 
             val before = assertNotNull(
-                actual = library.buildDashboard(scan = null),
+                actual = library.dashboard(scan = null),
             ).tasks.filterIsInstance<OpenTask.RetentionDue>()
             val settled = library.settleRetention(documentIds = listOf(first.id, second.id))
             val after = assertNotNull(
-                actual = library.buildDashboard(scan = null),
+                actual = library.dashboard(scan = null),
             ).tasks.filterIsInstance<OpenTask.RetentionDue>()
 
             assertEquals(expected = 2, actual = before.size)
@@ -80,7 +80,7 @@ class RetentionTasksTest {
                 ),
             )
 
-            val dashboard = assertNotNull(actual = library.buildDashboard(scan = null))
+            val dashboard = assertNotNull(actual = library.dashboard(scan = null))
 
             assertEquals(
                 expected = listOf(

@@ -4,18 +4,16 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dms.application.catalog.model.CatalogEdit
 import dms.application.common.OperationOutcome
+import dms.application.document.model.AddDocumentsOutcome
 import dms.application.port.storage.model.ExternalFileModel
 import dms.domain.catalog.model.CatalogModel
 import dms.domain.document.model.DocumentIdModel
 import dms.domain.document.model.DocumentModel
 import dms.domain.library.model.RelativePathModel
 import dms.domain.query.model.DocumentQueryModel
-import dms.domain.taxonomy.model.CategoryIdModel
 import dms.domain.taxonomy.model.CategoryModel
-import dms.domain.taxonomy.model.TagNameModel
 import dms.ui.PlatformActions
 import dms.ui.components.dialog.DialogController
-import dms.ui.components.model.ConfirmationRequestModel
 import dms.ui.components.model.TextInputRequestModel
 import dms.ui.export.ExportController
 import dms.ui.library.drag.model.DragItem
@@ -31,6 +29,7 @@ import dms.ui.library.search.model.ContentSearchStateModel
 import dms.ui.library.sidebar.SidebarWidth
 import dms.ui.library.sidebar.model.ToggleTarget
 import dms.ui.library.smart.SmartFolders
+import dms.ui.library.taxonomy.TaxonomyController
 import dms.ui.service.AppServices
 import dms.ui.session.LibrarySession
 import dms.ui.session.NameInput
@@ -76,6 +75,14 @@ class LibraryViewModel(
         currentQuery = ::currentQuery,
         selected = view.map { (it.selection as? LibrarySelection.SmartFolder)?.id },
         scope = viewModelScope,
+    )
+
+    /** Editing the categories and tags of the sidebar. */
+    val taxonomy: TaxonomyController = TaxonomyController(
+        services = services,
+        session = session,
+        dialogs = dialogs,
+        select = ::select,
     )
 
     val export: ExportController = ExportController(
@@ -168,10 +175,17 @@ class LibraryViewModel(
             return
         }
         session.perform(label = "Adding ${locations.size} file(s)") {
-            val added = services.documents.addDocuments(
+            val outcome = services.documents.addDocuments(
                 files = locations.map { ExternalFileModel(location = it) },
                 targetFolder = target,
             )
+            val added = when (outcome) {
+                is AddDocumentsOutcome.Added -> outcome.files
+                AddDocumentsOutcome.LibraryNotOpen -> {
+                    session.report(message = OutcomeMessages.of(outcome = OperationOutcome.LibraryNotOpen, done = ""))
+                    return@perform
+                }
+            }
             val done = added.count { it.outcome is OperationOutcome.Done }
             val duplicates = added.count { it.duplicates.isNotEmpty() }
             val problem = added.firstOrNull { it.outcome !is OperationOutcome.Done }
@@ -202,9 +216,7 @@ class LibraryViewModel(
         if (!movable || parentId == category.parentId || parentId == category.id) {
             return
         }
-        val where = parentId?.let { services.library.catalog.value?.categories?.get(it)?.name } ?: "the top level"
-        val edit = CatalogEdit.MoveCategory(categoryId = category.id, parentId = parentId)
-        edit(edit = edit, done = "Moved ${category.name} to $where")
+        taxonomy.moveCategory(category = category, parentId = parentId)
     }
 
     private fun dropDocument(document: DocumentModel, target: DropTarget) {
@@ -224,17 +236,17 @@ class LibraryViewModel(
             is DropTarget.Category -> if (document.categoryId != target.categoryId) {
                 val category = services.library.catalog.value?.categories?.get(target.categoryId)?.name
                 val edit = CatalogEdit.AssignCategory(documentId = document.id, categoryId = target.categoryId)
-                edit(edit = edit, done = "Filed $name under $category")
+                taxonomy.edit(edit = edit, done = "Filed $name under $category")
             }
 
             DropTarget.Uncategorized -> if (document.categoryId != null) {
                 val edit = CatalogEdit.AssignCategory(documentId = document.id, categoryId = null)
-                edit(edit = edit, done = "Removed the category of $name")
+                taxonomy.edit(edit = edit, done = "Removed the category of $name")
             }
 
             is DropTarget.Tag -> if (target.tag !in document.tags) {
                 val edit = CatalogEdit.AddTags(documentId = document.id, tags = setOf(target.tag))
-                edit(edit = edit, done = "Tagged $name with ${target.tag.value}")
+                taxonomy.edit(edit = edit, done = "Tagged $name with ${target.tag.value}")
             }
 
             DropTarget.TopLevelCategory -> Unit
@@ -281,78 +293,9 @@ class LibraryViewModel(
         }
     }
 
-    /** Creates a category; below the selected category, if one is selected. */
     /** A new category below the selected one, or at the top level. */
     fun newCategory() {
-        addCategory(parentId = (view.value.selection as? LibrarySelection.Category)?.categoryId)
-    }
-
-    fun newSubcategory(parent: CategoryModel) {
-        addCategory(parentId = parent.id)
-    }
-
-    private fun addCategory(parentId: CategoryIdModel?) {
-        askText(title = "New category", label = "Name", initial = "", confirm = "Create") { name ->
-            edit(edit = CatalogEdit.AddCategory(name = name.trim(), parentId = parentId))
-        }
-    }
-
-    fun renameCategory(category: CategoryModel) {
-        askText(title = "Rename category", label = "Name", initial = category.name, confirm = "Rename") { name ->
-            edit(edit = CatalogEdit.RenameCategory(categoryId = category.id, name = name.trim()))
-        }
-    }
-
-    fun removeCategory(category: CategoryModel) {
-        dialogs.ask(
-            request = ConfirmationRequestModel(
-                title = "Delete category \"${category.name}\"",
-                message = "The category leaves the catalog. No document uses it and no file changes.",
-                affected = emptyList(),
-                confirmLabel = "Delete category",
-            ),
-        ) {
-            edit(edit = CatalogEdit.RemoveCategory(categoryId = category.id))
-            view.update { it.copy(selection = LibrarySelection.Folder(path = RelativePathModel.ROOT)) }
-        }
-    }
-
-    fun renameTag(tag: TagNameModel) {
-        askText(title = "Rename tag", label = "Tag", initial = tag.value, confirm = "Rename") { name ->
-            val renamed = runCatching { TagNameModel.of(raw = name) }.getOrNull()
-            if (renamed == null) {
-                session.report(message = UiMessageModel(text = "Not a valid tag", isError = true))
-            } else {
-                edit(edit = CatalogEdit.RenameTag(from = tag, to = renamed))
-                view.update { it.copy(selection = LibrarySelection.Tag(tag = renamed)) }
-            }
-        }
-    }
-
-    fun removeTag(tag: TagNameModel) {
-        val tagged = services.library.catalog.value?.documents?.values.orEmpty().filter { tag in it.tags }
-        dialogs.ask(
-            request = ConfirmationRequestModel(
-                title = "Remove tag \"${tag.value}\"",
-                message = "The tag is removed from the catalog and from ${tagged.size} document(s). " +
-                    "The files stay as they are.",
-                affected = tagged.map { it.path.value },
-                confirmLabel = "Remove tag",
-            ),
-        ) {
-            edit(edit = CatalogEdit.RemoveTag(tag = tag))
-            view.update { it.copy(selection = LibrarySelection.Folder(path = RelativePathModel.ROOT)) }
-        }
-    }
-
-    /** Saves [edit]; reports errors always, and success only when [done] says what happened. */
-    private fun edit(edit: CatalogEdit, done: String? = null) {
-        session.perform(label = "Saving the catalog") {
-            val outcome = services.documents.editCatalog(edit = edit)
-            if (outcome !is OperationOutcome.Done || done != null) {
-                session.report(message = OutcomeMessages.of(outcome = outcome, done = done.orEmpty()))
-            }
-        }
+        taxonomy.newCategory(parentId = (view.value.selection as? LibrarySelection.Category)?.categoryId)
     }
 
     private fun chooseAndAdd(target: RelativePathModel) {
@@ -366,7 +309,13 @@ class LibraryViewModel(
 
     /** Asks for a file or folder name and passes it on only if the file name policy allows it. */
     private fun askName(title: String, initial: String, confirm: String, submit: (String) -> Unit) {
-        askText(title = title, label = "Name", initial = initial, confirm = confirm) { name ->
+        val request = TextInputRequestModel(
+            title = title,
+            label = "Name",
+            initialValue = initial,
+            confirmLabel = confirm,
+        )
+        dialogs.askText(request = request) { name ->
             val problem = NameInput.problem(raw = name)
             if (problem == null) {
                 submit(name)
@@ -374,18 +323,6 @@ class LibraryViewModel(
                 session.report(message = UiMessageModel(text = problem, isError = true))
             }
         }
-    }
-
-    private fun askText(title: String, label: String, initial: String, confirm: String, submit: (String) -> Unit) {
-        dialogs.askText(
-            request = TextInputRequestModel(
-                title = title,
-                label = label,
-                initialValue = initial,
-                confirmLabel = confirm,
-            ),
-            submit = submit,
-        )
     }
 
     /** What the library shows now as one query: selection, year, search text and, if on, its content term. */

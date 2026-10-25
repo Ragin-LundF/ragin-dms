@@ -19,7 +19,7 @@ class TrashNewFileTest {
             val library = TestLibrary()
             library.open()
             library.folders.put(folder = library.syncA, path = "inbox/stray.pdf", content = "stray")
-            val scan = assertNotNull(actual = library.scanLibrary())
+            val scan = assertNotNull(actual = library.scanned())
             val newFile = scan.changes.filterIsInstance<DetectedChange.NewFile>().single()
 
             val refused = library.trashNewFile(change = newFile, confirmed = false)

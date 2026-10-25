@@ -229,7 +229,7 @@ class LibraryViewModelTest {
             val invoices = library.state.first { it.categories.isNotEmpty() }.categories.single().category
             library.select(selection = LibrarySelection.Recent)
 
-            library.newSubcategory(parent = invoices)
+            library.taxonomy.newCategory(parentId = invoices.id)
             library.dialogs.submit(text = "Energy")
             app.idle()
 

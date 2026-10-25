@@ -16,7 +16,7 @@ import androidx.compose.ui.unit.dp
 import dms.domain.document.model.DocumentModel
 import dms.ui.components.FileSizes
 import dms.ui.components.surface.KindStyles
-import dms.ui.dashboard.ActivityTexts
+import dms.ui.dashboard.panel.ActivityTexts
 import dms.ui.theme.Spacing
 
 /** Where the document lives, its type, its size and when it was added. */

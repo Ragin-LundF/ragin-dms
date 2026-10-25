@@ -139,7 +139,7 @@ class RulesTest {
                 classified(library = library, document = library.add(path = "bill-$index.pdf", content = "$index"))
             }
 
-            val proposal = assertNotNull(actual = library.buildDashboard(scan = null)).tasks
+            val proposal = assertNotNull(actual = library.dashboard(scan = null)).tasks
                 .filterIsInstance<OpenTask.ReviewLearnedRule>().single().proposal
             assertIs<OperationOutcome.Done>(value = library.acceptRuleProposal(proposal = proposal))
 
@@ -151,7 +151,7 @@ class RulesTest {
                 actual = library.catalog.settings.correspondents.map { it.name },
             )
             assertTrue(
-                actual = assertNotNull(actual = library.buildDashboard(scan = null)).tasks
+                actual = assertNotNull(actual = library.dashboard(scan = null)).tasks
                     .none { it is OpenTask.ReviewLearnedRule },
             )
         }
@@ -167,13 +167,13 @@ class RulesTest {
                 classified(library = library, document = library.add(path = "bill-$index.pdf", content = "$index"))
             }
             val task = assertNotNull(
-                actual = library.buildDashboard(scan = null),
+                actual = library.dashboard(scan = null),
             ).tasks.filterIsInstance<OpenTask.ReviewLearnedRule>().single()
 
             library.dismissTask(key = task.key)
 
             assertTrue(
-                actual = assertNotNull(actual = library.buildDashboard(scan = null)).tasks
+                actual = assertNotNull(actual = library.dashboard(scan = null)).tasks
                     .none { it is OpenTask.ReviewLearnedRule },
             )
         }

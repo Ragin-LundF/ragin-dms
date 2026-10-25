@@ -5,8 +5,10 @@ import dms.application.port.storage.model.CatalogLoad
 import dms.application.port.storage.model.StorageFailure
 import dms.application.port.storage.model.StorageResult
 import dms.domain.catalog.model.CatalogModel
+import dms.domain.catalog.model.CatalogRevisionModel
 import dms.domain.library.model.LibraryFolderModel
 import dms.storage.catalog.dto.CatalogDto
+import dms.storage.catalog.mapper.CatalogMapper
 import dms.storage.fs.AtomicFiles
 import dms.storage.fs.PathResolver
 import dms.storage.fs.StorageIo
@@ -19,7 +21,8 @@ import java.nio.file.Path
  * Reads and writes `dms-catalog.yaml` in the root of one library folder.
  *
  * A file this version cannot read, because it is newer or broken, is never overwritten: saving fails
- * instead, so no device loses what another one wrote.
+ * instead, so no device loses what another one wrote. The same holds for a file with a higher revision
+ * than the change was based on.
  */
 class FileCatalogRepository(private val trash: SystemTrash) : CatalogRepository {
 
@@ -46,7 +49,11 @@ class FileCatalogRepository(private val trash: SystemTrash) : CatalogRepository 
         }
     }
 
-    override suspend fun save(folder: LibraryFolderModel, catalog: CatalogModel): StorageResult<Unit> {
+    override suspend fun save(
+        folder: LibraryFolderModel,
+        catalog: CatalogModel,
+        basedOn: CatalogRevisionModel,
+    ): StorageResult<Unit> {
         return StorageIo.run {
             val root = PathResolver.root(folder = folder)
                 ?: return@run StorageIo.failure(reason = StorageFailure.FOLDER_UNREACHABLE)
@@ -55,7 +62,11 @@ class FileCatalogRepository(private val trash: SystemTrash) : CatalogRepository 
             if (previous is StorageResult.Failure) {
                 return@run previous
             }
-            val dto = CatalogMapper.toDto(catalog = catalog, previous = (previous as? StorageResult.Success)?.value)
+            val previousDto = (previous as? StorageResult.Success)?.value
+            if (previousDto != null && previousDto.revision > basedOn.value) {
+                return@run StorageIo.failure(reason = StorageFailure.CATALOG_CHANGED)
+            }
+            val dto = CatalogMapper.toDto(catalog = catalog, previous = previousDto)
             AtomicFiles.write(target = file, bytes = YamlMappers.yaml.writeValueAsBytes(dto))
             StorageResult.Success(value = Unit)
         }

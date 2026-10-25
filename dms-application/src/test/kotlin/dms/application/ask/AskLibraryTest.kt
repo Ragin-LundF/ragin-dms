@@ -2,6 +2,7 @@ package dms.application.ask
 
 import dms.application.TestLibrary
 import dms.application.ask.model.AskOutcome
+import dms.application.ask.model.RelatedOutcome
 import dms.application.catalog.model.CatalogEdit
 import dms.application.port.storage.model.FolderOperation
 import dms.domain.document.model.DocumentMetadataModel
@@ -146,8 +147,9 @@ class AskLibraryTest {
             library.reader.texts = library.reader.texts + ("meter.pdf" to "Electricity meter reading, power")
             library.indexLibrary().toList()
 
-            assertEquals(expected = listOf(meter.id), actual = library.relatedDocuments(documentId = power.id))
-            assertTrue(actual = car.id !in library.relatedDocuments(documentId = power.id))
+            val related = assertIs<RelatedOutcome.Found>(value = library.relatedDocuments(documentId = power.id))
+            assertEquals(expected = listOf(meter.id), actual = related.documentIds)
+            assertTrue(actual = car.id !in related.documentIds)
         }
     }
 }

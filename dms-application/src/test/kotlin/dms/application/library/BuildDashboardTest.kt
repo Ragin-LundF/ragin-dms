@@ -1,6 +1,7 @@
 package dms.application.library
 
 import dms.application.TestLibrary
+import dms.application.library.model.outcome.DashboardOutcome
 import dms.domain.task.OpenTask
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
@@ -19,8 +20,8 @@ class BuildDashboardTest {
             library.add(path = "letters/a.pdf", content = "alpha")
             library.folders.put(folder = library.syncA, path = "inbox/new.pdf", content = "new")
 
-            val scan = assertNotNull(actual = library.scanLibrary())
-            val dashboard = assertNotNull(actual = library.buildDashboard(scan = scan))
+            val scan = assertNotNull(actual = library.scanned())
+            val dashboard = assertNotNull(actual = library.dashboard(scan = scan))
 
             assertTrue(actual = dashboard.tasks.any { it is OpenTask.AdoptNewFile })
             assertTrue(
@@ -38,13 +39,20 @@ class BuildDashboardTest {
             val library = TestLibrary()
             library.open()
             library.folders.put(folder = library.syncA, path = "inbox/new.pdf", content = "new")
-            val firstScan = assertNotNull(actual = library.scanLibrary())
-            val task = assertNotNull(actual = library.buildDashboard(scan = firstScan)).tasks.single()
+            val firstScan = assertNotNull(actual = library.scanned())
+            val task = assertNotNull(actual = library.dashboard(scan = firstScan)).tasks.single()
 
             library.dismissTask(key = task.key)
-            val dashboard = assertNotNull(actual = library.buildDashboard(scan = library.scanLibrary()))
+            val dashboard = assertNotNull(actual = library.dashboard(scan = library.scanned()))
 
             assertTrue(actual = dashboard.tasks.isEmpty())
+        }
+    }
+
+    @Test
+    fun `no dashboard is built while no library is open`() {
+        runTest {
+            assertEquals(expected = DashboardOutcome.LibraryNotOpen, actual = TestLibrary().buildDashboard(scan = null))
         }
     }
 }

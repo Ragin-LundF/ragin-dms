@@ -43,7 +43,7 @@ Use these rules for all Kotlin code unless a more specific instruction file says
 
 ## Models and DTOs
 
-A **model** is a pure data declaration with no behavior: `data class`, `enum class`, `sealed interface` / `sealed class` hierarchies of data, `@JvmInline value class`, and `data object`.
+A **model** is a pure data declaration with no behavior: `data class`, `enum class`, `sealed interface` / `sealed class` hierarchies of data, `@JvmInline value class`, and `data object`. The allowed exception is `CatalogModel`, the aggregate root: its functions are the only way to change documents, categories and tags (see `dms-core.md`).
 
 - **`dms-domain`:** the domain *is* the model. Group by subject: `dms.domain.document`, `dms.domain.catalog`, `dms.domain.taxonomy`, `dms.domain.library`. Domain types carry no framework or serialization annotations.
 - **`dms-application`:** use case inputs and outcomes live in a `model` subpackage of the use case package, for example `dms.application.document.model`. Ports live in `dms.application.port`.

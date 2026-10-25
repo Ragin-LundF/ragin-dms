@@ -60,10 +60,13 @@ import dms.application.resolution.KeepVersion
 import dms.application.resolution.MergeDuplicates
 import dms.application.resolution.ResolveMove
 import dms.application.restructure.ApplyRestructurePlan
+import dms.application.restructure.ListRestructureHistory
 import dms.application.restructure.PlanRestructure
 import dms.application.restructure.RemoveEmptyFolders
 import dms.application.restructure.ReverseRestructure
 import dms.application.rule.AcceptRuleProposal
+import dms.application.search.ContentMatcher
+import dms.application.search.FindDocuments
 import dms.application.search.SearchContents
 import dms.application.sync.MergeAllFolders
 import dms.application.sync.Replicator
@@ -112,7 +115,11 @@ class AppContainer(
         clock = clock,
         ids = ids,
     )
-    private val store = CatalogStore(settings = adapters.settings, replicator = replicator)
+    private val store = CatalogStore(
+        settings = adapters.settings,
+        catalogs = adapters.catalogs,
+        replicator = replicator,
+    )
     private val activity = ActivityRecorder(activity = adapters.activity, clock = clock)
     private val names = SiblingNames(storage = adapters.documents)
     private val dates = DocumentDates(storage = adapters.documents)
@@ -148,12 +155,7 @@ class AppContainer(
     )
     private val changeSettings = ChangeSettings(store = store, activity = activity)
     private val filing = DocumentFiling(store = store, names = names, moveDocument = moveDocument)
-    private val searchContents = SearchContents(
-        store = store,
-        reader = ai.reader,
-        texts = adapters.texts,
-        clock = clock,
-    )
+    private val matcher = ContentMatcher(reader = ai.reader, texts = adapters.texts, clock = clock)
     private val adoptNewFile = AdoptNewFile(
         store = store,
         storage = adapters.documents,
@@ -208,7 +210,8 @@ class AppContainer(
                 activity = adapters.activity,
                 clock = clock,
             ),
-            searchContents = searchContents,
+            searchContents = SearchContents(store = store, matcher = matcher),
+            findDocuments = FindDocuments(store = store, matcher = matcher),
             thumbnails = DocumentThumbnails(store = store, previewer = ai.previewer),
         )
     }
@@ -349,9 +352,10 @@ class AppContainer(
             collectInbox = CollectInbox(store = store, adoptNewFile = adoptNewFile),
             fileInboxDocument = FileInboxDocument(store = store, filing = filing, activity = activity),
             folderWatcher = adapters.watcher,
-            planRestructure = PlanRestructure(store = store, search = searchContents),
+            planRestructure = PlanRestructure(store = store, search = matcher),
             applyRestructurePlan = apply,
             reverseRestructure = ReverseRestructure(store = store, plans = adapters.plans, apply = apply),
+            listRestructureHistory = ListRestructureHistory(store = store, plans = adapters.plans),
             removeEmptyFolders = RemoveEmptyFolders(
                 store = store,
                 storage = adapters.documents,
@@ -361,7 +365,7 @@ class AppContainer(
             acceptRuleProposal = AcceptRuleProposal(changeSettings = changeSettings, ids = ids),
             exportDocuments = ExportDocuments(
                 store = store,
-                search = searchContents,
+                search = matcher,
                 writer = adapters.exports,
                 activity = activity,
                 clock = clock,
@@ -431,7 +435,7 @@ class AppContainer(
             ),
             askLibrary = AskLibrary(
                 store = store,
-                search = searchContents,
+                search = matcher,
                 texts = texts,
                 embeddings = ai.embeddings,
                 vectors = vectors,

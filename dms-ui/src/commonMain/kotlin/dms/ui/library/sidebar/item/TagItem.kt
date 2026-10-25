@@ -25,8 +25,8 @@ fun TagItem(
     viewModel: LibraryViewModel,
 ) {
     val actions = listOf(
-        ActionButtonModel(label = "Rename", icon = Icons.Rounded.Edit) { viewModel.renameTag(tag = tag) },
-        ActionButtonModel(label = "Remove", icon = Icons.Rounded.Delete) { viewModel.removeTag(tag = tag) },
+        ActionButtonModel(label = "Rename", icon = Icons.Rounded.Edit) { viewModel.taxonomy.renameTag(tag = tag) },
+        ActionButtonModel(label = "Remove", icon = Icons.Rounded.Delete) { viewModel.taxonomy.removeTag(tag = tag) },
     )
     DropTargetArea(drag = drag, target = DropTarget.Tag(tag = tag)) { hovered ->
         SidebarItem(

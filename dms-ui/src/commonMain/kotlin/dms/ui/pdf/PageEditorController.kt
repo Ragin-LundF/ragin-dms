@@ -40,7 +40,12 @@ class PageEditorController(
     fun open(document: DocumentModel) {
         mutableState.value = PageEditorStateModel(documentId = document.id, name = document.path.fileName)
         scope.launch {
-            val primary = session.state.value.folders?.primary ?: return@launch
+            val primary = session.state.value.folders?.primary
+            if (primary == null) {
+                mutableState.value = null
+                session.report(message = UiMessageModel(text = "No library is open", isError = true))
+                return@launch
+            }
             val counted = services.pdf.editor.pageCount(folder = primary, path = document.path)
             val count = (counted as? StorageResult.Success)?.value ?: 0
             val pages = List(size = count) { index -> PageItemModel(source = index) }

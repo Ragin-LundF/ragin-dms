@@ -16,13 +16,8 @@ import java.text.Normalizer
 value class RelativePathModel private constructor(val value: String) {
 
     init {
-        require(value = !value.startsWith(prefix = SEPARATOR)) { "Path must be relative: $value" }
-        require(value = !DRIVE_PREFIX.containsMatchIn(input = value)) { "Path must be relative: $value" }
-        if (value.isNotEmpty()) {
-            require(value = value.split(SEPARATOR).none { it in INVALID_SEGMENTS }) {
-                "Path must not contain empty, '.' or '..' segments: $value"
-            }
-        }
+        val problem = problemOf(value = value)
+        require(value = problem == null) { problem.orEmpty() }
     }
 
     val isRoot: Boolean
@@ -93,9 +88,32 @@ value class RelativePathModel private constructor(val value: String) {
 
         /** Parses a `/`-separated path as stored in the catalog. A trailing separator is ignored. */
         fun of(raw: String): RelativePathModel {
-            return RelativePathModel(
-                value = Normalizer.normalize(raw.removeSuffix(suffix = SEPARATOR), Normalizer.Form.NFC),
-            )
+            return RelativePathModel(value = normalized(raw = raw))
+        }
+
+        /** Like [of] for a path a user typed: `null` if it is absolute or has empty, `.` or `..` segments. */
+        fun parse(raw: String): RelativePathModel? {
+            val value = normalized(raw = raw)
+            if (problemOf(value = value) != null) {
+                return null
+            }
+            return RelativePathModel(value = value)
+        }
+
+        private fun normalized(raw: String): String {
+            return Normalizer.normalize(raw.removeSuffix(suffix = SEPARATOR), Normalizer.Form.NFC)
+        }
+
+        private fun problemOf(value: String): String? {
+            return when {
+                value.startsWith(prefix = SEPARATOR) || DRIVE_PREFIX.containsMatchIn(input = value) ->
+                    "Path must be relative: $value"
+
+                value.isNotEmpty() && value.split(SEPARATOR).any { it in INVALID_SEGMENTS } ->
+                    "Path must not contain empty, '.' or '..' segments: $value"
+
+                else -> null
+            }
         }
 
         /** Builds a path from file system segments, which may contain characters such as `\`. */

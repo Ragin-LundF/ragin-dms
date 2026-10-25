@@ -89,7 +89,11 @@ object FileNamePolicy {
         return baseName.uppercase(Locale.ROOT) in RESERVED_NAMES
     }
 
-    private fun comparisonKey(name: String): String {
+    /**
+     * The domain's rule of "same name": two names, or two paths, are the same on a case-insensitive,
+     * Unicode-normalizing file system exactly when their keys are equal.
+     */
+    fun comparisonKey(name: String): String {
         return Normalizer.normalize(name, Normalizer.Form.NFC).lowercase(Locale.ROOT)
     }
 }

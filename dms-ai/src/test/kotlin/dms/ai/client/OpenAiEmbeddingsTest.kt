@@ -3,8 +3,6 @@ package dms.ai.client
 import dms.ai.AiAdapters
 import dms.application.port.ai.model.ClassificationFailure
 import dms.application.port.ai.model.EmbeddingResult
-import dms.application.port.assistant.model.AssistantAnswer
-import dms.application.port.assistant.model.SourceChunkModel
 import dms.application.port.state.model.AiSettingsModel
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
@@ -17,19 +15,21 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import java.net.ConnectException
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
-import kotlin.test.assertTrue
 
 class OpenAiEmbeddingsTest {
 
     private val bodies = mutableListOf<String>()
+    private val paths = mutableListOf<String>()
 
     private fun adapters(settings: AiSettingsModel, answer: (String) -> Pair<HttpStatusCode, String>): AiAdapters {
         val engine = MockEngine { request ->
             bodies += request.body.toByteArray().decodeToString()
+            paths += request.url.encodedPath
             val (status, body) = answer(request.url.encodedPath)
             respond(content = body, status = status, headers = headersOf(HttpHeaders.ContentType, "application/json"))
         }
@@ -90,31 +90,153 @@ class OpenAiEmbeddingsTest {
     }
 
     @Test
-    fun `the library assistant gets the numbered passages and the question`() {
+    fun `a blank chosen model falls back to the server's embedding model, whatever its case`() {
         runTest {
-            val ai = adapters(settings = AiSettingsModel(model = "chat")) {
-                val message = """{"role":"assistant","content":"It was 120 kWh [1]."}"""
-                HttpStatusCode.OK to """{"choices":[{"message":$message}]}"""
+            val ai = adapters(settings = AiSettingsModel(embeddingModel = "  ")) {
+                HttpStatusCode.OK to """{"data":[{"id":"chat-model"},{"id":"Sample-EMBED-Text"}]}"""
             }
 
-            val answer = ai.libraryAssistant.answer(
-                question = "How much power?",
-                sources = listOf(SourceChunkModel(number = 1, title = "Bill", text = "Meter: 120 kWh")),
-            )
+            assertEquals(expected = "Sample-EMBED-Text", actual = ai.embeddings.model())
+        }
+    }
 
-            assertEquals(expected = AssistantAnswer.Text(text = "It was 120 kWh [1].", model = "chat"), actual = answer)
-            val messages = Json.parseToJsonElement(
-                string = bodies.single(),
-            ).jsonObject.getValue(key = "messages").jsonArray
-            assertTrue(
-                actual = messages.first().jsonObject.getValue(
-                    key = "content",
-                ).jsonPrimitive.content.contains(other = "[1] Meter: 120 kWh"),
+    @Test
+    fun `without any embedding model the texts are not sent and the provider is unavailable`() {
+        runTest {
+            val ai = adapters(settings = AiSettingsModel()) {
+                HttpStatusCode.OK to """{"data":[{"id":"chat-model"}]}"""
+            }
+
+            val result = assertIs<EmbeddingResult.Failed>(value = ai.embeddings.embed(texts = listOf("a")))
+
+            assertEquals(expected = ClassificationFailure.PROVIDER_UNAVAILABLE, actual = result.reason)
+            assertEquals(expected = listOf("/v1/models"), actual = paths)
+        }
+    }
+
+    @Test
+    fun `a server that cannot be reached is unavailable, with or without a chosen model`() {
+        runTest {
+            val unreachable: (String) -> Pair<HttpStatusCode, String> = { throw ConnectException("Connection refused") }
+            val chosen = adapters(settings = AiSettingsModel(embeddingModel = "e"), answer = unreachable)
+            val listed = adapters(settings = AiSettingsModel(), answer = unreachable)
+
+            val failed = assertIs<EmbeddingResult.Failed>(value = chosen.embeddings.embed(texts = listOf("a")))
+
+            assertEquals(
+                expected = EmbeddingResult.Failed(
+                    reason = ClassificationFailure.PROVIDER_UNAVAILABLE,
+                    detail = "Connection refused",
+                ),
+                actual = failed,
             )
             assertEquals(
-                expected = "How much power?",
-                actual = messages.last().jsonObject.getValue(key = "content").jsonPrimitive.content,
+                expected = ClassificationFailure.PROVIDER_UNAVAILABLE,
+                actual = assertIs<EmbeddingResult.Failed>(value = listed.embeddings.embed(texts = listOf("a"))).reason,
             )
+        }
+    }
+
+    @Test
+    fun `a refusing server's status and a shortened answer are the detail`() {
+        runTest {
+            val ai = adapters(settings = AiSettingsModel(embeddingModel = "e")) {
+                HttpStatusCode.ServiceUnavailable to "x".repeat(n = 1_000)
+            }
+
+            val failed = assertIs<EmbeddingResult.Failed>(value = ai.embeddings.embed(texts = listOf("a")))
+
+            assertEquals(
+                expected = "HTTP 503: " + "x".repeat(n = ChatTransport.DETAIL_LENGTH),
+                actual = failed.detail,
+            )
+        }
+    }
+
+    @Test
+    fun `a missing or empty vector makes the whole answer invalid, not a partial result`() {
+        runTest {
+            val answers = listOf(
+                """{"data":[{"index":0,"embedding":[1.0]},{"index":1}]}""",
+                """{"data":[{"index":0,"embedding":[1.0]},{"index":1,"embedding":[]}]}""",
+                """{"data":[{"index":0,"embedding":[1.0]}]}""",
+                """{"model":"e"}""",
+            )
+
+            answers.forEach { answer ->
+                val ai = adapters(settings = AiSettingsModel(embeddingModel = "e")) { HttpStatusCode.OK to answer }
+
+                val result = ai.embeddings.embed(texts = listOf("first", "second"))
+
+                assertEquals(
+                    expected = ClassificationFailure.INVALID_RESPONSE,
+                    actual = assertIs<EmbeddingResult.Failed>(value = result, message = answer).reason,
+                    message = answer,
+                )
+            }
+        }
+    }
+
+    @Test
+    fun `a base URL ending with a slash still reaches the embeddings endpoint`() {
+        runTest {
+            val settings = AiSettingsModel(baseUrl = " http://localhost:1234/v1/ ", embeddingModel = "e")
+            val ai = adapters(settings = settings) {
+                HttpStatusCode.OK to """{"data":[{"index":0,"embedding":[1.0]}]}"""
+            }
+
+            assertIs<EmbeddingResult.Vectors>(value = ai.embeddings.embed(texts = listOf("a")))
+
+            assertEquals(expected = listOf("/v1/embeddings"), actual = paths)
+        }
+    }
+
+    @Test
+    fun `an answer that is no JSON or not the embeddings schema is invalid`() {
+        runTest {
+            val answers = listOf(
+                "<html>Internal error</html>",
+                "",
+                """{"data":{"index":0,"embedding":[1.0]}}""",
+                """{"data":[{"index":0,"embedding":["one"]}]}""",
+                """{"data":[{"index":"first","embedding":[1.0]}]}""",
+            )
+
+            answers.forEach { answer ->
+                val ai = adapters(settings = AiSettingsModel(embeddingModel = "e")) { HttpStatusCode.OK to answer }
+
+                val result = ai.embeddings.embed(texts = listOf("a"))
+
+                assertEquals(
+                    expected = ClassificationFailure.INVALID_RESPONSE,
+                    actual = assertIs<EmbeddingResult.Failed>(value = result, message = answer).reason,
+                    message = answer,
+                )
+            }
+        }
+    }
+
+    @Test
+    fun `vectors that cannot be matched to the texts make the answer invalid`() {
+        runTest {
+            val answers = listOf(
+                """{"data":[{"index":0,"embedding":[1.0]},{"index":0,"embedding":[2.0]}]}""",
+                """{"data":[{"embedding":[1.0]},{"embedding":[2.0]}]}""",
+                """{"data":[{"index":1,"embedding":[1.0]},{"index":2,"embedding":[2.0]}]}""",
+                """{"data":[{"index":0,"embedding":[1.0,2.0]},{"index":1,"embedding":[2.0]}]}""",
+            )
+
+            answers.forEach { answer ->
+                val ai = adapters(settings = AiSettingsModel(embeddingModel = "e")) { HttpStatusCode.OK to answer }
+
+                val result = ai.embeddings.embed(texts = listOf("first", "second"))
+
+                assertEquals(
+                    expected = ClassificationFailure.INVALID_RESPONSE,
+                    actual = assertIs<EmbeddingResult.Failed>(value = result, message = answer).reason,
+                    message = answer,
+                )
+            }
         }
     }
 }

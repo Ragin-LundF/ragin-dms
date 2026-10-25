@@ -2,6 +2,7 @@ package dms.application.inbox
 
 import dms.application.TestLibrary
 import dms.application.common.OperationOutcome
+import dms.application.inbox.model.CollectInboxOutcome
 import dms.application.port.storage.model.FolderOperation
 import dms.domain.catalog.CatalogRejection
 import dms.domain.library.model.RelativePathModel
@@ -62,9 +63,9 @@ class InboxTest {
             library.open()
             library.configureInbox(inbox = inbox)
             library.folders.put(folder = library.syncA, path = "Inbox/scan-7.pdf", content = "dropped")
-            val scan = assertNotNull(actual = library.scanLibrary())
+            val scan = assertNotNull(actual = library.scanned())
 
-            val collected = library.collectInbox(scan = scan)
+            val collected = assertIs<CollectInboxOutcome.Collected>(value = library.collectInbox(scan = scan)).changes
 
             assertEquals(expected = listOf("Inbox/scan-7.pdf"), actual = collected.map { it.path.value })
             library.allFolders.forEach {
@@ -84,9 +85,12 @@ class InboxTest {
             library.open()
             library.configureInbox(inbox = inbox)
             library.folders.put(folder = library.primary, path = "elsewhere.pdf", content = "x")
-            val scan = assertNotNull(actual = library.scanLibrary())
+            val scan = assertNotNull(actual = library.scanned())
 
-            assertTrue(actual = library.collectInbox(scan = scan).isEmpty())
+            assertEquals(
+                expected = CollectInboxOutcome.Collected(changes = emptyList()),
+                actual = library.collectInbox(scan = scan),
+            )
         }
     }
 

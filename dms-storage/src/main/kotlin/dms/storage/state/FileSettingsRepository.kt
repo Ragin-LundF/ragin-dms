@@ -50,6 +50,9 @@ class FileSettingsRepository(path: Path) : SettingsRepository {
                     timeoutSeconds = settings.ai.timeoutSeconds,
                     acceptSuggestedFileNames = settings.ai.acceptSuggestedFileNames,
                     embeddingModel = settings.ai.embeddingModel,
+                    // A hand-edited value out of range is moved into it instead of making the file unreadable.
+                    inputCharacters = settings.ai.inputCharacters
+                        .coerceIn(range = AiSettingsModel.INPUT_CHARACTERS_RANGE),
                 ),
             )
         }
@@ -68,6 +71,7 @@ class FileSettingsRepository(path: Path) : SettingsRepository {
                     timeoutSeconds = ai.timeoutSeconds,
                     acceptSuggestedFileNames = ai.acceptSuggestedFileNames,
                     embeddingModel = ai.embeddingModel,
+                    inputCharacters = ai.inputCharacters,
                 ),
             )
             file.write(value = updated)

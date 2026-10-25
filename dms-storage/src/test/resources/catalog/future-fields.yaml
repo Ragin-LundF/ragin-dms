@@ -1,0 +1,56 @@
+formatVersion: 1
+libraryId: library-1
+revision: 3
+futureField: kept at the top
+layout:
+  pathTemplate: "{year}"
+  futureLayout: kept in the layout
+  inbox:
+    enabled: true
+    futureInbox: kept in the inbox
+fieldDefinitions:
+- key: amount
+  label: Amount
+  type: TEXT
+  futureDefinition: kept in the field definition
+savedSearches:
+- id: search-1
+  name: Letters
+  futureSearch: kept in the saved search
+  query:
+    text: letter
+    futureQuery: kept in the query
+correspondents:
+- name: Example Corp
+  futureCorrespondent: kept in the correspondent
+rules:
+- id: rule-1
+  name: Letters
+  origin: MANUAL
+  futureRule: kept in the rule
+  conditions:
+  - type: fileName
+    glob: "*.pdf"
+  actions:
+    tags:
+    - letter
+    futureAction: kept in the actions
+documents:
+- id: doc-1
+  path: a.pdf
+  contentHash: 8ed3f6ad685b959ead7022518e1af76cd816f8e8ec7ccdda1ed4018e8f2223f8
+  size: 5
+  addedAt: 2024-01-01T10:00:00Z
+  futureNote: kept in the document
+  retention:
+    keepUntil: 2030-01-01
+    futureRetention: kept in the retention
+- id: doc-2
+  path: b.pdf
+  contentHash: 8ed3f6ad685b959ead7022518e1af76cd816f8e8ec7ccdda1ed4018e8f2223f8
+  size: 5
+  addedAt: 2024-01-01T10:00:00Z
+links:
+- first: doc-1
+  second: doc-2
+  futureLink: kept in the link

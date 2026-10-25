@@ -19,7 +19,7 @@ class RestoreDocumentTest {
             val document = library.add(path = "letters/a.pdf", content = "alpha")
             library.folders.moveToTrash(folder = library.primary, path = document.path)
             library.folders.moveToTrash(folder = library.syncA, path = document.path)
-            val scan = assertNotNull(actual = library.scanLibrary())
+            val scan = assertNotNull(actual = library.scanned())
             val missing = scan.changes.filterIsInstance<DetectedChange.MissingFile>().single()
 
             val outcome = library.restoreDocument(change = missing)

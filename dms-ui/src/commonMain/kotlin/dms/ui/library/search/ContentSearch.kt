@@ -1,5 +1,6 @@
 package dms.ui.library.search
 
+import dms.application.search.model.SearchOutcome
 import dms.ui.library.search.model.ContentSearchStateModel
 import dms.ui.service.AppServices
 import kotlinx.coroutines.CoroutineScope
@@ -54,7 +55,10 @@ class ContentSearch(
         }
         mutableState.update { it.copy(enabled = true, searching = true) }
         delay(timeMillis = TYPING_PAUSE_MILLIS)
-        val matches = services.library.searchContents(query = query)
+        val matches = when (val found = services.library.searchContents(query = query)) {
+            is SearchOutcome.Found -> found.documentIds
+            SearchOutcome.LibraryNotOpen -> emptySet()
+        }
         mutableState.value = ContentSearchStateModel(enabled = true, matches = matches)
     }
 

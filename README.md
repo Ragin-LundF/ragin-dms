@@ -81,7 +81,7 @@ Runs on macOS, Windows and Linux. Built with Kotlin and Compose Multiplatform.
 
 ### Local AI
 
-* Works with any OpenAI-compatible server; LM Studio at `http://localhost:1234/v1` is the default.
+* Works with any OpenAI-compatible server that needs no API key, such as LM Studio (the default, at `http://localhost:1234/v1`) or Ollama. Providers that require an API key are not supported.
   The settings list the loaded models and have a connection test.
 * PDFs are read from their text layer, or rendered and sent to a vision model when there is none (or
   always, with **Read PDFs as images**). Images go to the vision model, and Word, PowerPoint and Excel

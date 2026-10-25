@@ -12,8 +12,8 @@ data class CategoryDto(
     val name: String,
     val parentId: String? = null,
     val retentionYears: Int? = null,
-) {
+) : ExtensibleDto {
     @get:JsonAnyGetter
     @field:JsonAnySetter
-    val unknownFields: MutableMap<String, Any?> = linkedMapOf()
+    override val unknownFields: MutableMap<String, Any?> = linkedMapOf()
 }

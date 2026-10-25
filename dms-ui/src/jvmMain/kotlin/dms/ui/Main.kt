@@ -7,6 +7,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.LocalWindowExceptionHandlerFactory
@@ -14,12 +15,14 @@ import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
 import dms.storage.platform.AppDataDirectory
+import dms.ui.components.layout.LocalResizePointerIcon
 import dms.ui.model.Screen
 import dms.ui.platform.DesktopPlatformActions
 import dms.ui.session.LibrarySession
 import dms.ui.system.AppErrorHandler
 import dms.ui.system.AppIcon
 import dms.ui.theme.LocalAppLogo
+import java.awt.Cursor
 
 @OptIn(ExperimentalComposeUiApi::class)
 fun main() {
@@ -44,7 +47,10 @@ fun main() {
                     onScreenChange = { screen = it },
                     onLogVisibleChange = { logVisible = it },
                 )
-                CompositionLocalProvider(LocalAppLogo provides AppIcon.painter) {
+                CompositionLocalProvider(
+                    LocalAppLogo provides AppIcon.painter,
+                    LocalResizePointerIcon provides PointerIcon(cursor = Cursor(Cursor.E_RESIZE_CURSOR)),
+                ) {
                     App(
                         services = container.services,
                         platform = platform,

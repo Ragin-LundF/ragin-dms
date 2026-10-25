@@ -1,13 +1,39 @@
 package dms.application.search
 
 import dms.application.TestLibrary
+import dms.application.search.model.FindOutcome
+import dms.application.search.model.SearchOutcome
+import dms.domain.document.model.DocumentIdModel
+import dms.domain.document.model.DocumentModel
 import dms.domain.library.model.RelativePathModel
 import dms.domain.query.model.DocumentQueryModel
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertIs
 
 class SearchContentsTest {
+
+    private suspend fun found(library: TestLibrary, query: String): Set<DocumentIdModel> {
+        return assertIs<SearchOutcome.Found>(value = library.searchContents(query = query)).documentIds
+    }
+
+    private suspend fun matched(library: TestLibrary, query: DocumentQueryModel): List<DocumentModel> {
+        return assertIs<FindOutcome.Found>(value = library.findDocuments(query = query)).documents
+    }
+
+    @Test
+    fun `nothing is searched while no library is open`() {
+        runTest {
+            val library = TestLibrary()
+
+            assertEquals(expected = SearchOutcome.LibraryNotOpen, actual = library.searchContents(query = "a"))
+            assertEquals(
+                expected = FindOutcome.LibraryNotOpen,
+                actual = library.findDocuments(query = DocumentQueryModel.ALL),
+            )
+        }
+    }
 
     @Test
     fun `documents are found by the text of their file, ignoring case`() {
@@ -18,8 +44,8 @@ class SearchContentsTest {
             library.add(path = "bills/water.pdf", content = "b")
             library.reader.texts = mapOf("power.pdf" to "Sample Energy Ltd, meter reading 4711")
 
-            assertEquals(expected = setOf(bill.id), actual = library.searchContents(query = "  METER reading "))
-            assertEquals(expected = emptySet(), actual = library.searchContents(query = "insurance"))
+            assertEquals(expected = setOf(bill.id), actual = found(library = library, query = "  METER reading "))
+            assertEquals(expected = emptySet(), actual = found(library = library, query = "insurance"))
         }
     }
 
@@ -31,7 +57,7 @@ class SearchContentsTest {
             val scan = library.add(path = "scans/receipt.png", content = "a")
             library.folders.write(folder = library.primary, documentId = scan.id, text = "Sample Bakery receipt")
 
-            assertEquals(expected = setOf(scan.id), actual = library.searchContents(query = "bakery"))
+            assertEquals(expected = setOf(scan.id), actual = found(library = library, query = "bakery"))
         }
     }
 
@@ -57,7 +83,7 @@ class SearchContentsTest {
             library.open()
             library.add(path = "a.pdf", content = "a")
 
-            assertEquals(expected = emptySet(), actual = library.searchContents(query = " "))
+            assertEquals(expected = emptySet(), actual = found(library = library, query = " "))
         }
     }
 
@@ -69,7 +95,7 @@ class SearchContentsTest {
             val bill = library.add(path = "bills/power.pdf", content = "a")
             library.store.commit { it.setNote(documentId = bill.id, note = "Disputed with the supplier") }
 
-            assertEquals(expected = setOf(bill.id), actual = library.searchContents(query = "disputed"))
+            assertEquals(expected = setOf(bill.id), actual = found(library = library, query = "disputed"))
         }
     }
 
@@ -85,10 +111,10 @@ class SearchContentsTest {
 
             val inBills = DocumentQueryModel(folder = RelativePathModel.of(raw = "bills"), contentText = "METER")
 
-            assertEquals(expected = listOf(power), actual = library.searchContents.search(query = inBills))
+            assertEquals(expected = listOf(power), actual = matched(library = library, query = inBills))
             assertEquals(
                 expected = 3,
-                actual = library.searchContents.search(query = DocumentQueryModel.ALL).size,
+                actual = matched(library = library, query = DocumentQueryModel.ALL).size,
             )
         }
     }
