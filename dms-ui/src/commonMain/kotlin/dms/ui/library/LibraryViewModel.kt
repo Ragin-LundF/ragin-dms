@@ -16,8 +16,12 @@ import dms.ui.PlatformActions
 import dms.ui.components.dialog.DialogController
 import dms.ui.components.model.TextInputRequestModel
 import dms.ui.export.ExportController
+import dms.ui.library.documents.DocumentOrder
+import dms.ui.library.documents.model.SortColumn
 import dms.ui.library.drag.model.DragItem
 import dms.ui.library.drag.model.DropTarget
+import dms.ui.library.filter.ActiveFilters
+import dms.ui.library.filter.model.ActiveFilter
 import dms.ui.library.model.DocumentLayout
 import dms.ui.library.model.DocumentRowModel
 import dms.ui.library.model.LibrarySelection
@@ -30,6 +34,7 @@ import dms.ui.library.sidebar.SidebarWidth
 import dms.ui.library.sidebar.model.ToggleTarget
 import dms.ui.library.smart.SmartFolders
 import dms.ui.library.taxonomy.TaxonomyController
+import dms.ui.preview.ThumbnailLoader
 import dms.ui.service.AppServices
 import dms.ui.session.LibrarySession
 import dms.ui.session.NameInput
@@ -85,6 +90,8 @@ class LibraryViewModel(
         select = ::select,
     )
 
+    val thumbnails: ThumbnailLoader = ThumbnailLoader(services = services, platform = platform)
+
     val export: ExportController = ExportController(
         services = services,
         session = session,
@@ -129,6 +136,23 @@ class LibraryViewModel(
 
     fun search(query: String) {
         view.update { it.copy(query = query) }
+    }
+
+    /** Removes one filter chip: a tag or category goes back to all documents, a year or text is cleared. */
+    fun removeFilter(filter: ActiveFilter) {
+        when (filter) {
+            is ActiveFilter.Tag,
+            is ActiveFilter.Category,
+            -> select(selection = LibrarySelection.Folder(path = RelativePathModel.ROOT))
+
+            is ActiveFilter.Year -> filterYear(year = null)
+            is ActiveFilter.Text -> search(query = "")
+        }
+    }
+
+    /** Sorts the list by [column]; a second click on the same column turns the order around. */
+    fun sortBy(column: SortColumn) {
+        view.update { it.copy(sort = DocumentOrder.next(current = it.sort, column = column)) }
     }
 
     fun inspect(documentId: DocumentIdModel?) {
@@ -388,12 +412,15 @@ class LibraryViewModel(
             tagCounts = documents.flatMap { it.tags }.groupingBy { it }.eachCount(),
             selection = view.selection,
             query = view.query,
-            documents = visible.map { document ->
-                DocumentRowModel(
-                    document = document,
-                    categoryName = document.categoryId?.let { catalog.categories[it]?.name },
-                )
-            },
+            documents = DocumentOrder.sorted(
+                rows = visible.map { document ->
+                    DocumentRowModel(
+                        document = document,
+                        categoryName = document.categoryId?.let { catalog.categories[it]?.name },
+                    )
+                },
+                sort = view.sort,
+            ),
             inspected = view.inspected?.let { catalog.documents[it] },
             busy = sessionState.busy,
             aiBusy = sessionState.aiBusy,
@@ -403,6 +430,9 @@ class LibraryViewModel(
             collapsedGroups = view.collapsedGroups,
             contentSearch = search,
             smartFolders = smartFolders.entriesOf(catalog = catalog),
+            filters = ActiveFilters.of(view = view, catalog = catalog, contentSearch = search.enabled),
+            sort = view.sort,
+            primaryFolderId = sessionState.folders?.primary?.id,
         )
     }
 

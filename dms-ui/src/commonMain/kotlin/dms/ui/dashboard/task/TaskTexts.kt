@@ -5,7 +5,7 @@ import dms.domain.change.DetectedChange
 import dms.domain.classification.SuggestedCategory
 import dms.domain.classification.model.ClassificationSuggestionModel
 import dms.domain.task.OpenTask
-import dms.ui.components.FileSizes
+import dms.ui.components.format.FileSizes
 
 /** The title and the detail line of every kind of task. */
 object TaskTexts {

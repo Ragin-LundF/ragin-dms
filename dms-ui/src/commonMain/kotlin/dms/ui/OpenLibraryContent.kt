@@ -1,9 +1,15 @@
 package dms.ui
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import dms.domain.document.model.DocumentIdModel
 import dms.domain.library.model.RelativePathModel
@@ -25,8 +31,14 @@ import dms.ui.service.AppServices
 import dms.ui.session.LibrarySession
 import dms.ui.settings.SettingsScreen
 import dms.ui.settings.SettingsViewModel
+import dms.ui.shell.palette.CommandPalette
+import dms.ui.shell.palette.CommandPaletteDialog
+import dms.ui.shell.palette.PaletteCommands
 
-/** The chosen screen of an open library; the dashboard opens the library at what the user clicked. */
+/**
+ * The chosen screen of an open library under the window toolbar, and the command palette; the
+ * dashboard and the palette open the library at what the user chose.
+ */
 @Composable
 fun OpenLibraryContent(
     services: AppServices,
@@ -35,10 +47,12 @@ fun OpenLibraryContent(
     screen: Screen,
     settings: SettingsViewModel,
     onScreenChange: (Screen) -> Unit,
+    palette: CommandPalette,
 ) {
     val library = viewModel { LibraryViewModel(services = services, session = session, platform = platform) }
     val dashboard = viewModel { DashboardViewModel(services = services, session = session, platform = platform) }
     val restructure = viewModel { RestructureViewModel(services = services, session = session) }
+    val ask = viewModel { AskViewModel(services = services, session = session) }
     val restructureRequest by dashboard.organize.restructureRequests.collectAsState()
     LaunchedEffect(key1 = restructureRequest) {
         val folder = restructureRequest ?: return@LaunchedEffect
@@ -50,50 +64,74 @@ fun OpenLibraryContent(
         library.reveal(documentId = documentId)
         onScreenChange(Screen.LIBRARY)
     }
-    when (screen) {
-        Screen.DASHBOARD -> DashboardScreen(
-            viewModel = dashboard,
-            platform = platform,
-            onAddFiles = { files -> library.addFiles(locations = files, target = RelativePathModel.ROOT) },
-            onChooseFiles = library::addFilesToTopLevel,
-            onOpen = { selection, query ->
-                library.show(selection = selection, query = query)
-                onScreenChange(Screen.LIBRARY)
-            },
-            onOpenYear = { year ->
-                library.show(
-                    selection = LibrarySelection.Folder(path = RelativePathModel.ROOT),
-                    query = "",
-                    year = year,
-                )
-                onScreenChange(Screen.LIBRARY)
-            },
-            onOpenDocument = openDocument,
-            onShowAllTasks = { onScreenChange(Screen.TASKS) },
-            onOpenInbox = { onScreenChange(Screen.INBOX) },
-        )
-
-        Screen.INBOX -> InboxScreen(
-            viewModel = viewModel { InboxViewModel(services = services, session = session) },
-            onOpenSettings = { onScreenChange(Screen.SETTINGS) },
+    val commands = remember(library, dashboard, ask) {
+        PaletteCommands(
+            session = session,
+            dashboard = dashboard,
+            library = library,
+            ask = ask,
+            onScreenChange = onScreenChange,
             onOpenDocument = openDocument,
         )
-
-        Screen.ASK -> AskScreen(
-            viewModel = viewModel { AskViewModel(services = services, session = session) },
-            onOpenDocument = openDocument,
-        )
-
-        Screen.RESTRUCTURE -> RestructureScreen(viewModel = restructure)
-
-        Screen.TASKS -> TasksScreen(viewModel = dashboard)
-
-        Screen.LIBRARY -> LibraryScreen(
-            viewModel = library,
-            inspector = viewModel { InspectorViewModel(services = services, session = session, platform = platform) },
-            platform = platform,
-        )
-
-        Screen.SETTINGS -> SettingsScreen(viewModel = settings)
     }
+    CommandPaletteDialog(palette = palette, onChoose = commands::run)
+    Column(modifier = Modifier.fillMaxSize()) {
+        ScreenToolbar(screen = screen, session = session, dashboard = dashboard, library = library, palette = palette)
+        Box(modifier = Modifier.weight(weight = 1f).fillMaxWidth()) {
+            when (screen) {
+                Screen.DASHBOARD -> Dashboard(
+                    dashboard = dashboard,
+                    library = library,
+                    platform = platform,
+                    onScreenChange = onScreenChange,
+                    onOpenDocument = openDocument,
+                )
+
+                Screen.INBOX -> InboxScreen(
+                    viewModel = viewModel { InboxViewModel(services = services, session = session) },
+                    onOpenSettings = { onScreenChange(Screen.SETTINGS) },
+                    onOpenDocument = openDocument,
+                )
+
+                Screen.ASK -> AskScreen(viewModel = ask, onOpenDocument = openDocument)
+                Screen.RESTRUCTURE -> RestructureScreen(viewModel = restructure)
+                Screen.TASKS -> TasksScreen(viewModel = dashboard)
+                Screen.LIBRARY -> LibraryScreen(
+                    viewModel = library,
+                    inspector = viewModel {
+                        InspectorViewModel(services = services, session = session, platform = platform)
+                    },
+                    platform = platform,
+                )
+
+                Screen.SETTINGS -> SettingsScreen(viewModel = settings)
+            }
+        }
+    }
+}
+
+@Composable
+private fun Dashboard(
+    dashboard: DashboardViewModel,
+    library: LibraryViewModel,
+    platform: PlatformActions,
+    onScreenChange: (Screen) -> Unit,
+    onOpenDocument: (DocumentIdModel) -> Unit,
+) {
+    DashboardScreen(
+        viewModel = dashboard,
+        platform = platform,
+        onAddFiles = { files -> library.addFiles(locations = files, target = RelativePathModel.ROOT) },
+        onOpen = { selection, query ->
+            library.show(selection = selection, query = query)
+            onScreenChange(Screen.LIBRARY)
+        },
+        onOpenYear = { year ->
+            library.show(selection = LibrarySelection.Folder(path = RelativePathModel.ROOT), query = "", year = year)
+            onScreenChange(Screen.LIBRARY)
+        },
+        onOpenDocument = onOpenDocument,
+        onShowAllTasks = { onScreenChange(Screen.TASKS) },
+        onOpenInbox = { onScreenChange(Screen.INBOX) },
+    )
 }

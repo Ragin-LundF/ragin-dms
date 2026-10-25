@@ -9,29 +9,37 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import dms.domain.document.model.DocumentIdModel
 import dms.domain.library.model.RelativePathModel
 import dms.domain.taxonomy.model.CategoryIdModel
 import dms.domain.taxonomy.model.TagNameModel
 import dms.ui.dashboard.DashboardViewModel
-import dms.ui.dashboard.hero.DashboardHero
+import dms.ui.dashboard.attention.AttentionHandler
+import dms.ui.dashboard.attention.AttentionRows
+import dms.ui.dashboard.header.DashboardHeader
 import dms.ui.dashboard.model.DashboardUiStateModel
+import dms.ui.dashboard.stats.StatColumns
+import dms.ui.dashboard.stats.model.StatLink
+import dms.ui.dashboard.widgets.AiBand
+import dms.ui.dashboard.widgets.AiBandContent
 import dms.ui.dashboard.widgets.StatRow
 import dms.ui.library.model.LibrarySelection
 import dms.ui.library.model.YearFilterModel
 import dms.ui.theme.Spacing
 
 /**
- * The dashboard's sections one below the other: the main actions, the headline figures, the inbox,
- * quick access, the work that waits, and the charts. Clicks open the library at what was clicked.
+ * The dashboard's sections one below the other: the header with the main actions, the headline
+ * figures, what the AI can do, what needs the user beside the recent documents, quick access, the
+ * charts and the state of the folders. Clicks open the library at what was clicked.
  */
 @Composable
 fun DashboardOverview(
     state: DashboardUiStateModel,
     busyReason: String?,
     viewModel: DashboardViewModel,
-    onChooseFiles: () -> Unit,
     onOpen: (LibrarySelection, String) -> Unit,
     onOpenYear: (YearFilterModel) -> Unit,
     onOpenDocument: (DocumentIdModel) -> Unit,
@@ -40,54 +48,83 @@ fun DashboardOverview(
 ) {
     val everything = LibrarySelection.Folder(path = RelativePathModel.ROOT)
     val scans by viewModel.organize.scans.collectAsState()
+    val attentionHandler = rememberAttentionHandler(
+        viewModel = viewModel,
+        onOpenInbox = onOpenInbox,
+        onOpenDocument = onOpenDocument,
+    )
     Column(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(state = rememberScrollState())
-            .padding(all = Spacing.xxlarge),
-        verticalArrangement = Arrangement.spacedBy(space = Spacing.xlarge),
+            .padding(all = Spacing.screen),
+        verticalArrangement = Arrangement.spacedBy(space = Spacing.large),
     ) {
-        DashboardHero(
+        DashboardHeader(state = state)
+        StatRow(columns = StatColumns.of(state = state)) { link ->
+            when (link) {
+                StatLink.UNCATEGORIZED -> onOpen(LibrarySelection.Uncategorized, "")
+                StatLink.INBOX -> onOpenInbox()
+            }
+        }
+        AiBandContent.of(state = state)?.let { band ->
+            AiBand(band = band, onClassify = viewModel.aiBatches::classifyAll, onTag = viewModel.aiBatches::tagAll)
+        }
+        FocusSection(
             state = state,
+            attention = AttentionRows.of(state = state, scans = scans, handler = attentionHandler),
             busyReason = busyReason,
-            onAddFiles = onChooseFiles,
-            onScan = viewModel::scan,
-            onSync = viewModel::syncToAllDestinations,
-            onMerge = viewModel::mergeAllFolders,
-            onClassifyAll = viewModel.aiBatches::classifyAll,
-            onTagAll = viewModel.aiBatches::tagAll,
-            onSearch = { query -> onOpen(everything, query) },
-        )
-        StatRow(state = state, onOpenUncategorized = { onOpen(LibrarySelection.Uncategorized, "") })
-        OrganizeSection(
-            state = state,
-            onOpenInbox = onOpenInbox,
-            onAnalyzeInbox = viewModel::analyzeInbox,
+            thumbnails = viewModel.thumbnails,
+            onShowAllTasks = onShowAllTasks,
             onOpenDocument = onOpenDocument,
-            onExportCalendar = viewModel.organize::exportCalendar,
-            scans = scans,
-            onFindScans = viewModel.organize::findScans,
-            onMakeSearchable = viewModel.organize::makeScansSearchable,
+            onOpenRecent = { onOpen(LibrarySelection.Recent, "") },
         )
         QuickAccessSection(
             stats = state.stats,
-            onOpenDocument = onOpenDocument,
-            onOpenRecent = { onOpen(LibrarySelection.Recent, "") },
             onOpenCategory = { id -> onOpen(LibrarySelection.Category(categoryId = CategoryIdModel(value = id)), "") },
             onOpenUncategorized = { onOpen(LibrarySelection.Uncategorized, "") },
             onOpenTag = { tag -> onOpen(LibrarySelection.Tag(tag = TagNameModel.of(raw = tag)), "") },
-        )
-        WorkSection(
-            state = state,
-            busyReason = busyReason,
-            thumbnails = viewModel.thumbnails,
-            onFilter = viewModel::setFilter,
-            onFullView = onShowAllTasks,
-        )
-        InsightsSection(
-            stats = state.stats,
-            onSearch = { query -> onOpen(everything, query) },
             onOpenYear = { id -> YearFilterModel.parse(text = id)?.let(onOpenYear) },
         )
+        InsightsSection(stats = state.stats, onSearch = { query -> onOpen(everything, query) })
+        StatusSection(state = state)
+    }
+}
+
+/** The answers of "Needs your attention"; stays the same object and always calls the latest callbacks. */
+@Composable
+private fun rememberAttentionHandler(
+    viewModel: DashboardViewModel,
+    onOpenInbox: () -> Unit,
+    onOpenDocument: (DocumentIdModel) -> Unit,
+): AttentionHandler {
+    val latestOpenInbox by rememberUpdatedState(newValue = onOpenInbox)
+    val latestOpenDocument by rememberUpdatedState(newValue = onOpenDocument)
+    return remember(viewModel) {
+        object : AttentionHandler {
+            override fun openInbox() {
+                latestOpenInbox()
+            }
+
+            override fun analyzeInbox() {
+                viewModel.analyzeInbox()
+            }
+
+            override fun openDocument(documentId: DocumentIdModel) {
+                latestOpenDocument(documentId)
+            }
+
+            override fun findScans() {
+                viewModel.organize.findScans()
+            }
+
+            override fun makeScansSearchable() {
+                viewModel.organize.makeScansSearchable()
+            }
+
+            override fun exportCalendar() {
+                viewModel.organize.exportCalendar()
+            }
+        }
     }
 }

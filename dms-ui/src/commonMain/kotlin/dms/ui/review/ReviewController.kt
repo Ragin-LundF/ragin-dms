@@ -76,7 +76,7 @@ class ReviewController(
         if (started) {
             close()
         } else {
-            mutableState.value = review.copy(problem = "Wait until \"${session.state.value.busy}\" finishes")
+            mutableState.value = review.copy(problem = OutcomeMessages.waitFor(operation = session.state.value.busy.orEmpty()))
         }
     }
 

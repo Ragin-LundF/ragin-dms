@@ -5,98 +5,132 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import dms.application.port.state.model.ActivityEntryModel
+import dms.domain.catalog.model.CatalogModel
 import dms.domain.document.model.DocumentModel
+import dms.domain.library.model.LibraryFolderIdModel
 import dms.domain.taxonomy.model.TagNameModel
-import dms.ui.components.ActionButtons
-import dms.ui.components.SectionHeader
-import dms.ui.components.model.ActionButtonModel
-import dms.ui.components.model.ButtonStyle
-import dms.ui.document.details.DetailsSections
-import dms.ui.document.edit.CategoryPicker
-import dms.ui.document.edit.MetadataEditor
-import dms.ui.document.edit.TagEditor
+import dms.ui.document.details.NotesAndLinksSections
+import dms.ui.document.model.InspectorTab
+import dms.ui.document.suggestion.SuggestionCard
+import dms.ui.document.suggestion.SuggestionValues
+import dms.ui.document.tab.DetailsTab
+import dms.ui.document.tab.HistoryTab
+import dms.ui.document.tab.InspectorTabs
 import dms.ui.library.model.CategoryEntryModel
 import dms.ui.pdf.PdfSection
 import dms.ui.theme.Spacing
 
 /**
- * Everything about one document, editable: metadata, category, tags, fields, note, links, retention,
- * name and place.
+ * Everything about one document: a preview, the actions, a suggestion of the AI that waits for review,
+ * and the tabs Details, Notes & links, Pages and History with their editors.
  */
 @Composable
 fun InspectorPanel(
     document: DocumentModel,
     categories: List<CategoryEntryModel>,
     allTags: List<TagNameModel>,
+    folderId: LibraryFolderIdModel?,
     busyReason: String?,
     aiBusyReason: String?,
     viewModel: InspectorViewModel,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val enabled = busyReason == null
+    val catalog by viewModel.catalog.collectAsState()
+    val feed by viewModel.feed.state.collectAsState()
+    val selected by viewModel.tab.collectAsState()
+    val tab = viewModel.shownTab(selected = selected, document = document)
     Surface(modifier = modifier, color = MaterialTheme.colorScheme.surface) {
         Column(
-            modifier = Modifier.verticalScroll(state = rememberScrollState()).padding(all = Spacing.xlarge),
-            verticalArrangement = Arrangement.spacedBy(space = Spacing.small),
+            modifier = Modifier.verticalScroll(state = rememberScrollState()).padding(all = Spacing.large),
+            verticalArrangement = Arrangement.spacedBy(space = Spacing.medium),
         ) {
-            InspectorHeader(document = document, onClose = onClose)
+            InspectorHeader(
+                document = document,
+                folderId = folderId,
+                thumbnails = viewModel.thumbnails,
+                onClose = onClose,
+            )
             DocumentActions(
                 document = document,
                 busyReason = busyReason,
                 aiBusyReason = aiBusyReason,
                 viewModel = viewModel,
             )
-            DocumentFacts(document = document)
-            SectionHeader(title = "Details")
-            MetadataEditor(document = document, enabled = enabled) { draft ->
-                viewModel.saveMetadata(document = document, draft = draft)
+            feed.suggestions[document.id]?.let { suggestion ->
+                catalog?.let { shown ->
+                    SuggestionCard(
+                        values = SuggestionValues.of(suggestion = suggestion, catalog = shown),
+                        busyReason = busyReason,
+                        onReview = { viewModel.reviewSuggestion(suggestion = suggestion) },
+                        onDismiss = { viewModel.dismissSuggestion(document = document) },
+                    )
+                }
             }
-            SectionHeader(title = "Category")
-            CategoryPicker(selected = document.categoryId, categories = categories, enabled = enabled) { categoryId ->
-                viewModel.assignCategory(document = document, categoryId = categoryId)
-            }
-            SectionHeader(title = "Tags")
-            TagEditor(
-                tags = document.tags.sorted(),
-                allTags = allTags,
-                enabled = enabled,
-                onAdd = { viewModel.addTag(document = document, raw = it) },
-                onRemove = { viewModel.removeTag(document = document, tag = it) },
+            InspectorTabs(
+                selected = tab,
+                disabled = viewModel.disabledTabs(document = document),
+                onSelect = viewModel::selectTab,
             )
-            PdfSection(document = document, busyReason = busyReason, pages = viewModel.pages, actions = viewModel.pdf)
-            val catalog by viewModel.catalog.collectAsState()
-            catalog?.let {
-                DetailsSections(
+            catalog?.let { shown ->
+                TabContent(
+                    tab = tab,
                     document = document,
-                    catalog = it,
+                    catalog = shown,
+                    categories = categories,
+                    allTags = allTags,
                     busyReason = busyReason,
-                    controller = viewModel.details,
-                    onOpenDocument = viewModel::open,
+                    activity = feed.activity,
+                    viewModel = viewModel,
                 )
             }
-            SectionHeader(title = "Remove")
-            ActionButtons(
-                buttons = listOf(
-                    ActionButtonModel(
-                        label = "Move to trash…",
-                        icon = Icons.Rounded.Delete,
-                        style = ButtonStyle.TEXT,
-                    ) {
-                        viewModel.trash(document = document)
-                    },
-                ),
-                enabled = enabled,
-                busyReason = busyReason,
-            )
         }
+    }
+}
+
+@Composable
+private fun TabContent(
+    tab: InspectorTab,
+    document: DocumentModel,
+    catalog: CatalogModel,
+    categories: List<CategoryEntryModel>,
+    allTags: List<TagNameModel>,
+    busyReason: String?,
+    activity: List<ActivityEntryModel>,
+    viewModel: InspectorViewModel,
+) {
+    when (tab) {
+        InspectorTab.DETAILS -> DetailsTab(
+            document = document,
+            catalog = catalog,
+            categories = categories,
+            allTags = allTags,
+            busyReason = busyReason,
+            viewModel = viewModel,
+        )
+
+        InspectorTab.NOTES_AND_LINKS -> NotesAndLinksSections(
+            document = document,
+            catalog = catalog,
+            busyReason = busyReason,
+            controller = viewModel.details,
+            onOpenDocument = viewModel::open,
+        )
+
+        InspectorTab.PAGES -> PdfSection(
+            document = document,
+            busyReason = busyReason,
+            pages = viewModel.pages,
+            actions = viewModel.pdf,
+        )
+
+        InspectorTab.HISTORY -> HistoryTab(entries = viewModel.historyOf(document = document, activity = activity))
     }
 }

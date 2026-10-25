@@ -1,15 +1,19 @@
 package dms.ui.library.model
 
 import dms.domain.document.model.DocumentModel
+import dms.domain.library.model.LibraryFolderIdModel
 import dms.domain.library.model.RelativePathModel
 import dms.domain.taxonomy.model.TagNameModel
+import dms.ui.library.documents.model.DocumentSortModel
+import dms.ui.library.filter.model.ActiveFilter
 import dms.ui.library.search.model.ContentSearchStateModel
 import dms.ui.library.sidebar.model.SidebarGroup
 import dms.ui.library.smart.model.SmartFolderEntryModel
 
 /**
  * The library screen, derived from the catalog and the user's choices. [busy] names the library
- * operation that runs now, [aiBusy] the AI run.
+ * operation that runs now, [aiBusy] the AI run. [filters] are the filters applied now, as chips;
+ * [primaryFolderId] is where the thumbnails come from.
  */
 data class LibraryUiStateModel(
     val isOpen: Boolean = false,
@@ -31,4 +35,7 @@ data class LibraryUiStateModel(
     val collapsedGroups: Set<SidebarGroup> = emptySet(),
     val contentSearch: ContentSearchStateModel = ContentSearchStateModel(),
     val smartFolders: List<SmartFolderEntryModel> = emptyList(),
+    val filters: List<ActiveFilter> = emptyList(),
+    val sort: DocumentSortModel? = null,
+    val primaryFolderId: LibraryFolderIdModel? = null,
 )

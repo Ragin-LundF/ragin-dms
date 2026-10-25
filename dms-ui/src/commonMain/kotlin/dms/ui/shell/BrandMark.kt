@@ -38,7 +38,7 @@ fun BrandMark(compact: Boolean) {
                 modifier = Modifier
                     .size(size = 40.dp)
                     .clip(shape = MaterialTheme.shapes.medium)
-                    .background(brush = Brush.linearGradient(colors = AppColors.brandGradient)),
+                    .background(brush = Brush.linearGradient(colors = AppColors.aiGradient)),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(

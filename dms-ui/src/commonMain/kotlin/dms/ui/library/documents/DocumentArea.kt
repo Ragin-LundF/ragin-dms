@@ -9,6 +9,8 @@ import dms.ui.PlatformActions
 import dms.ui.components.layout.FileDropZone
 import dms.ui.components.surface.EmptyState
 import dms.ui.library.LibraryViewModel
+import dms.ui.library.documents.grid.DocumentGrid
+import dms.ui.library.documents.list.DocumentList
 import dms.ui.library.drag.DocumentDrag
 import dms.ui.library.model.DocumentLayout
 import dms.ui.library.model.LibrarySelection
@@ -41,8 +43,12 @@ fun DocumentArea(
             state.layout == DocumentLayout.LIST -> DocumentList(
                 rows = state.documents,
                 inspected = state.inspected?.id,
+                sort = state.sort,
+                folderId = state.primaryFolderId,
+                thumbnails = viewModel.thumbnails,
                 drag = drag,
                 onInspect = viewModel::inspect,
+                onSort = viewModel::sortBy,
             )
 
             else -> DocumentGrid(

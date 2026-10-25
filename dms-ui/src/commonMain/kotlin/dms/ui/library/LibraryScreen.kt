@@ -28,6 +28,7 @@ import dms.ui.library.documents.DocumentArea
 import dms.ui.library.drag.DocumentDrag
 import dms.ui.library.drag.DragOverlay
 import dms.ui.library.sidebar.LibrarySidebar
+import dms.ui.session.OutcomeMessages
 import dms.ui.theme.Spacing
 
 /**
@@ -38,7 +39,7 @@ import dms.ui.theme.Spacing
 fun LibraryScreen(viewModel: LibraryViewModel, inspector: InspectorViewModel, platform: PlatformActions) {
     val state by viewModel.state.collectAsState()
     val sidebarWidth by viewModel.sidebarWidth.width.collectAsState()
-    val busyReason = state.busy?.let { "Wait until \"$it\" finishes" }
+    val busyReason = state.busy?.let { OutcomeMessages.waitFor(operation = it) }
     val drag = remember(viewModel) { DocumentDrag(onDrop = viewModel::drop) }
     var origin by remember { mutableStateOf(value = Offset.Zero) }
     Box(modifier = Modifier.fillMaxSize().onGloballyPositioned { origin = it.positionInRoot() }) {
@@ -55,18 +56,7 @@ fun LibraryScreen(viewModel: LibraryViewModel, inspector: InspectorViewModel, pl
                 modifier = Modifier.weight(weight = 1f).fillMaxHeight().padding(all = Spacing.xlarge),
                 verticalArrangement = Arrangement.spacedBy(space = Spacing.large),
             ) {
-                LibraryToolbar(
-                    state = state,
-                    busyReason = busyReason,
-                    onSearch = viewModel::search,
-                    onContentSearch = viewModel.contentSearch::enable,
-                    onYear = viewModel::filterYear,
-                    onLayout = viewModel::setLayout,
-                    onAddFiles = { viewModel.addFiles() },
-                    onNewFolder = viewModel::newFolder,
-                    onSaveSmartFolder = viewModel.smartFolders::saveCurrent,
-                    onExport = { viewModel.export.openCurrentView(title = state.title) },
-                )
+                LibraryToolbar(state = state, busyReason = busyReason, viewModel = viewModel)
                 DocumentArea(
                     state = state,
                     drag = drag,
@@ -81,8 +71,9 @@ fun LibraryScreen(viewModel: LibraryViewModel, inspector: InspectorViewModel, pl
                     document = document,
                     categories = state.categories,
                     allTags = state.tags,
+                    folderId = state.primaryFolderId,
                     busyReason = busyReason,
-                    aiBusyReason = state.aiBusy?.let { "Wait until \"$it\" finishes" },
+                    aiBusyReason = state.aiBusy?.let { OutcomeMessages.waitFor(operation = it) },
                     viewModel = inspector,
                     onClose = { viewModel.inspect(documentId = null) },
                     modifier = Modifier.width(width = Spacing.inspectorWidth).fillMaxHeight(),

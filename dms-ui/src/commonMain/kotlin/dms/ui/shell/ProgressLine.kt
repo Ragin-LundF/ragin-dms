@@ -2,7 +2,8 @@ package dms.ui.shell
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -14,47 +15,37 @@ import dms.ui.session.model.OperationProgressModel
 import dms.ui.theme.Spacing
 import java.util.Locale
 
-/** The running operation in one line, its counts and current item, with a progress bar below. */
+/** A running operation in one short line for the status bar: its step, its counts and a small progress bar. */
 @Composable
 fun ProgressLine(busy: String, progress: OperationProgressModel?) {
     val colors = MaterialTheme.colorScheme
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(space = Spacing.medium),
+        horizontalArrangement = Arrangement.spacedBy(space = Spacing.small),
     ) {
+        val detail = progress?.detail?.let { " · $it" }.orEmpty()
         Text(
-            text = progress?.step ?: busy,
-            style = MaterialTheme.typography.labelLarge,
+            text = (progress?.step ?: busy) + detail,
+            style = MaterialTheme.typography.labelSmall,
             maxLines = 1,
-            softWrap = false,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(weight = 1f, fill = false),
+            modifier = Modifier.widthIn(max = Spacing.statusTextMaxWidth),
         )
         progress?.total?.let { total ->
             Text(
                 text = String.format(Locale.getDefault(), "%,d of %,d", progress.done, total),
-                style = MaterialTheme.typography.labelMedium,
+                style = MaterialTheme.typography.labelSmall,
                 color = colors.primary,
                 maxLines = 1,
                 softWrap = false,
             )
         }
-        progress?.detail?.let { detail ->
-            Text(
-                text = detail,
-                style = MaterialTheme.typography.bodySmall,
-                color = colors.onSurfaceVariant,
-                maxLines = 1,
-                softWrap = false,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(weight = 1f),
-            )
+        val fraction = progress?.fraction
+        val bar = Modifier.width(width = Spacing.statusProgressWidth)
+        if (fraction == null) {
+            LinearProgressIndicator(modifier = bar)
+        } else {
+            LinearProgressIndicator(progress = { fraction }, modifier = bar)
         }
-    }
-    val fraction = progress?.fraction
-    if (fraction == null) {
-        LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-    } else {
-        LinearProgressIndicator(progress = { fraction }, modifier = Modifier.fillMaxWidth())
     }
 }

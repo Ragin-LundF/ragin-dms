@@ -9,6 +9,7 @@ import dms.ui.ask.model.AskUiStateModel
 import dms.ui.review.AiMessages
 import dms.ui.service.AppServices
 import dms.ui.session.LibrarySession
+import dms.ui.session.OutcomeMessages
 import dms.ui.session.model.OperationLane
 import dms.ui.session.model.OperationProgressModel
 import dms.ui.session.model.UiMessageModel
@@ -74,7 +75,7 @@ class AskViewModel(
             if (!started) {
                 val busy = AskEntryModel(
                     question = text,
-                    note = "Wait until \"${session.state.value.aiBusy}\" finishes",
+                    note = OutcomeMessages.waitFor(operation = session.state.value.aiBusy.orEmpty()),
                 )
                 entries.update { asked -> asked.dropLast(n = 1) + busy }
             }

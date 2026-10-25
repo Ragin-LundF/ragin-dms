@@ -11,13 +11,17 @@ import dms.ui.platform.HostOs
 import dms.ui.session.LibrarySession
 import dms.ui.session.model.LibraryStatus
 
-/** The native menu bar with the main actions and their shortcuts (⌘ on macOS, Ctrl elsewhere). */
+/**
+ * The native menu bar with the main actions and their shortcuts (⌘ on macOS, Ctrl elsewhere); "Go to…"
+ * opens the command palette.
+ */
 @Composable
 fun FrameWindowScope.AppMenuBar(
     session: LibrarySession,
     logVisible: Boolean,
     onScreenChange: (Screen) -> Unit,
     onLogVisibleChange: (Boolean) -> Unit,
+    onGoTo: () -> Unit,
 ) {
     val state by session.state.collectAsState()
     val idle = state.busy == null && state.status is LibraryStatus.Open
@@ -43,6 +47,8 @@ fun FrameWindowScope.AppMenuBar(
             )
         }
         Menu(text = "View") {
+            Item(text = "Go to…", shortcut = HostOs.shortcut(key = Key.K), onClick = onGoTo)
+            Separator()
             Item(
                 text = Screen.DASHBOARD.label,
                 shortcut = HostOs.shortcut(key = Key.One),

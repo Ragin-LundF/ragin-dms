@@ -73,6 +73,11 @@ object OutcomeMessages {
         }
     }
 
+    /** Why a button waits: the [operation] running in its lane. */
+    fun waitFor(operation: String): String {
+        return "Wait until \"$operation\" finishes"
+    }
+
     fun failure(reason: StorageFailure): String {
         return when (reason) {
             StorageFailure.FOLDER_UNREACHABLE -> "folder not reachable"

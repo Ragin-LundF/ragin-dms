@@ -4,6 +4,7 @@ import dms.domain.catalog.model.CatalogModel
 import dms.domain.document.DocumentKind
 import dms.domain.document.model.DocumentModel
 import dms.ui.components.chart.model.ChartPointModel
+import dms.ui.components.format.DateTexts
 import dms.ui.dashboard.stats.model.KindCountModel
 import dms.ui.dashboard.stats.model.LibraryStatsModel
 import dms.ui.dashboard.stats.model.RecentDocumentModel
@@ -21,7 +22,8 @@ object LibraryStatistics {
     private const val TOP_TAGS = 24
     private const val TOP_CORRESPONDENTS = 6
     private const val RECENT = 6
-    private val RECENTLY: Duration = Duration.ofDays(30)
+    private const val GROWTH_DAYS = 30
+    private val RECENTLY: Duration = Duration.ofDays(GROWTH_DAYS.toLong())
 
     fun of(catalog: CatalogModel?, now: Instant, zone: ZoneId): LibraryStatsModel {
         if (catalog == null) {
@@ -32,6 +34,7 @@ object LibraryStatistics {
             documentCount = documents.size,
             totalBytes = documents.sumOf { it.size },
             addedRecently = documents.count { it.addedAt > now.minus(RECENTLY) },
+            growth = growth(documents = documents, now = now),
             uncategorizedCount = documents.count { it.categoryId == null },
             byKind = DocumentKind.entries
                 .map { kind -> KindCountModel(kind = kind, count = documents.count { it.kind == kind }) }
@@ -60,7 +63,7 @@ object LibraryStatistics {
             recent = documents
                 .sortedByDescending { it.addedAt }
                 .take(n = RECENT)
-                .map { recentOf(document = it, catalog = catalog) },
+                .map { recentOf(document = it, catalog = catalog, now = now, zone = zone) },
         )
     }
 
@@ -84,14 +87,32 @@ object LibraryStatistics {
         }
     }
 
-    private fun recentOf(document: DocumentModel, catalog: CatalogModel): RecentDocumentModel {
+    /** How many documents the library held at the end of each of the last [GROWTH_DAYS] days, oldest first. */
+    private fun growth(documents: Collection<DocumentModel>, now: Instant): List<Int> {
+        if (documents.isEmpty()) {
+            return emptyList()
+        }
+        return (GROWTH_DAYS - 1 downTo 0).map { daysAgo ->
+            val endOfDay = now.minus(Duration.ofDays(daysAgo.toLong()))
+            documents.count { it.addedAt <= endOfDay }
+        }
+    }
+
+    private fun recentOf(
+        document: DocumentModel,
+        catalog: CatalogModel,
+        now: Instant,
+        zone: ZoneId,
+    ): RecentDocumentModel {
         return RecentDocumentModel(
             id = document.id,
+            path = document.path,
             title = document.metadata.title ?: document.path.fileName,
             folder = document.path.parent?.value.orEmpty(),
             kind = document.kind,
             categoryName = document.categoryId?.let { catalog.categories[it]?.name },
-            addedAt = document.addedAt,
+            added = DateTexts.relative(instant = document.addedAt, now = now, zone = zone),
+            addedOn = DateTexts.absolute(instant = document.addedAt, zone = zone),
         )
     }
 

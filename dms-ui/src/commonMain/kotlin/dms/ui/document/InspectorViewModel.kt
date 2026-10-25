@@ -5,7 +5,10 @@ import androidx.lifecycle.viewModelScope
 import dms.application.catalog.model.CatalogEdit
 import dms.application.classification.model.SuggestOutcome
 import dms.application.common.OperationOutcome
+import dms.application.port.state.model.ActivityEntryModel
 import dms.domain.catalog.model.CatalogModel
+import dms.domain.classification.model.ClassificationSuggestionModel
+import dms.domain.document.DocumentKind
 import dms.domain.document.model.DocumentIdModel
 import dms.domain.document.model.DocumentMetadataModel
 import dms.domain.document.model.DocumentModel
@@ -19,9 +22,16 @@ import dms.ui.components.dialog.DialogController
 import dms.ui.components.model.ConfirmationRequestModel
 import dms.ui.components.model.TextInputRequestModel
 import dms.ui.document.details.DetailsController
+import dms.ui.document.model.DocumentFactModel
+import dms.ui.document.model.HistoryEntryModel
+import dms.ui.document.model.InspectorTab
 import dms.ui.document.model.MetadataDraftModel
+import dms.ui.document.suggestion.DashboardFeed
+import dms.ui.document.tab.DocumentFacts
+import dms.ui.document.tab.DocumentHistory
 import dms.ui.pdf.PageEditorController
 import dms.ui.pdf.PdfActions
+import dms.ui.preview.ThumbnailLoader
 import dms.ui.review.AiMessages
 import dms.ui.review.ReviewController
 import dms.ui.service.AppServices
@@ -31,11 +41,15 @@ import dms.ui.session.NameInput
 import dms.ui.session.OutcomeMessages
 import dms.ui.session.model.OperationLane
 import dms.ui.session.model.UiMessageModel
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import java.time.ZoneId
 
 /**
- * Changes to the one document shown in the inspector: metadata, category, tags, name, place; and
- * what the AI can do with it: summarize, tag, classify, and answer questions.
+ * Changes to the one document shown in the inspector: metadata, category, tags, name, place; what
+ * the AI can do with it: summarize, tag, classify, and answer questions; its pending suggestion; and
+ * which tab of the inspector shows.
  */
 class InspectorViewModel(
     private val services: AppServices,
@@ -57,6 +71,16 @@ class InspectorViewModel(
     )
     val pdf: PdfActions = PdfActions(services = services, session = session, dialogs = dialogs, scope = viewModelScope)
 
+    val thumbnails: ThumbnailLoader = ThumbnailLoader(services = services, platform = platform)
+
+    /** The suggestions that wait for review and the recent activity, as the dashboard has them. */
+    val feed: DashboardFeed = DashboardFeed(services = services, session = session, scope = viewModelScope)
+
+    private val selectedTab = MutableStateFlow(value = InspectorTab.DETAILS)
+
+    /** The tab the user chose; it stays when another document is inspected. */
+    val tab: StateFlow<InspectorTab> = selectedTab.asStateFlow()
+
     /** The open catalog, for the sections that show more than the document itself. */
     val catalog: StateFlow<CatalogModel?> = services.library.catalog
 
@@ -64,6 +88,48 @@ class InspectorViewModel(
         get() {
             return platform.fileManagerName
         }
+
+    fun selectTab(tab: InspectorTab) {
+        selectedTab.value = tab
+    }
+
+    /** The tab to show for [document]: the [selected] one, or Details if it does not apply to [document]. */
+    fun shownTab(selected: InspectorTab, document: DocumentModel): InspectorTab {
+        return if (selected in disabledTabs(document = document)) InspectorTab.DETAILS else selected
+    }
+
+    /** The tabs that do not apply to [document], with the reason. */
+    fun disabledTabs(document: DocumentModel): Map<InspectorTab, String> {
+        if (document.kind == DocumentKind.PDF) {
+            return emptyMap()
+        }
+        return mapOf(InspectorTab.PAGES to "Only PDFs have pages")
+    }
+
+    fun factsOf(document: DocumentModel, catalog: CatalogModel): List<DocumentFactModel> {
+        return DocumentFacts.of(
+            document = document,
+            catalog = catalog,
+            today = services.library.clock.today(),
+            zone = ZoneId.systemDefault(),
+        )
+    }
+
+    fun historyOf(document: DocumentModel, activity: List<ActivityEntryModel>): List<HistoryEntryModel> {
+        return DocumentHistory.of(document = document, activity = activity)
+    }
+
+    /** Opens the review of a suggestion that waits for this document. */
+    fun reviewSuggestion(suggestion: ClassificationSuggestionModel) {
+        review.open(suggestion = suggestion)
+    }
+
+    /** Rejects the suggestion for [document], as "Reject" on the dashboard does; nothing else changes. */
+    fun dismissSuggestion(document: DocumentModel) {
+        session.perform(label = "Rejecting the suggestion for ${document.path.fileName}") {
+            services.ai.rejectSuggestion(documentId = document.id)
+        }
+    }
 
     fun saveMetadata(document: DocumentModel, draft: MetadataDraftModel) {
         val date = draft.documentDate.takeIf { it.isNotBlank() }?.let { DateInput.parse(raw = it) }

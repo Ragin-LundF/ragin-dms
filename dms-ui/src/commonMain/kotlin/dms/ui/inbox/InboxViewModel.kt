@@ -13,7 +13,7 @@ import dms.domain.restructure.template.TemplateParse
 import dms.domain.restructure.template.TemplateRendering
 import dms.domain.restructure.template.model.PathTemplateModel
 import dms.domain.task.OpenTask
-import dms.ui.components.FileSizes
+import dms.ui.components.format.FileSizes
 import dms.ui.dashboard.panel.ActivityTexts
 import dms.ui.inbox.model.FolderPickModel
 import dms.ui.inbox.model.InboxRowModel

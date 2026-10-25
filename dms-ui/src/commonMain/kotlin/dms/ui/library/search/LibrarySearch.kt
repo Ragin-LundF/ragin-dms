@@ -1,19 +1,20 @@
 package dms.ui.library.search
 
-import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import dms.ui.components.layout.SearchField
 import dms.ui.library.search.model.ContentSearchStateModel
 
-/** The library's search field, with the switch that makes it search the documents' text too. */
+/**
+ * The library's search field. Whether it searches the documents' text too is switched in the filter
+ * row's "+ Filter" menu; the placeholder says which.
+ */
 @Composable
 fun LibrarySearch(
     query: String,
     search: ContentSearchStateModel,
     onSearch: (String) -> Unit,
-    onContentSearch: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     SearchField(
         query = query,
@@ -23,7 +24,6 @@ fun LibrarySearch(
         } else {
             "Filter by name, title, correspondent or tag"
         },
-        modifier = Modifier.width(width = 360.dp),
+        modifier = modifier,
     )
-    ContentSearchChip(state = search, onEnable = onContentSearch)
 }

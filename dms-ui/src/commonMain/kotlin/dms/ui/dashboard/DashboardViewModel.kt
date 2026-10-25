@@ -313,6 +313,7 @@ class DashboardViewModel(
         val foreign = (sessionState.status as? LibraryStatus.Open)?.foreignFolders.orEmpty()
         return DashboardUiStateModel(
             folders = dashboard?.folders.orEmpty().map { toFolderStatus(state = it, foreign = foreign) },
+            primaryFolderId = sessionState.folders?.primary?.id,
             documentCount = dashboard?.documentCount ?: 0,
             uncategorizedCount = dashboard?.uncategorizedCount ?: 0,
             groups = TaskGroup.entries.mapNotNull { group ->
@@ -353,6 +354,7 @@ class DashboardViewModel(
                 date = upcoming.date.toString(),
                 what = upcoming.field?.let { context.fieldLabel(key = it) } ?: "Retention ends",
                 document = document?.metadata?.title ?: document?.path?.fileName ?: upcoming.documentId.value,
+                path = document?.path,
             )
         }
     }

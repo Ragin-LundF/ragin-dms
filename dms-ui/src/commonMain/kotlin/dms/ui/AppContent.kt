@@ -18,6 +18,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import dms.ui.model.Screen
@@ -25,7 +26,9 @@ import dms.ui.service.AppServices
 import dms.ui.session.LibrarySession
 import dms.ui.shell.ActivityBar
 import dms.ui.shell.LogPanel
-import dms.ui.shell.NavigationSidebar
+import dms.ui.shell.navigation.NavigationCounts
+import dms.ui.shell.navigation.NavigationSidebar
+import dms.ui.shell.palette.CommandPalette
 
 /** The navigation on the left, the screen, the log and the activity bar below it, and the messages. */
 @Composable
@@ -37,11 +40,15 @@ fun AppContent(
     onScreenChange: (Screen) -> Unit,
     logVisible: Boolean,
     onLogVisibleChange: (Boolean) -> Unit,
+    palette: CommandPalette,
 ) {
     val sessionState by session.state.collectAsState()
     val progress by session.progress.collectAsState()
     val snackbar = remember { SnackbarHostState() }
     var navigationCollapsed by remember { mutableStateOf(value = false) }
+    val scope = rememberCoroutineScope()
+    val navigationCounts = remember { NavigationCounts(services = services, session = session, scope = scope) }
+    val counts by navigationCounts.counts.collectAsState()
     LaunchedEffect(key1 = sessionState.message) {
         val message = sessionState.message ?: return@LaunchedEffect
         snackbar.showSnackbar(
@@ -58,8 +65,9 @@ fun AppContent(
         Row(modifier = Modifier.fillMaxSize().padding(paddingValues = padding)) {
             NavigationSidebar(
                 screen = screen,
-                sessionState = sessionState,
-                collapsed = navigationCollapsed,
+                counts = counts,
+                // The library needs the width for its own sidebar, so the navigation is a rail there.
+                collapsed = navigationCollapsed || screen == Screen.LIBRARY,
                 onToggleCollapsed = { navigationCollapsed = !navigationCollapsed },
                 onScreenChange = onScreenChange,
             )
@@ -72,6 +80,7 @@ fun AppContent(
                         status = sessionState.status,
                         screen = screen,
                         onScreenChange = onScreenChange,
+                        palette = palette,
                     )
                 }
                 if (logVisible) {
@@ -79,7 +88,7 @@ fun AppContent(
                     LogPanel(entries = entries, onClear = session.log::clear)
                 }
                 ActivityBar(
-                    operations = sessionState.operations,
+                    sessionState = sessionState,
                     progress = progress,
                     logVisible = logVisible,
                     onCancel = session::cancel,

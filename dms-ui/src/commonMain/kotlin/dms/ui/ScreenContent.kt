@@ -13,6 +13,7 @@ import dms.ui.session.LibrarySession
 import dms.ui.session.model.LibraryStatus
 import dms.ui.settings.SettingsScreen
 import dms.ui.settings.SettingsViewModel
+import dms.ui.shell.palette.CommandPalette
 
 /** The screen for the library's status: settings until it is configured, the chosen screen once it is open. */
 @Composable
@@ -23,6 +24,7 @@ fun ScreenContent(
     status: LibraryStatus,
     screen: Screen,
     onScreenChange: (Screen) -> Unit,
+    palette: CommandPalette,
 ) {
     val settings = viewModel {
         SettingsViewModel(services = services, session = session, platform = platform)
@@ -50,6 +52,7 @@ fun ScreenContent(
             screen = screen,
             settings = settings,
             onScreenChange = onScreenChange,
+            palette = palette,
         )
     }
 }

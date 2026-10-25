@@ -12,7 +12,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import dms.ui.theme.Spacing
 
-/** The card every dashboard and inspector block sits on: rounded, hairline border, soft shadow. */
+/** The card every dashboard and inspector block sits on: rounded, a hairline border and no shadow. */
 @Composable
 fun AppCard(
     modifier: Modifier = Modifier,
@@ -32,7 +32,7 @@ fun AppCard(
             shape = shape,
             color = color,
             border = border,
-            shadowElevation = 1.dp,
+            shadowElevation = 0.dp,
             content = inner,
         )
     } else {
@@ -42,7 +42,7 @@ fun AppCard(
             shape = shape,
             color = color,
             border = border,
-            shadowElevation = 1.dp,
+            shadowElevation = 0.dp,
             content = inner,
         )
     }
