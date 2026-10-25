@@ -43,8 +43,8 @@ data class CatalogDto(
     val rules: List<RuleDto> = emptyList(),
     val correspondents: List<CorrespondentDto> = emptyList(),
     val layout: LayoutDto? = null,
-) {
+) : ExtensibleDto {
     @get:JsonAnyGetter
     @field:JsonAnySetter
-    val unknownFields: MutableMap<String, Any?> = linkedMapOf()
+    override val unknownFields: MutableMap<String, Any?> = linkedMapOf()
 }

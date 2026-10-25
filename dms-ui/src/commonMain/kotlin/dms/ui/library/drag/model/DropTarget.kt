@@ -7,8 +7,11 @@ import dms.domain.taxonomy.model.TagNameModel
 /** Where a dragged document or category can be dropped, and what the drop does. */
 sealed interface DropTarget {
 
-    /** Moves the document into the folder, in every library folder. */
-    data class Folder(val path: RelativePathModel) : DropTarget
+    /**
+     * Moves the document into the folder, in every library folder. [place] tells apart several areas
+     * showing the same folder at once, such as a tree row and a breadcrumb segment.
+     */
+    data class Folder(val path: RelativePathModel, val place: FolderDropPlace = FolderDropPlace.LIST) : DropTarget
 
     /** Gives the document this category. */
     data class Category(val categoryId: CategoryIdModel) : DropTarget

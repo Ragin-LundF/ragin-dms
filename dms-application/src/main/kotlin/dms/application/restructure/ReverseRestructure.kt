@@ -7,7 +7,8 @@ import dms.domain.restructure.model.RestructurePlanModel
 
 /**
  * Undoes an applied restructure: every document that is still where the restructure put it goes back
- * where it came from. Documents moved or renamed since are left alone and counted as skipped.
+ * where it came from, including files whose move was never catalogued. Documents moved or renamed since
+ * are left alone and counted as skipped.
  */
 class ReverseRestructure(
     private val store: CatalogStore,
@@ -22,8 +23,9 @@ class ReverseRestructure(
         val library = store.current() ?: return RestructureOutcome.LibraryNotOpen
         val record = plans.read(folder = library.folders.primary, name = name)
             ?: return RestructureOutcome.RecordNotFound
+        // A document still catalogued at its old place moved on disk only; its file goes back as well.
         val (unchanged, changed) = record.moves.partition { move ->
-            library.catalog.documents[move.documentId]?.path == move.to
+            library.catalog.documents[move.documentId]?.path in setOf(move.to, move.from)
         }
         val inverse = RestructurePlanModel(
             template = "${record.template} (reversed)",
@@ -32,11 +34,5 @@ class ReverseRestructure(
             skipped = emptyList(),
         )
         return apply(plan = inverse, skipped = changed.size, onProgress = onProgress)
-    }
-
-    /** The applied restructures that can be reversed, newest first. */
-    suspend fun history(): List<String> {
-        val library = store.current() ?: return emptyList()
-        return plans.names(folder = library.folders.primary)
     }
 }

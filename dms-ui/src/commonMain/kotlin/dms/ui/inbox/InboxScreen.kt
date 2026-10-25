@@ -23,6 +23,7 @@ import dms.ui.components.model.ButtonStyle
 import dms.ui.components.surface.EmptyState
 import dms.ui.inbox.model.InboxUiStateModel
 import dms.ui.review.ReviewDialog
+import dms.ui.session.OutcomeMessages
 import dms.ui.theme.Spacing
 
 /**
@@ -36,10 +37,10 @@ fun InboxScreen(
     onOpenDocument: (DocumentIdModel) -> Unit,
 ) {
     val state by viewModel.state.collectAsState()
-    val busyReason = state.busy?.let { "Wait until \"$it\" finishes" }
-    val aiBusyReason = state.aiBusy?.let { "Wait until \"$it\" finishes" }
+    val busyReason = state.busy?.let { OutcomeMessages.waitFor(operation = it) }
+    val aiBusyReason = state.aiBusy?.let { OutcomeMessages.waitFor(operation = it) }
     Column(
-        modifier = Modifier.fillMaxSize().padding(all = Spacing.xxlarge),
+        modifier = Modifier.fillMaxSize().padding(all = Spacing.screen),
         verticalArrangement = Arrangement.spacedBy(space = Spacing.xlarge),
     ) {
         val subtitle = if (state.enabled) {

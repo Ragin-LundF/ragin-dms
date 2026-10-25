@@ -10,7 +10,7 @@ import dms.application.port.export.model.ExportTargetModel
 import dms.application.port.state.model.ActivityKind
 import dms.application.port.storage.model.StorageResult
 import dms.application.port.system.Clock
-import dms.application.search.SearchContents
+import dms.application.search.ContentMatcher
 
 /**
  * Exports documents into a folder or a ZIP file outside the library, with an index, for example for
@@ -18,7 +18,7 @@ import dms.application.search.SearchContents
  */
 class ExportDocuments(
     private val store: CatalogStore,
-    private val search: SearchContents,
+    private val search: ContentMatcher,
     private val writer: ExportWriter,
     private val activity: ActivityRecorder,
     private val clock: Clock,
@@ -36,7 +36,7 @@ class ExportDocuments(
         }
         val documents = when (scope) {
             is ExportScope.Documents -> scope.ids.mapNotNull { library.catalog.documents[it] }
-            is ExportScope.Query -> search.search(query = scope.query)
+            is ExportScope.Query -> search.matching(library = library, query = scope.query)
         }
         if (documents.isEmpty()) {
             return ExportOutcome.Empty

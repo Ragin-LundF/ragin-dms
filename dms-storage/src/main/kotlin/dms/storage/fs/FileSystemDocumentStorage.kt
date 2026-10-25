@@ -2,6 +2,7 @@ package dms.storage.fs
 
 import dms.application.port.storage.DocumentStorage
 import dms.application.port.storage.model.ExternalFileModel
+import dms.application.port.storage.model.FolderEntriesModel
 import dms.application.port.storage.model.StorageFailure
 import dms.application.port.storage.model.StorageResult
 import dms.domain.change.model.FileFactsModel
@@ -185,6 +186,21 @@ class FileSystemDocumentStorage(private val trash: SystemTrash) : DocumentStorag
             }
             StorageResult.Success(value = names)
         }
+    }
+
+    override suspend fun listEntries(
+        folder: LibraryFolderModel,
+        path: RelativePathModel,
+    ): StorageResult<FolderEntriesModel> {
+        return inFolder(folder = folder) { root ->
+            val directory = PathResolver.existing(root = root, path = path)?.takeIf { Files.isDirectory(it) }
+                ?: return@inFolder StorageIo.failure(reason = StorageFailure.NOT_FOUND)
+            StorageResult.Success(value = FolderWalk.entries(root = root, directory = directory))
+        }
+    }
+
+    override suspend fun listFolders(folder: LibraryFolderModel): StorageResult<Set<RelativePathModel>> {
+        return inFolder(folder = folder) { root -> StorageResult.Success(value = FolderWalk.folders(root = root)) }
     }
 
     private suspend fun <T> inFolder(

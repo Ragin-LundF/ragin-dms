@@ -13,6 +13,9 @@ import dms.application.document.TrashDuplicateFile
 import dms.application.document.TrashNewFile
 import dms.application.folder.CreateFolder
 import dms.application.folder.MoveFolder
+import dms.application.folder.ReadFolderEntries
+import dms.application.folder.ReadFolders
+import dms.application.folder.TrashFolder
 
 /** Use cases that change documents, folders, their categorization and details, and the library settings. */
 class DocumentServices(
@@ -25,6 +28,9 @@ class DocumentServices(
     val restoreDocument: RestoreDocument,
     val createFolder: CreateFolder,
     val moveFolder: MoveFolder,
+    val readFolderEntries: ReadFolderEntries,
+    val readFolders: ReadFolders,
+    val trashFolder: TrashFolder,
     val editCatalog: EditCatalog,
     val changeSettings: ChangeSettings,
     val editDocumentDetails: EditDocumentDetails,

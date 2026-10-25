@@ -18,7 +18,7 @@ Use this file when touching `dms-domain` or `dms-application`.
 | `dms.domain.rule`, `dms.domain.restructure`, `dms.domain.outline` | Matching rules (`RuleMatcher`, `RuleLearner`), `PathTemplateModel`, `RestructurePlanner`, `FolderShape`, and the `FolderOutlineModel` the AI gets for a target folder. |
 | `dms.application.port` | Every port interface. |
 | `dms.application.common` | Shared outcome (`OperationOutcome`), `SiblingNames` (name collision checks against the primary and the catalog), `ActivityRecorder`. |
-| `dms.application.<feature>` | Use cases grouped by feature: `library`, `sync` (with `Replicator`), `folder`, `document`, `catalog`, `resolution`, `classification`, `search`, `inbox`, `restructure`, `deadline`, `rule`, `export`, `pdf`, `ask`. Inputs and outcomes go in `<feature>.model`. |
+| `dms.application.<feature>` | Use cases grouped by feature: `library`, `sync` (with `Replicator`), `folder`, `document`, `catalog`, `resolution`, `classification`, `search` (`ContentMatcher` is the shared text index the searching use cases use), `inbox`, `restructure`, `deadline`, `rule`, `export`, `pdf`, `ask`, `preview` (thumbnails). Inputs and outcomes go in `<feature>.model`. |
 
 The data and value types of every package above live in its `model` subpackage and end in `Model`
 (`dms.domain.document.model.DocumentModel`); see "Models and DTOs" in `coding-guidelines.md`.
@@ -41,7 +41,8 @@ The data and value types of every package above live in its `model` subpackage a
 - One use case per class, named as a verb phrase (`AddDocuments`, `SyncFromPrimary`, `ApproveSuggestion`), with a single `suspend operator fun invoke(...)`.
 - A use case returns a `sealed interface` outcome. The UI decides how to present each case; the use case does not produce user-facing text.
 - Use cases are stateless. State lives in the catalog (persisted, shared), in the task store and activity log (local), or in the UI's view models (transient).
-- **Nothing changes the library without a user action.** Scans only detect; they produce `DetectedChange`s, and `BuildDashboard` turns them into `OpenTask`s. Adopting, renaming, syncing, restoring and deleting are separate use cases the user triggers.
+- **Nothing changes the library without a user action.** Scans only detect; they produce `DetectedChange`s, and `BuildDashboard` turns them into `OpenTask`s. Adopting, renaming, syncing, restoring and deleting are separate use cases the user triggers. The one documented exception is the inbox: when the user switched it on (opt-in), `CollectInbox` catalogs the new files a scan found in it.
+- `CatalogStore` is the only writer of the catalog. A save based on an older revision than the primary holds is refused (`StorageFailure.CATALOG_CHANGED`); the store then merges the primary's catalog, applies the edit again and saves once more. `Replicator` never lowers a sync folder's revision.
 - A use case that writes files writes the **file first and the catalog second**. A crash in between leaves an uncatalogued file, which the next scan finds; the reverse would leave a catalog entry pointing at nothing.
 - Every write goes to **all reachable library folders**, primary first. A failed primary aborts the operation; a failed sync folder is journaled and becomes a `RetryFailedOperations` task. Use `Replicator` for this; never loop over folders in a use case.
 - Sync never deletes. Deleting is its own use case (`TrashDocument`), requires an explicit confirmation flag in its input, and moves to the trash in every folder.

@@ -20,6 +20,7 @@ import dms.ui.components.layout.ScreenHeader
 import dms.ui.components.model.ActionButtonModel
 import dms.ui.components.surface.AppCard
 import dms.ui.components.surface.CardTitle
+import dms.ui.session.OutcomeMessages
 import dms.ui.theme.Spacing
 
 /** The restructure assistant: template, plan and the restructures that can be reversed. */
@@ -33,7 +34,7 @@ fun RestructureScreen(viewModel: RestructureViewModel) {
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(state = rememberScrollState())
-            .padding(all = Spacing.xxlarge),
+            .padding(all = Spacing.screen),
         verticalArrangement = Arrangement.spacedBy(space = Spacing.xlarge),
     ) {
         ScreenHeader(title = "Restructure", subtitle = "Sort documents into folders by a template, after you approve")
@@ -49,7 +50,7 @@ fun RestructureScreen(viewModel: RestructureViewModel) {
                     tint = MaterialTheme.colorScheme.tertiary,
                     subtitle = "Reverse puts back every document that is still where a restructure put it",
                 )
-                val busyReason = state.busy?.let { "Wait until \"$it\" finishes" }
+                val busyReason = state.busy?.let { OutcomeMessages.waitFor(operation = it) }
                 ActionButtons(
                     buttons = state.history.take(n = HISTORY_SHOWN).map { name ->
                         ActionButtonModel(label = "Reverse $name") { viewModel.reverse(name = name) }

@@ -2,6 +2,7 @@ package dms.application.inbox
 
 import dms.application.common.OperationOutcome
 import dms.application.document.AdoptNewFile
+import dms.application.inbox.model.CollectInboxOutcome
 import dms.application.library.CatalogStore
 import dms.application.library.model.ScanResultModel
 import dms.domain.change.DetectedChange
@@ -16,17 +17,17 @@ class CollectInbox(
     private val adoptNewFile: AdoptNewFile,
 ) {
 
-    /** Returns the changes that became inbox documents, so the caller can drop them from the scan. */
-    suspend operator fun invoke(scan: ScanResultModel): List<DetectedChange.NewFile> {
-        val library = store.current() ?: return emptyList()
+    suspend operator fun invoke(scan: ScanResultModel): CollectInboxOutcome {
+        val library = store.current() ?: return CollectInboxOutcome.LibraryNotOpen
         val inbox = library.catalog.settings.layout.inbox
         if (!inbox.enabled) {
-            return emptyList()
+            return CollectInboxOutcome.Collected(changes = emptyList())
         }
         val known = library.catalog.documents.values.map { it.contentHash }.toSet()
-        return scan.changes.filterIsInstance<DetectedChange.NewFile>()
+        val collected = scan.changes.filterIsInstance<DetectedChange.NewFile>()
             .filter { inbox.contains(candidate = it.path) && it.contentHash != null && it.contentHash !in known }
             .distinctBy { it.contentHash }
             .filter { adoptNewFile(change = it) is OperationOutcome.Done }
+        return CollectInboxOutcome.Collected(changes = collected)
     }
 }

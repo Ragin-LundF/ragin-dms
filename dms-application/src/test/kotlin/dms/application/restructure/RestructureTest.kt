@@ -183,6 +183,59 @@ class RestructureTest {
     }
 
     @Test
+    fun `moves whose catalog commit failed are reported apart, recorded and reversed`() {
+        runTest {
+            val (library, _) = libraryWith(count = 60)
+            val applied = assertIs<RestructureOutcome.Applied>(
+                value = library.applyRestructurePlan(plan = plan(library = library)) { done, _ ->
+                    if (done == 51) {
+                        library.folders.readOnlyCatalogs += library.primary.id
+                    }
+                },
+            )
+            library.folders.readOnlyCatalogs.clear()
+
+            assertEquals(expected = 50, actual = applied.moved)
+            assertEquals(expected = 10, actual = applied.notCatalogued.size)
+            assertTrue(actual = applied.failed.isEmpty())
+            val record = assertNotNull(actual = applied.record)
+            val recorded = assertNotNull(actual = library.plans.recordsIn(folder = library.primary)[record])
+            assertEquals(expected = 60, actual = recorded.moves.size)
+            applied.notCatalogued.forEach { move ->
+                assertEquals(expected = move.from, actual = library.catalog.documents.getValue(move.documentId).path)
+                assertNotNull(actual = library.folders.content(folder = library.primary, path = move.to.value))
+            }
+
+            val reversed = assertIs<RestructureOutcome.Applied>(value = library.reverseRestructure(name = record))
+
+            assertEquals(expected = 60, actual = reversed.moved)
+            assertTrue(actual = library.catalog.documents.values.all { it.path.value.startsWith(prefix = "loose/") })
+            val onDisk = library.folders.paths(folder = library.primary)
+            assertTrue(actual = onDisk.all { it.startsWith(prefix = "loose/") })
+        }
+    }
+
+    @Test
+    fun `a batch whose catalog commit failed once is committed at the end`() {
+        runTest {
+            val (library, _) = libraryWith(count = 120)
+
+            val applied = assertIs<RestructureOutcome.Applied>(
+                value = library.applyRestructurePlan(plan = plan(library = library)) { done, _ ->
+                    when (done) {
+                        51 -> library.folders.readOnlyCatalogs += library.primary.id
+                        100 -> library.folders.readOnlyCatalogs.clear()
+                    }
+                },
+            )
+
+            assertEquals(expected = 120, actual = applied.moved)
+            assertTrue(actual = applied.notCatalogued.isEmpty())
+            assertTrue(actual = library.catalog.documents.values.all { it.path.value.startsWith(prefix = "Bills/") })
+        }
+    }
+
+    @Test
     fun `a move whose document changed in the meantime fails and the rest goes on`() {
         runTest {
             val (library, documents) = libraryWith(count = 2)

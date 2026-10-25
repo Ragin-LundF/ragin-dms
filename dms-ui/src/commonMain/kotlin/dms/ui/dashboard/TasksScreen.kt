@@ -9,6 +9,7 @@ import androidx.compose.ui.Modifier
 import dms.ui.components.dialog.DialogHost
 import dms.ui.dashboard.task.TaskList
 import dms.ui.review.ReviewDialog
+import dms.ui.session.OutcomeMessages
 import dms.ui.theme.Spacing
 
 /** Every open task, filling the screen; it shares the dashboard's view model and so its filter. */
@@ -18,11 +19,11 @@ fun TasksScreen(viewModel: DashboardViewModel) {
     TaskList(
         groups = state.groups,
         filter = state.filter,
-        busyReason = state.busy?.let { "Wait until \"$it\" finishes" },
+        busyReason = state.busy?.let { OutcomeMessages.waitFor(operation = it) },
         thumbnails = viewModel.thumbnails,
         onFilter = viewModel::setFilter,
         onFullView = null,
-        modifier = Modifier.fillMaxSize().padding(all = Spacing.xxlarge),
+        modifier = Modifier.fillMaxSize().padding(all = Spacing.screen),
     )
     DialogHost(controller = viewModel.dialogs)
     ReviewDialog(controller = viewModel.review, onOpenDocument = viewModel::openDocument)

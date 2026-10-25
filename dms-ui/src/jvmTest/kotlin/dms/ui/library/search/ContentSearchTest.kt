@@ -14,7 +14,7 @@ class ContentSearchTest {
             val library = app.libraryViewModel()
             val source = app.write(file = app.root.resolve("outside/receipt-3.pdf"), content = "alpha")
             app.platform.nextFiles = listOf(source.toString())
-            library.addFilesToTopLevel()
+            library.files.addFilesToTopLevel()
             app.idle()
             val document = library.state.first { it.documents.isNotEmpty() }.documents.single().document
             val transcription = app.primary.resolve(".dms-text/${document.id.value}.txt")

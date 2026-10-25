@@ -15,21 +15,24 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dms.ui.components.chart.model.ChartPointModel
 import dms.ui.theme.Spacing
 
-/** A ranked list: each entry with its count and a thin bar of its size; a click opens the entry. */
+/**
+ * A ranked list: each entry with its count and a thin bar of its size in the brand colour, the same
+ * in every list; a click opens the entry.
+ */
 @Composable
 fun BarList(
     points: List<ChartPointModel>,
-    color: Color,
     onClick: (ChartPointModel) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val max = points.maxOfOrNull { it.value }?.takeIf { it > 0 } ?: 1
+    val colors = MaterialTheme.colorScheme
+    val bar = colors.primary.copy(alpha = 0.75f)
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(space = Spacing.xsmall)) {
         points.forEach { point ->
             val grown = growIn(target = point.value.toFloat() / max)
@@ -48,20 +51,24 @@ fun BarList(
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(weight = 1f),
                     )
-                    Text(text = point.value.toString(), style = MaterialTheme.typography.labelLarge)
+                    Text(
+                        text = point.value.toString(),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = colors.onSurfaceVariant,
+                    )
                 }
                 Box(
                     modifier = Modifier
                         .padding(top = Spacing.xsmall)
                         .fillMaxWidth()
                         .height(height = 6.dp)
-                        .background(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = CircleShape),
+                        .background(color = colors.surfaceContainer, shape = CircleShape),
                 ) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth(fraction = grown.coerceAtLeast(minimumValue = 0.02f))
                             .height(height = 6.dp)
-                            .background(color = color, shape = CircleShape),
+                            .background(color = bar, shape = CircleShape),
                     )
                 }
             }

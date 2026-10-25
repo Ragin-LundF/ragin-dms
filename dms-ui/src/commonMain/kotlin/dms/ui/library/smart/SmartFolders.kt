@@ -1,6 +1,7 @@
 package dms.ui.library.smart
 
 import dms.application.search.SavedSearchPresets
+import dms.application.search.model.FindOutcome
 import dms.domain.catalog.model.CatalogModel
 import dms.domain.document.model.DocumentIdModel
 import dms.domain.query.model.DocumentQueryModel
@@ -54,7 +55,10 @@ class SmartFolders(
                 matchesState.value = if (query == null || !query.needsContent) {
                     null
                 } else {
-                    services.library.searchContents.search(query = query).map { it.id }.toSet()
+                    when (val found = services.library.findDocuments(query = query)) {
+                        is FindOutcome.Found -> found.documents.map { it.id }.toSet()
+                        FindOutcome.LibraryNotOpen -> emptySet()
+                    }
                 }
             }
         }
@@ -77,7 +81,7 @@ class SmartFolders(
     /** Asks for a name and saves what the library shows now as a smart folder. */
     fun saveCurrent() {
         val query = currentQuery()
-        ask(title = "Save as smart folder", initial = "") { name ->
+        ask(title = "Save view", initial = "") { name ->
             save(
                 search = SavedSearchModel(
                     id = SavedSearchIdModel(value = UUID.randomUUID().toString()),
@@ -96,14 +100,14 @@ class SmartFolders(
 
     fun rename(id: SavedSearchIdModel) {
         val search = searchOf(id = id) ?: return
-        ask(title = "Rename smart folder", initial = search.name) { name -> save(search = search.copy(name = name)) }
+        ask(title = "Rename saved view", initial = search.name) { name -> save(search = search.copy(name = name)) }
     }
 
     fun delete(id: SavedSearchIdModel) {
         val search = searchOf(id = id) ?: return
         dialogs.ask(
             request = ConfirmationRequestModel(
-                title = "Delete smart folder \"${search.name}\"",
+                title = "Delete saved view \"${search.name}\"",
                 message = "Only the saved search is deleted; no document changes.",
                 affected = emptyList(),
                 confirmLabel = "Delete",
@@ -122,7 +126,7 @@ class SmartFolders(
             ids = { UUID.randomUUID().toString() },
             taxTag = taxTag,
         )
-        change(done = "Added the standard smart folders") { settings ->
+        change(done = "Added the standard saved views") { settings ->
             val taken = settings.savedSearches.map { it.name.lowercase() }.toSet()
             presets.filterNot { it.name.lowercase() in taken }
                 .fold(initial = settings) { current, preset -> current.withSearch(search = preset) }
@@ -134,8 +138,8 @@ class SmartFolders(
     }
 
     private fun change(done: String, change: (CatalogSettingsModel) -> CatalogSettingsModel) {
-        session.perform(label = "Saving the smart folders") {
-            val outcome = services.documents.changeSettings(subject = "Smart folders", change = change)
+        session.perform(label = "Saving the saved views") {
+            val outcome = services.documents.changeSettings(subject = "Saved views", change = change)
             session.report(message = OutcomeMessages.of(outcome = outcome, done = done))
         }
     }

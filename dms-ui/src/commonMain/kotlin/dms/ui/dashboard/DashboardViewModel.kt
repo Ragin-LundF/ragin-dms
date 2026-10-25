@@ -46,12 +46,9 @@ import dms.ui.session.model.UiMessageModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.launch
 import java.time.ZoneId
 
 /**
@@ -65,7 +62,7 @@ class DashboardViewModel(
     private val platform: PlatformActions,
 ) : ViewModel(), TaskHandler {
 
-    private val dashboard = MutableStateFlow<DashboardModel?>(value = null)
+    private val dashboard: StateFlow<DashboardModel?> = session.dashboard
     private val filter = MutableStateFlow<TaskGroup?>(value = null)
 
     val dialogs: DialogController = DialogController()
@@ -88,14 +85,6 @@ class DashboardViewModel(
     ) { built, sessionState, group ->
         toUiState(dashboard = built, sessionState = sessionState, filter = group)
     }.stateIn(scope = viewModelScope, started = SharingStarted.Eagerly, initialValue = DashboardUiStateModel())
-
-    init {
-        viewModelScope.launch {
-            val scans = session.state.map { it.lastScan to it.revision }.distinctUntilChanged()
-            combine(flow = scans, flow2 = services.library.catalog) { (scan, _), _ -> scan }
-                .collectLatest { scan -> dashboard.value = services.library.buildDashboard(scan = scan) }
-        }
-    }
 
     fun setFilter(group: TaskGroup?) {
         filter.value = group
@@ -307,6 +296,7 @@ class DashboardViewModel(
         val foreign = (sessionState.status as? LibraryStatus.Open)?.foreignFolders.orEmpty()
         return DashboardUiStateModel(
             folders = dashboard?.folders.orEmpty().map { toFolderStatus(state = it, foreign = foreign) },
+            primaryFolderId = sessionState.folders?.primary?.id,
             documentCount = dashboard?.documentCount ?: 0,
             uncategorizedCount = dashboard?.uncategorizedCount ?: 0,
             groups = TaskGroup.entries.mapNotNull { group ->
@@ -347,6 +337,7 @@ class DashboardViewModel(
                 date = upcoming.date.toString(),
                 what = upcoming.field?.let { context.fieldLabel(key = it) } ?: "Retention ends",
                 document = document?.metadata?.title ?: document?.path?.fileName ?: upcoming.documentId.value,
+                path = document?.path,
             )
         }
     }

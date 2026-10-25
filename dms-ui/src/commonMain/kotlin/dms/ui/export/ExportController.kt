@@ -110,7 +110,7 @@ class ExportController(
         }
         scope.launch {
             val directory = platform.chooseFolder(title = "Choose where to export \"${chosen.name}\"") ?: return@launch
-            val started = session.perform(label = "Exporting ${chosen.scopeLabel}") {
+            session.perform(label = "Exporting ${chosen.scopeLabel}") {
                 val outcome = services.organize.exportDocuments(
                     scope = chosen.scope,
                     directory = directory,
@@ -118,9 +118,10 @@ class ExportController(
                     options = chosen.options,
                 )
                 session.report(message = messageOf(outcome = outcome))
-            }
-            if (started) {
-                draftState.value = null
+                // A refused export keeps the draft, so the user can correct it instead of starting over.
+                if (outcome is ExportOutcome.Exported) {
+                    draftState.value = null
+                }
             }
         }
     }

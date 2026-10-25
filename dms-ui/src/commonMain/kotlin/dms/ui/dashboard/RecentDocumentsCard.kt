@@ -6,8 +6,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.material3.MaterialTheme
@@ -18,17 +16,27 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextOverflow
 import dms.domain.document.model.DocumentIdModel
+import dms.domain.library.model.LibraryFolderIdModel
 import dms.ui.components.FullViewButton
+import dms.ui.components.ReasonTooltip
 import dms.ui.components.surface.AppCard
 import dms.ui.components.surface.CardTitle
 import dms.ui.components.surface.KindBadge
+import dms.ui.dashboard.model.TaskFileModel
 import dms.ui.dashboard.stats.model.RecentDocumentModel
+import dms.ui.dashboard.widgets.RowThumbnail
+import dms.ui.preview.ThumbnailLoader
 import dms.ui.theme.Spacing
 
-/** The documents added last; a click opens one in the library, and the card opens all of them there. */
+/**
+ * The documents added last, each with a thumbnail from [primaryFolderId] and when it was added; a
+ * click opens one in the library, and the card opens all of them there.
+ */
 @Composable
 fun RecentDocumentsCard(
     documents: List<RecentDocumentModel>,
+    primaryFolderId: LibraryFolderIdModel?,
+    thumbnails: ThumbnailLoader,
     onOpen: (DocumentIdModel) -> Unit,
     onShowAll: () -> Unit,
     modifier: Modifier = Modifier,
@@ -45,41 +53,61 @@ fun RecentDocumentsCard(
                 color = colors.onSurfaceVariant,
             )
         }
-        Column(modifier = Modifier.verticalScroll(state = rememberScrollState())) {
-            documents.forEach { document ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(shape = MaterialTheme.shapes.small)
-                        .clickable { onOpen(document.id) }
-                        .padding(vertical = Spacing.small, horizontal = Spacing.xsmall),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(space = Spacing.medium),
-                ) {
-                    KindBadge(kind = document.kind)
-                    Column(modifier = Modifier.weight(weight = 1f)) {
-                        Text(
-                            text = document.title,
-                            style = MaterialTheme.typography.bodyMedium,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                        Text(
-                            text = listOfNotNull(document.folder.ifEmpty { "Top level" }, document.categoryName)
-                                .joinToString(separator = " · "),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = colors.onSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    }
-                    Text(
-                        text = ActivityTexts.time(instant = document.addedAt),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = colors.onSurfaceVariant,
-                    )
-                }
-            }
+        documents.forEach { document ->
+            RecentRow(
+                document = document,
+                file = primaryFolderId?.let { TaskFileModel(label = "Open", folderId = it, path = document.path) },
+                thumbnails = thumbnails,
+                onOpen = { onOpen(document.id) },
+            )
+        }
+    }
+}
+
+@Composable
+private fun RecentRow(
+    document: RecentDocumentModel,
+    file: TaskFileModel?,
+    thumbnails: ThumbnailLoader,
+    onOpen: () -> Unit,
+) {
+    val colors = MaterialTheme.colorScheme
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(shape = MaterialTheme.shapes.small)
+            .clickable(onClick = onOpen)
+            .padding(vertical = Spacing.xsmall, horizontal = Spacing.xsmall),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(space = Spacing.medium),
+    ) {
+        RowThumbnail(file = file, loader = thumbnails, onClick = onOpen) {
+            KindBadge(kind = document.kind, size = Spacing.xxlarge)
+        }
+        Column(modifier = Modifier.weight(weight = 1f)) {
+            Text(
+                text = document.title,
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = listOfNotNull(document.folder.ifEmpty { "Top level" }, document.categoryName)
+                    .joinToString(separator = " · "),
+                style = MaterialTheme.typography.bodySmall,
+                color = colors.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        ReasonTooltip(reason = document.addedOn) {
+            Text(
+                text = document.added,
+                style = MaterialTheme.typography.labelMedium,
+                color = colors.onSurfaceVariant,
+                maxLines = 1,
+                softWrap = false,
+            )
         }
     }
 }

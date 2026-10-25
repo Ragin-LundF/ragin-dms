@@ -27,7 +27,7 @@ import dms.ui.components.surface.CardTitle
 /**
  * The matching rules: what each one looks for and proposes, whether it was learned or written by
  * hand, on or off. New rules come from accepted proposals on the dashboard and from "Create rule from
- * this document" in the inspector.
+ * this document" in the quickLookViewModel.
  */
 @Composable
 fun RulesCard(
@@ -46,7 +46,7 @@ fun RulesCard(
         if (settings.rules.isEmpty()) {
             Text(
                 text = "No rules yet. Accept a learned rule on the dashboard, or create one from a document in the " +
-                    "inspector.",
+                    "quickLookViewModel.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

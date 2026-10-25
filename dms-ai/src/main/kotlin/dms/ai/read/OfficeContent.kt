@@ -1,6 +1,5 @@
 package dms.ai.read
 
-import dms.ai.prompt.PromptTexts
 import dms.application.port.ai.model.DocumentContent
 import org.apache.poi.extractor.ExtractorFactory
 import java.nio.file.Files
@@ -16,12 +15,13 @@ object OfficeContent {
         }.trim()
     }
 
-    fun read(file: Path): DocumentContent {
+    /** The text of [file], cut after [limit] characters. */
+    fun read(file: Path, limit: Int): DocumentContent {
         val text = text(file = file)
         return if (text.isEmpty()) {
             DocumentContent.NotReadable(reason = "The file contains no text")
         } else {
-            DocumentContent.Text(text = text.take(n = PromptTexts.MAX_TEXT_CHARACTERS))
+            DocumentContent.Text(text = text.take(n = limit))
         }
     }
 }

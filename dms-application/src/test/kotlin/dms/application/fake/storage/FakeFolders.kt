@@ -7,9 +7,11 @@ import dms.application.port.storage.ScanListener
 import dms.application.port.storage.TextStore
 import dms.application.port.storage.model.CatalogLoad
 import dms.application.port.storage.model.ExternalFileModel
+import dms.application.port.storage.model.FolderEntriesModel
 import dms.application.port.storage.model.StorageFailure
 import dms.application.port.storage.model.StorageResult
 import dms.domain.catalog.model.CatalogModel
+import dms.domain.catalog.model.CatalogRevisionModel
 import dms.domain.change.model.FileFactsModel
 import dms.domain.change.model.FolderSnapshotModel
 import dms.domain.document.model.ContentHashModel
@@ -36,6 +38,12 @@ class FakeFolders : DocumentStorage, LibraryScanner, CatalogRepository, TextStor
 
     /** Conflict copies of the catalog file, as a sync client creates them. */
     val conflictCopies: MutableMap<LibraryFolderIdModel, MutableList<CatalogModel>> = mutableMapOf()
+
+    /** Folders whose catalog file cannot be written, while everything else in them works. */
+    val readOnlyCatalogs: MutableSet<LibraryFolderIdModel> = mutableSetOf()
+
+    /** Runs before every catalog save, so a test can let another device write in between. */
+    var beforeSave: ((LibraryFolderModel) -> Unit)? = null
 
     private val texts = mutableMapOf<LibraryFolderIdModel, MutableMap<DocumentIdModel, String>>()
     private val external = mutableMapOf<ExternalFileModel, String>()
@@ -210,6 +218,30 @@ class FakeFolders : DocumentStorage, LibraryScanner, CatalogRepository, TextStor
         return StorageResult.Success(value = names)
     }
 
+    override suspend fun listFolders(folder: LibraryFolderModel): StorageResult<Set<RelativePathModel>> {
+        return when (val listed = listEntries(folder = folder, path = RelativePathModel.ROOT)) {
+            is StorageResult.Success -> StorageResult.Success(value = listed.value.folders)
+            is StorageResult.Failure -> listed
+        }
+    }
+
+    override suspend fun listEntries(
+        folder: LibraryFolderModel,
+        path: RelativePathModel,
+    ): StorageResult<FolderEntriesModel> {
+        unreachableFailure(folder = folder)?.let { return it }
+        if (!path.isRoot && !isDirectory(folderId = folder.id, path = path)) {
+            return failure(reason = StorageFailure.NOT_FOUND)
+        }
+        val files = filesOf(folderId = folder.id).keys.filter { path.isRoot || it.isInside(folder = path) }.toSet()
+        val explicit = directories[folder.id].orEmpty().filter { path.isRoot || it.isInside(folder = path) }
+        val parents = (files + explicit).flatMap { entry ->
+            generateSequence(seed = entry.parent) { it.parent }
+                .filter { !it.isRoot && (path.isRoot || it.isInside(folder = path)) }
+        }
+        return StorageResult.Success(value = FolderEntriesModel(folders = (explicit + parents).toSet(), files = files))
+    }
+
     // --- LibraryScanner
 
     override suspend fun scan(
@@ -234,8 +266,20 @@ class FakeFolders : DocumentStorage, LibraryScanner, CatalogRepository, TextStor
         return CatalogLoad.Found(catalog = catalog, conflictCopies = conflictCopies[folder.id].orEmpty().toList())
     }
 
-    override suspend fun save(folder: LibraryFolderModel, catalog: CatalogModel): StorageResult<Unit> {
+    override suspend fun save(
+        folder: LibraryFolderModel,
+        catalog: CatalogModel,
+        basedOn: CatalogRevisionModel,
+    ): StorageResult<Unit> {
         unreachableFailure(folder = folder)?.let { return it }
+        if (folder.id in readOnlyCatalogs) {
+            return failure(reason = StorageFailure.IO_ERROR)
+        }
+        beforeSave?.invoke(folder)
+        val onDisk = catalogs[folder.id]
+        if (onDisk != null && onDisk.revision > basedOn) {
+            return failure(reason = StorageFailure.CATALOG_CHANGED)
+        }
         catalogs[folder.id] = catalog
         return StorageResult.Success(value = Unit)
     }

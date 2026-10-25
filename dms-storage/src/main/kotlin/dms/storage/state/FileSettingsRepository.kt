@@ -2,6 +2,7 @@ package dms.storage.state
 
 import dms.application.port.state.SettingsRepository
 import dms.application.port.state.model.AiSettingsModel
+import dms.application.port.state.model.LayoutPreferencesModel
 import dms.application.port.state.model.PreferencesModel
 import dms.domain.library.FolderRole
 import dms.domain.library.model.FolderLocationModel
@@ -9,6 +10,7 @@ import dms.domain.library.model.LibraryFolderIdModel
 import dms.domain.library.model.LibraryFolderModel
 import dms.domain.library.model.LibraryFoldersModel
 import dms.storage.state.dto.AiSettingsDto
+import dms.storage.state.dto.LayoutDto
 import dms.storage.state.dto.LibraryFolderDto
 import dms.storage.state.dto.SettingsDto
 import dms.storage.yaml.YamlFile
@@ -50,6 +52,16 @@ class FileSettingsRepository(path: Path) : SettingsRepository {
                     timeoutSeconds = settings.ai.timeoutSeconds,
                     acceptSuggestedFileNames = settings.ai.acceptSuggestedFileNames,
                     embeddingModel = settings.ai.embeddingModel,
+                    // A hand-edited value out of range is moved into it instead of making the file unreadable.
+                    inputCharacters = settings.ai.inputCharacters
+                        .coerceIn(range = AiSettingsModel.INPUT_CHARACTERS_RANGE),
+                ),
+                layout = LayoutPreferencesModel(
+                    sidebarWidth = settings.layout.sidebarWidth.coerceIn(range = LayoutPreferencesModel.SIDEBAR_WIDTHS),
+                    sidebarFolded = settings.layout.sidebarFolded,
+                    folderTreeWidth = settings.layout.folderTreeWidth
+                        .coerceIn(range = LayoutPreferencesModel.FOLDER_TREE_WIDTHS),
+                    folderTreeHidden = settings.layout.folderTreeHidden,
                 ),
             )
         }
@@ -68,6 +80,13 @@ class FileSettingsRepository(path: Path) : SettingsRepository {
                     timeoutSeconds = ai.timeoutSeconds,
                     acceptSuggestedFileNames = ai.acceptSuggestedFileNames,
                     embeddingModel = ai.embeddingModel,
+                    inputCharacters = ai.inputCharacters,
+                ),
+                layout = LayoutDto(
+                    sidebarWidth = preferences.layout.sidebarWidth,
+                    sidebarFolded = preferences.layout.sidebarFolded,
+                    folderTreeWidth = preferences.layout.folderTreeWidth,
+                    folderTreeHidden = preferences.layout.folderTreeHidden,
                 ),
             )
             file.write(value = updated)

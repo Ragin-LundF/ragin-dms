@@ -89,4 +89,14 @@ class RelativePathTest {
             )
         }
     }
+
+    @Test
+    fun `parse accepts what of accepts and gives nothing for absolute or broken paths`() {
+        val parsed = RelativePathModel.parse(raw = "Letters/2024/")
+
+        assertEquals(expected = RelativePathModel.of(raw = "Letters/2024/"), actual = parsed)
+        listOf("/abs", "C:/x", "a//b", "a/../b", "./a").forEach { raw ->
+            assertNull(actual = RelativePathModel.parse(raw = raw), message = raw)
+        }
+    }
 }

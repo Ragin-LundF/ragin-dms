@@ -2,6 +2,7 @@ package dms.ui.dashboard.organize
 
 import dms.application.common.OperationOutcome
 import dms.application.deadline.DeadlineCalendar
+import dms.application.pdf.model.ScansOutcome
 import dms.application.pdf.model.SearchableOutcome
 import dms.application.port.storage.model.StorageResult
 import dms.domain.document.model.DocumentIdModel
@@ -123,7 +124,7 @@ class OrganizeTasks(
 
     /** Looks for PDFs without a text layer in the background; it only reads. */
     fun findScans() {
-        scope.launch { scansState.value = services.pdf.scansWithoutText() }
+        scope.launch { scansState.value = scansWithoutText() }
     }
 
     /** Makes every scan without text searchable from its transcription, one after the other; can be cancelled. */
@@ -146,7 +147,14 @@ class OrganizeTasks(
                     text = "Made $made scans searchable; scans without a transcription were left out",
                 ),
             )
-            scansState.value = services.pdf.scansWithoutText()
+            scansState.value = scansWithoutText()
+        }
+    }
+
+    private suspend fun scansWithoutText(): List<DocumentIdModel> {
+        return when (val outcome = services.pdf.scansWithoutText()) {
+            is ScansOutcome.Found -> outcome.documentIds
+            ScansOutcome.LibraryNotOpen -> emptyList()
         }
     }
 

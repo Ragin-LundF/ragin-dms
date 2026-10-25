@@ -72,6 +72,8 @@ class DocumentDrag(private val onDrop: (DragItem, DropTarget) -> Unit) {
             is DragItem.DraggedDocument -> target != DropTarget.TopLevelCategory
             is DragItem.DraggedCategory -> target == DropTarget.TopLevelCategory ||
                 (target is DropTarget.Category && target.categoryId != item.category.id)
+            // Into one of its own subfolders is taken too, so the drop can say why it is refused.
+            is DragItem.DraggedFolder -> target is DropTarget.Folder && target.path != item.path
         }
     }
 }

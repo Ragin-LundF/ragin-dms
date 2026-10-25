@@ -12,8 +12,6 @@ import dms.domain.restructure.template.PlaceholderName
 import dms.domain.restructure.template.TemplateRendering
 import dms.domain.restructure.template.model.PathTemplateModel
 import dms.domain.settings.model.InboxSettingsModel
-import java.text.Normalizer
-import java.util.Locale
 
 /**
  * Plans a restructure: where each document of a scope belongs by a [PathTemplateModel]. Pure; nothing
@@ -140,8 +138,7 @@ object RestructurePlanner {
         }
     }
 
-    /** How case-insensitive, normalizing file systems compare paths. */
     private fun key(path: RelativePathModel): String {
-        return Normalizer.normalize(path.value, Normalizer.Form.NFC).lowercase(Locale.ROOT)
+        return FileNamePolicy.comparisonKey(name = path.value)
     }
 }

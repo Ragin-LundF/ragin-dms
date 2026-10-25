@@ -36,6 +36,7 @@ import dms.ui.components.model.ButtonStyle
 import dms.ui.components.surface.AppCard
 import dms.ui.components.surface.CardTitle
 import dms.ui.restructure.model.RestructureUiStateModel
+import dms.ui.session.OutcomeMessages
 import dms.ui.theme.Spacing
 
 /**
@@ -118,7 +119,7 @@ private fun NamingRow(naming: FileNaming, onChange: (FileNaming) -> Unit) {
 
 @Composable
 private fun TemplateButtons(state: RestructureUiStateModel, viewModel: RestructureViewModel) {
-    val busyReason = state.busy?.let { "Wait until \"$it\" finishes" }
+    val busyReason = state.busy?.let { OutcomeMessages.waitFor(operation = it) }
     ActionButtons(
         buttons = listOf(
             ActionButtonModel(

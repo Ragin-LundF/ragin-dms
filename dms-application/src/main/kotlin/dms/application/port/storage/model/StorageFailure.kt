@@ -13,4 +13,7 @@ enum class StorageFailure {
 
     /** A file written by a newer version of the tool, or not a file this tool can read. */
     UNSUPPORTED_FORMAT,
+
+    /** The catalog file holds a newer revision than the change was based on; nothing was written. */
+    CATALOG_CHANGED,
 }

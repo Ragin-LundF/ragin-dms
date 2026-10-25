@@ -7,18 +7,18 @@ Use this file when touching `dms-ai`: LLM providers, prompts, structured output,
 | Package | Purpose |
 |---|---|
 | `dms.ai` | `AiAdapters`: builds the HTTP client and hands out the client and the reader. Tests pass a Ktor `MockEngine`. |
-| `dms.ai.client` | `ChatTransport`: the HTTP side of OpenAI-compatible APIs (LM Studio, Ollama's `/v1`, OpenAI): `/models`, `/chat/completions`, the model choice (`ModelChoice` skips embedding models when no model is set), error mapping, and `AnswerText`, which drops `<think>` blocks. `ChatRequestBuilder` builds the bodies with text and image parts. `OpenAiCompatibleClient` implements `DocumentClassifier` and `AiServer`. DTOs in `dms.ai.client.dto`. |
-| `dms.ai.assistant` | `OpenAiAssistant` (implements `DocumentAssistant`): summary, tags and questions about one document, free-text answers. `TagAnswerParser` turns a free-text tag answer into `TagNameModel`s. |
-| `dms.ai.prompt` | The answer schema, the prompt texts, the naming convention detected from file names, the tax tag (`TaxTag`), and the mapping of the answer to a `ClassificationSuggestionModel`. `PromptTemplates` loads and fills the templates in `src/main/resources/prompts/` (`classification`, `summary`, `tags`, `chat`, each with a `-request` user part where needed). |
+| `dms.ai.client` | `ChatTransport`: the HTTP side of OpenAI-compatible APIs (LM Studio, Ollama's `/v1`, any key-less server): `/models`, `/chat/completions`, the model choice (`ModelChoice` skips embedding models when no model is set), error mapping, and `AnswerText`, which drops `<think>` blocks. `ChatRequestBuilder` builds the bodies with text and image parts. `OpenAiCompatibleClient` implements `DocumentClassifier` and `AiServer`. `OpenAiEmbeddings` implements `EmbeddingClient` (`/embeddings`; one vector per text, by index, all of one size, or a typed failure). Ktor wraps deserialization errors in `ContentConvertException`: catch it, so a malformed answer becomes a typed failure. DTOs in `dms.ai.client.dto`. |
+| `dms.ai.assistant` | `OpenAiAssistant` (implements `DocumentAssistant`): summary, tags and questions about one document, free-text answers. `OpenAiLibraryAssistant` (implements `LibraryAssistant`) answers a question about the library from numbered passages with citations, using the `ask-library` prompt. `TagAnswerParser` turns a free-text tag answer into `TagNameModel`s. |
+| `dms.ai.prompt` | The answer schema, the prompt texts, the naming convention detected from file names, the tax tag (`TaxTag`), and the mapping of the answer to a `ClassificationSuggestionModel`. `PromptTemplates` loads and fills the templates in `src/main/resources/prompts/` (`classification`, `summary`, `tags`, `chat`, `ask-library`, each with a `-request` user part where needed, plus the fragments `document-text`, `document-images` and `classification-outline*`/`classification-rules`). |
 | `dms.ai.read` | `FileContentReader` (implements `DocumentContentReader`): PDF (PDFBox: text layer or rendered pages), images, Office (Apache POI). |
 
 The provider settings (`AiSettingsModel`: base URL, model, timeout, "prefer vision for PDFs") are a port model in `dms-application` and are stored per device by `dms-storage`. The client reads them for every request, so a change in Settings applies at once.
 
 ## Provider rules
 
-- Talk to providers through the OpenAI-compatible chat completions API with a configurable base URL. That one client covers LM Studio (`http://localhost:1234/v1`), Ollama (`http://localhost:11434/v1`) and remote APIs.
+- Talk to providers through the OpenAI-compatible chat completions API with a configurable base URL. That one client covers LM Studio (`http://localhost:1234/v1`), Ollama (`http://localhost:11434/v1`) and any other OpenAI-compatible server that needs no API key, local or on the network.
 - Local first: the default configuration points at LM Studio on `localhost`. Sending document content to a remote API requires the user to configure it explicitly; never fall back to a remote provider automatically.
-- API keys are stored in the OS credential store (macOS Keychain, Windows Credential Manager, Linux Secret Service), never in the catalog, in files inside a library folder, or in logs.
+- API keys are not supported: no request carries an `Authorization` header, so providers that need a key (such as OpenAI's own API) do not work. If keys are added later, store them in the OS credential store (macOS Keychain, Windows Credential Manager, Linux Secret Service), never in the catalog, in files inside a library folder, or in logs.
 - Every request has a timeout and can be cancelled from the UI.
 - Do not log document text, images or prompts at `INFO` or above.
 

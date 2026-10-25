@@ -52,14 +52,17 @@ class ChatController(
         job = scope.launch {
             val outcome = services.ai.askAboutDocument(documentId = chat.document.id, conversation = asked)
             mutableState.update { current ->
-                when {
-                    current == null -> null
-                    outcome is AnswerOutcome.Answered -> current.copy(
+                when (outcome) {
+                    is AnswerOutcome.Answered -> current?.copy(
                         turns = asked + ChatTurnModel(role = ChatRole.ASSISTANT, text = outcome.text),
                         waiting = false,
                     )
 
-                    else -> current.copy(
+                    AnswerOutcome.LibraryNotOpen,
+                    AnswerOutcome.NotFound,
+                    is AnswerOutcome.NotReadable,
+                    is AnswerOutcome.Failed,
+                    -> current?.copy(
                         turns = chat.turns,
                         input = text,
                         waiting = false,

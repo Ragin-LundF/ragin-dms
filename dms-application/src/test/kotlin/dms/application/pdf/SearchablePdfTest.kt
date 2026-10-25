@@ -1,6 +1,7 @@
 package dms.application.pdf
 
 import dms.application.TestLibrary
+import dms.application.pdf.model.ScansOutcome
 import dms.application.pdf.model.SearchableOutcome
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runTest
@@ -85,12 +86,12 @@ class SearchablePdfTest {
             val before = library.scansWithoutText()
             val progress = library.makeAllSearchable().toList()
 
-            assertEquals(expected = listOf(scan.id), actual = before)
+            assertEquals(expected = ScansOutcome.Found(documentIds = listOf(scan.id)), actual = before)
             assertEquals(
                 expected = listOf(SearchableOutcome.AlreadySearchable::class, SearchableOutcome.Made::class),
                 actual = progress.map { it.outcome::class },
             )
-            assertEquals(expected = emptyList(), actual = library.scansWithoutText())
+            assertEquals(expected = ScansOutcome.Found(documentIds = emptyList()), actual = library.scansWithoutText())
         }
     }
 

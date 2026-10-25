@@ -42,6 +42,7 @@ import dms.ui.components.layout.ScreenHeader
 import dms.ui.components.model.ActionButtonModel
 import dms.ui.components.surface.AppCard
 import dms.ui.components.surface.EmptyState
+import dms.ui.session.OutcomeMessages
 import dms.ui.theme.Spacing
 
 /**
@@ -52,9 +53,9 @@ import dms.ui.theme.Spacing
 fun AskScreen(viewModel: AskViewModel, onOpenDocument: (DocumentIdModel) -> Unit) {
     val state by viewModel.state.collectAsState()
     var question by remember { mutableStateOf(value = "") }
-    val aiBusyReason = state.aiBusy?.let { "Wait until \"$it\" finishes" }
+    val aiBusyReason = state.aiBusy?.let { OutcomeMessages.waitFor(operation = it) }
     Column(
-        modifier = Modifier.fillMaxSize().padding(all = Spacing.xxlarge),
+        modifier = Modifier.fillMaxSize().padding(all = Spacing.screen),
         verticalArrangement = Arrangement.spacedBy(space = Spacing.large),
     ) {
         ScreenHeader(title = "Ask", subtitle = "Questions answered from your documents, with their sources") {

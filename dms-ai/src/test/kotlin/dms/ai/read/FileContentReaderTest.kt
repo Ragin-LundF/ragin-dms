@@ -63,6 +63,18 @@ class FileContentReaderTest {
     }
 
     @Test
+    fun `the text is cut after the configured input budget`() {
+        runTest(timeout = PdfTests.TIMEOUT) {
+            settings = AiSettingsModel(inputCharacters = 1_000)
+            writePdf(name = "long.pdf", text = sampleText.repeat(n = 10))
+
+            val content = reader.read(folder = folder, document = document(name = "long.pdf"))
+
+            assertEquals(expected = 1_000, actual = assertIs<DocumentContent.Text>(value = content).text.length)
+        }
+    }
+
+    @Test
     fun `the text for search is the whole text layer, and nothing for a scan or an image`() {
         runTest(timeout = PdfTests.TIMEOUT) {
             writePdf(name = "a.pdf", text = sampleText)

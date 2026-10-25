@@ -175,12 +175,19 @@ data class CatalogModel(
 
     /**
      * Replaces the custom field values of a document. Every key needs a definition in [settings], and
-     * every value the type of its definition.
+     * every value the type of its definition. A value whose definition was removed may stay as it is,
+     * so the document keeps it until the user removes it.
      */
     fun setFields(documentId: DocumentIdModel, fields: Map<FieldKeyModel, FieldValue>): CatalogUpdate {
+        val current = documents[documentId]?.fields.orEmpty()
         fields.forEach { (key, value) ->
             val definition = settings.field(key = key)
-                ?: return CatalogUpdate.Rejected(reason = CatalogRejection.FIELD_NOT_DEFINED)
+            if (definition == null) {
+                if (current[key] == value) {
+                    return@forEach
+                }
+                return CatalogUpdate.Rejected(reason = CatalogRejection.FIELD_NOT_DEFINED)
+            }
             if (definition.type != value.type) {
                 return CatalogUpdate.Rejected(reason = CatalogRejection.FIELD_TYPE_MISMATCH)
             }

@@ -123,7 +123,7 @@ object SuggestionMapper {
 
     private fun tagsOf(names: List<String>, request: ClassificationRequestModel): List<SuggestedTagModel> {
         return names
-            .mapNotNull { raw -> runCatching { TagNameModel.of(raw = raw) }.getOrNull() }
+            .mapNotNull { raw -> TagNameModel.parse(raw = raw) }
             .distinct()
             .take(n = MAX_TAGS)
             .map { tag ->

@@ -6,9 +6,11 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
+import dms.ui.library.LibraryCommands
 import dms.ui.model.Screen
 import dms.ui.service.AppServices
 import dms.ui.session.LibrarySession
+import dms.ui.shell.palette.CommandPalette
 import dms.ui.theme.AppTheme
 
 /** Root composable: opens the library once and shows the screen the user chose. */
@@ -21,6 +23,8 @@ fun App(
     onScreenChange: (Screen) -> Unit,
     logVisible: Boolean,
     onLogVisibleChange: (Boolean) -> Unit,
+    palette: CommandPalette,
+    libraryCommands: LibraryCommands,
 ) {
     val owner = remember { AppViewModelStoreOwner() }
     DisposableEffect(key1 = owner) {
@@ -40,6 +44,8 @@ fun App(
                 onScreenChange = onScreenChange,
                 logVisible = logVisible,
                 onLogVisibleChange = onLogVisibleChange,
+                palette = palette,
+                libraryCommands = libraryCommands,
             )
         }
     }

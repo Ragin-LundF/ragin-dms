@@ -15,6 +15,7 @@ import dms.application.port.system.Clock
 import dms.application.port.system.IdGenerator
 import dms.application.sync.model.Replication
 import dms.domain.catalog.model.CatalogModel
+import dms.domain.catalog.model.CatalogRevisionModel
 import dms.domain.library.model.LibraryFolderIdModel
 import dms.domain.library.model.LibraryFolderModel
 import dms.domain.library.model.LibraryFoldersModel
@@ -51,10 +52,18 @@ class Replicator(
         }
     }
 
-    suspend fun saveCatalog(folders: LibraryFoldersModel, catalog: CatalogModel): Replication<Unit> {
+    /**
+     * Saves [catalog] to every folder. [basedOn] is the newest revision the change was made on; a primary
+     * that holds a newer one fails with [StorageFailure.CATALOG_CHANGED] and nothing is written.
+     */
+    suspend fun saveCatalog(
+        folders: LibraryFoldersModel,
+        catalog: CatalogModel,
+        basedOn: CatalogRevisionModel,
+    ): Replication<Unit> {
         return replicate(
             folders = folders,
-            onPrimary = { primary -> catalogs.save(folder = primary, catalog = catalog) },
+            onPrimary = { primary -> catalogs.save(folder = primary, catalog = catalog, basedOn = basedOn) },
             followUp = FolderOperation.SaveCatalog,
         )
     }
@@ -157,9 +166,18 @@ class Replicator(
         return index.write(folder = target, vectors = vectors)
     }
 
+    /**
+     * Never lowers a sync folder's revision: a sync folder holding a newer catalog fails with
+     * [StorageFailure.CATALOG_CHANGED] and stays in the journal until opening the library merged it.
+     */
     private suspend fun copyCatalog(primary: LibraryFolderModel, target: LibraryFolderModel): StorageResult<Unit> {
         return when (val load = catalogs.load(folder = primary)) {
-            is CatalogLoad.Found -> catalogs.save(folder = target, catalog = load.catalog)
+            is CatalogLoad.Found -> catalogs.save(
+                folder = target,
+                catalog = load.catalog,
+                basedOn = load.catalog.revision,
+            )
+
             CatalogLoad.NotFound -> StorageResult.Failure(reason = StorageFailure.NOT_FOUND)
             is CatalogLoad.Failed -> load.failure
         }

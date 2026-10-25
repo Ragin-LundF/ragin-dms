@@ -15,6 +15,7 @@ import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import io.ktor.http.isSuccess
+import io.ktor.serialization.ContentConvertException
 import kotlinx.serialization.json.add
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -63,10 +64,12 @@ class OpenAiEmbeddings(
                         response.bodyAsText().take(n = ChatTransport.DETAIL_LENGTH),
                 )
             }
-            val vectors = response.body<EmbeddingsResponseDto>().data
-                .sortedBy { it.index }
-                .map { it.embedding.toFloatArray() }
-            if (vectors.size != texts.size || vectors.any { it.isEmpty() }) {
+            val data = response.body<EmbeddingsResponseDto>().data.sortedBy { it.index }
+            val vectors = data.map { it.embedding.toFloatArray() }
+            // One vector per text, by index, all of one size; anything else cannot be matched to the texts.
+            val complete = data.map { it.index } == texts.indices.toList() &&
+                vectors.all { it.isNotEmpty() && it.size == vectors.first().size }
+            if (!complete) {
                 EmbeddingResult.Failed(
                     reason = ClassificationFailure.INVALID_RESPONSE,
                     detail = "The server returned ${vectors.size} vectors",
@@ -75,8 +78,11 @@ class OpenAiEmbeddings(
                 EmbeddingResult.Vectors(model = model, vectors = vectors)
             }
         } catch (exception: IOException) {
-            EmbeddingResult.Failed(reason = ClassificationFailure.PROVIDER_UNAVAILABLE, detail = exception.message)
+            EmbeddingResult.Failed(reason = transport.failureOf(exception = exception), detail = exception.message)
         } catch (exception: IllegalArgumentException) {
+            EmbeddingResult.Failed(reason = ClassificationFailure.INVALID_RESPONSE, detail = exception.message)
+        } catch (exception: ContentConvertException) {
+            // No JSON, or not the embeddings schema; Ktor wraps every deserialization error in this.
             EmbeddingResult.Failed(reason = ClassificationFailure.INVALID_RESPONSE, detail = exception.message)
         }
     }

@@ -2,8 +2,8 @@ package dms.application.library
 
 import dms.application.fake.state.InMemorySettings
 import dms.application.fake.system.SequentialIds
-import dms.application.library.model.ConfigureLibraryOutcome
 import dms.application.library.model.LibraryCommand
+import dms.application.library.model.outcome.ConfigureLibraryOutcome
 import dms.domain.library.FolderRole
 import dms.domain.library.model.FolderLocationModel
 import kotlinx.coroutines.test.runTest

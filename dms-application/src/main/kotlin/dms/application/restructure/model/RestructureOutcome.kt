@@ -8,14 +8,17 @@ sealed interface RestructureOutcome {
 
     /**
      * [moved] documents are in their new place in the primary and the catalog; [failed] moves were not
-     * possible, for example because the file is gone or the target appeared in the meantime, and
-     * [skipped] documents of a reversal were changed since. [pendingFolders] wait in the journal.
+     * possible, for example because the file is gone or the target appeared in the meantime.
+     * [notCatalogued] files did move, but the catalog could not be saved; a scan shows them, and the
+     * record still holds them, so reversing moves them back. [skipped] documents of a reversal were
+     * changed since. [pendingFolders] wait in the journal.
      * [record] names the plan file that can reverse what was done. [emptyFolders] were left without
      * documents and may be removed. A [cancelled] run committed what it had done.
      */
     data class Applied(
         val moved: Int,
         val failed: List<PlannedMoveModel>,
+        val notCatalogued: List<PlannedMoveModel>,
         val skipped: Int,
         val pendingFolders: Set<LibraryFolderIdModel>,
         val record: String?,

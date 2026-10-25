@@ -1,6 +1,7 @@
 package dms.storage.state
 
 import dms.application.port.state.model.AiSettingsModel
+import dms.application.port.state.model.LayoutPreferencesModel
 import dms.application.port.state.model.PreferencesModel
 import dms.domain.library.FolderRole
 import dms.domain.library.model.FolderLocationModel
@@ -66,6 +67,13 @@ class FileSettingsRepositoryTest {
                     model = "sample-model",
                     preferVisionForPdfs = true,
                     acceptSuggestedFileNames = true,
+                    inputCharacters = 30_000,
+                ),
+                layout = LayoutPreferencesModel(
+                    sidebarWidth = 280,
+                    sidebarFolded = true,
+                    folderTreeWidth = 300,
+                    folderTreeHidden = true,
                 ),
             )
             repository.savePreferences(preferences = preferences)

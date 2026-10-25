@@ -12,8 +12,6 @@ import dms.domain.taxonomy.model.CategoryModel
  */
 object PromptTexts {
 
-    /** Enough text for a classification; longer documents are cut. */
-    const val MAX_TEXT_CHARACTERS: Int = 12_000
     private const val MAX_LISTED = 200
 
     fun system(request: ClassificationRequestModel): String {
@@ -48,14 +46,18 @@ object PromptTexts {
         )
     }
 
-    /** The document's text, cut to [MAX_TEXT_CHARACTERS], or a note that `null` text means page images. */
+    /**
+     * The document's text, already cut to the configured input budget when it was read, or a note that
+     * `null` text means page images.
+     */
     fun documentSection(text: String?): String {
-        return if (text == null) {
-            "The document is attached as page images."
-        } else {
-            "Text of the document (long documents are cut after $MAX_TEXT_CHARACTERS characters):\n" +
-                text.take(n = MAX_TEXT_CHARACTERS)
+        if (text == null) {
+            return PromptTemplates.fill(name = "document-images.md", values = emptyMap())
         }
+        return PromptTemplates.fill(
+            name = "document-text.md",
+            values = mapOf("text" to text),
+        )
     }
 
     /**
@@ -63,9 +65,10 @@ object PromptTexts {
      * main category and sample titles; or a note that no target folder is wanted.
      */
     fun outlineSection(request: ClassificationRequestModel): String {
-        val outline = request.outline ?: return "No folder outline: answer targetFolder with null."
+        val outline = request.outline
+            ?: return PromptTemplates.fill(name = "classification-outline-none.md", values = emptyMap())
         if (outline.folders.isEmpty()) {
-            return "Folder outline: the library has no folders yet; suggest a new top-level folder."
+            return PromptTemplates.fill(name = "classification-outline-empty.md", values = emptyMap())
         }
         val names = request.categories.associateBy { it.id }
         val lines = outline.folders.map { folder ->
@@ -80,8 +83,9 @@ object PromptTexts {
                 folder.hiddenSubfolders.takeIf { it > 0 }?.let { "$it more subfolders" },
             ).joinToString(separator = " | ")
         }
-        return "Folder outline (folder | documents | main category | examples):\n" + lines.joinToString(
-            separator = "\n",
+        return PromptTemplates.fill(
+            name = "classification-outline.md",
+            values = mapOf("folders" to lines.joinToString(separator = "\n")),
         )
     }
 
@@ -98,7 +102,10 @@ object PromptTexts {
         if (parts.isEmpty()) {
             return ""
         }
-        return "Already decided by the person's rules, keep these values: ${parts.joinToString(separator = "; ")}"
+        return PromptTemplates.fill(
+            name = "classification-rules.md",
+            values = mapOf("values" to parts.joinToString(separator = "; ")),
+        )
     }
 
     /** The custom fields as `key (Label, TYPE)`, with the default currency for money fields. */

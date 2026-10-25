@@ -1,6 +1,5 @@
 package dms.ai.read
 
-import dms.ai.prompt.PromptTexts
 import dms.application.port.ai.model.DocumentContent
 import dms.application.port.ai.model.PageImageModel
 import org.apache.pdfbox.Loader
@@ -45,7 +44,8 @@ object PdfContent {
         }
     }
 
-    fun read(file: Path, preferVision: Boolean): DocumentContent {
+    /** The text layer of [file], cut after [limit] characters, or its first pages as images. */
+    fun read(file: Path, preferVision: Boolean, limit: Int): DocumentContent {
         return Loader.loadPDF(RandomAccessReadBufferedFile(file.toString())).use { pdf ->
             val text = if (preferVision) {
                 ""
@@ -57,7 +57,7 @@ object PdfContent {
                 stripper.getText(pdf).trim()
             }
             if (text.length >= MIN_TEXT) {
-                DocumentContent.Text(text = text.take(n = PromptTexts.MAX_TEXT_CHARACTERS))
+                DocumentContent.Text(text = text.take(n = limit))
             } else if (pdf.numberOfPages == 0) {
                 DocumentContent.NotReadable(reason = "The PDF has no pages")
             } else {

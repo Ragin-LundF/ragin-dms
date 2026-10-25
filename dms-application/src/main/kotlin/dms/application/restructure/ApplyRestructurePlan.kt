@@ -33,6 +33,9 @@ import kotlin.coroutines.cancellation.CancellationException
  * the sync folders, and commits the catalog every [BATCH_SIZE] moves. Cancelling stops between two
  * files and still commits what was done, so the catalog always matches the disk. What was done is
  * recorded in `.dms-plans/` (replicated), so it can be reversed.
+ *
+ * Files are moved before the catalog is committed. A batch whose commit fails has still moved: it is
+ * tried once more at the end, and what is still not catalogued is recorded and reported on its own.
  */
 class ApplyRestructurePlan(
     private val store: CatalogStore,
@@ -76,7 +79,11 @@ class ApplyRestructurePlan(
         cancelled: Boolean,
     ): RestructureOutcome {
         commit(run = run)
-        val record = record(plan = plan, moves = run.done, run = run)
+        // One more try for the moves whose catalog commit failed; their files have moved already.
+        run.batch += run.notCatalogued
+        run.notCatalogued.clear()
+        commit(run = run)
+        val record = record(plan = plan, moves = run.done + run.notCatalogued, run = run)
         if (run.done.isNotEmpty()) {
             activity.record(
                 kind = ActivityKind.RESTRUCTURED,
@@ -86,6 +93,7 @@ class ApplyRestructurePlan(
         return RestructureOutcome.Applied(
             moved = run.done.size,
             failed = run.failed,
+            notCatalogued = run.notCatalogued.toList(),
             skipped = skipped,
             pendingFolders = run.pending,
             record = record,
@@ -94,12 +102,16 @@ class ApplyRestructurePlan(
         )
     }
 
-    /** Moves one file in the primary and journals the move for the sync folders. */
+    /**
+     * Moves one file in the primary and journals the move for the sync folders. A document the catalog
+     * already has at the target only needs its file to follow; this is how a reversal brings back a file
+     * whose move was never catalogued.
+     */
     private suspend fun moveFile(library: LibrarySnapshotModel, move: PlannedMoveModel, run: Run) {
-        val catalog = store.current()?.catalog ?: library.catalog
+        val catalog = store.catalog.value ?: library.catalog
         val current = catalog.documents[move.documentId]?.path
-        val owner = catalog.findByPath(path = move.to)
-        if (current != move.from || (owner != null && owner.id != move.documentId)) {
+        val ownerId = catalog.findByPath(path = move.to)?.id ?: move.documentId
+        if (current !in setOf(move.from, move.to) || ownerId != move.documentId) {
             run.failed += move
             return
         }
@@ -135,7 +147,7 @@ class ApplyRestructurePlan(
             run.done += batch
             run.pending += outcome.pendingFolders
         } else {
-            run.failed += batch
+            run.notCatalogued += batch
         }
         run.batch.clear()
     }
@@ -180,6 +192,7 @@ class ApplyRestructurePlan(
         val batch: MutableList<PlannedMoveModel> = mutableListOf()
         val done: MutableList<PlannedMoveModel> = mutableListOf()
         val failed: MutableList<PlannedMoveModel> = mutableListOf()
+        val notCatalogued: MutableList<PlannedMoveModel> = mutableListOf()
         val pending: MutableSet<LibraryFolderIdModel> = mutableSetOf()
     }
 

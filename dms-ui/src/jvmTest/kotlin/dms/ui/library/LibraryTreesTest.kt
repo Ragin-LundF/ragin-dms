@@ -23,7 +23,7 @@ class LibraryTreesTest {
 
         val entries = LibraryTrees.folders(
             documents = documents,
-            createdFolders = setOf(RelativePathModel.of(raw = "letters/empty")),
+            foldersOnDisk = setOf(RelativePathModel.of(raw = "letters/empty")),
         )
 
         assertEquals(
@@ -46,10 +46,10 @@ class LibraryTreesTest {
             document(id = "2", path = "Archive/old/c.pdf"),
         )
 
-        val folded = LibraryTrees.folders(documents = documents, createdFolders = emptySet(), expanded = emptySet())
+        val folded = LibraryTrees.folders(documents = documents, foldersOnDisk = emptySet(), expanded = emptySet())
         val unfolded = LibraryTrees.folders(
             documents = documents,
-            createdFolders = emptySet(),
+            foldersOnDisk = emptySet(),
             expanded = setOf(RelativePathModel.of(raw = "letters")),
         )
 

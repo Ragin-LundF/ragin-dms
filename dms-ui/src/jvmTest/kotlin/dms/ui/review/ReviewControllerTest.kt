@@ -1,7 +1,7 @@
 package dms.ui.review
 
 import dms.domain.document.model.DocumentModel
-import dms.ui.document.InspectorViewModel
+import dms.ui.document.QuickLookViewModel
 import dms.ui.support.SampleImages
 import dms.ui.support.TestApp
 import dms.ui.support.UiTest
@@ -25,14 +25,18 @@ class ReviewControllerTest {
     @Test
     fun `asking the AI opens a review and changes nothing yet`() {
         UiTest.run { app ->
-            val inspector = InspectorViewModel(services = app.services, session = app.session, platform = app.platform)
+            val quickLookViewModel = QuickLookViewModel(
+                services = app.services,
+                session = app.session,
+                platform = app.platform,
+            )
             val document = libraryWithOneImage(app = app)
             app.ai.suggestion = answer
 
-            inspector.classifyWithAi(document = document)
+            quickLookViewModel.classifyWithAi(document = document)
             app.idle()
 
-            val review = assertNotNull(actual = inspector.review.state.value)
+            val review = assertNotNull(actual = quickLookViewModel.review.state.value)
             assertEquals(expected = "Sample bill", actual = review.draft.title.value)
             assertEquals(expected = "2024-03-15 Sample Energy - Bill.png", actual = review.draft.fileName.value)
             assertFalse(actual = review.draft.fileName.accepted)
@@ -44,22 +48,26 @@ class ReviewControllerTest {
     @Test
     fun `an approved review applies the edited values and renames the file everywhere`() {
         UiTest.run { app ->
-            val inspector = InspectorViewModel(services = app.services, session = app.session, platform = app.platform)
+            val quickLookViewModel = QuickLookViewModel(
+                services = app.services,
+                session = app.session,
+                platform = app.platform,
+            )
             val document = libraryWithOneImage(app = app)
             app.ai.suggestion = answer
-            inspector.classifyWithAi(document = document)
+            quickLookViewModel.classifyWithAi(document = document)
             app.idle()
-            val draft = assertNotNull(actual = inspector.review.state.value).draft
+            val draft = assertNotNull(actual = quickLookViewModel.review.state.value).draft
 
             val edited = draft.copy(
                 title = draft.title.copy(value = "Edited bill"),
                 fileName = draft.fileName.copy(accepted = true),
             )
-            inspector.review.update(draft = edited)
-            inspector.review.approve()
+            quickLookViewModel.review.update(draft = edited)
+            quickLookViewModel.review.approve()
             app.idle()
 
-            assertNull(actual = inspector.review.state.value)
+            assertNull(actual = quickLookViewModel.review.state.value)
             val filed = app.services.library.catalog.value?.documents?.get(document.id)
             assertEquals(expected = "Edited bill", actual = filed?.metadata?.title)
             assertEquals(expected = LocalDate.parse("2024-03-15"), actual = filed?.metadata?.documentDate)
@@ -72,14 +80,18 @@ class ReviewControllerTest {
     @Test
     fun `a stopped AI server is reported and no review opens`() {
         UiTest.run { app ->
-            val inspector = InspectorViewModel(services = app.services, session = app.session, platform = app.platform)
+            val quickLookViewModel = QuickLookViewModel(
+                services = app.services,
+                session = app.session,
+                platform = app.platform,
+            )
             val document = libraryWithOneImage(app = app)
             app.ai.reachable = false
 
-            inspector.classifyWithAi(document = document)
+            quickLookViewModel.classifyWithAi(document = document)
             app.idle()
 
-            assertNull(actual = inspector.review.state.value)
+            assertNull(actual = quickLookViewModel.review.state.value)
             val message = assertNotNull(actual = app.session.state.value.message)
             assertTrue(actual = message.isError)
             assertTrue(actual = "does not answer" in message.text)
@@ -91,7 +103,7 @@ class ReviewControllerTest {
         val library = app.libraryViewModel()
         val source = SampleImages.write(file = app.root.resolve("outside/scan-7.png"))
         app.platform.nextFiles = listOf(source.toString())
-        library.addFilesToTopLevel()
+        library.files.addFilesToTopLevel()
         app.idle()
         return library.state.first { it.documents.isNotEmpty() }.documents.single().document
     }

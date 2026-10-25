@@ -1,8 +1,10 @@
 package dms.ui.dashboard.widgets
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -19,17 +21,23 @@ import dms.ui.components.surface.AppCard
 import dms.ui.components.surface.CardTitle
 import dms.ui.theme.Spacing
 
-/** The tags as a cloud: the more documents a tag has, the larger and stronger its chip. */
+/**
+ * The tags as light chips in the order of [points], most used first, each with its count; a click
+ * opens the tag in the library.
+ */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun TagCloudCard(points: List<ChartPointModel>, onOpenTag: (String) -> Unit, modifier: Modifier = Modifier) {
     val colors = MaterialTheme.colorScheme
-    val type = MaterialTheme.typography
-    val max = points.maxOfOrNull { it.value }?.takeIf { it > 0 } ?: 1
     AppCard(modifier = modifier) {
-        CardTitle(title = "Tags", icon = Icons.Rounded.LocalOffer, tint = colors.secondary, subtitle = "Sized by use")
+        CardTitle(
+            title = "Tags",
+            icon = Icons.Rounded.LocalOffer,
+            tint = colors.secondary,
+            subtitle = "Most used first",
+        )
         if (points.isEmpty()) {
-            Text(text = "No tags yet", style = type.bodyMedium, color = colors.onSurfaceVariant)
+            Text(text = "No tags yet", style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant)
         }
         FlowRow(
             modifier = Modifier.verticalScroll(state = rememberScrollState()),
@@ -37,27 +45,34 @@ fun TagCloudCard(points: List<ChartPointModel>, onOpenTag: (String) -> Unit, mod
             verticalArrangement = Arrangement.spacedBy(space = Spacing.small),
         ) {
             points.forEach { point ->
-                val weight = point.value.toFloat() / max
-                val style = when {
-                    weight > 0.66f -> type.titleMedium
-                    weight > 0.33f -> type.bodyLarge
-                    else -> type.labelLarge
-                }
-                Surface(
-                    onClick = { onOpenTag(point.id) },
-                    shape = CircleShape,
-                    color = colors.secondary.copy(alpha = 0.08f + 0.2f * weight),
-                    contentColor = colors.onSurface,
-                ) {
-                    Text(
-                        text = "#${point.label}  ${point.value}",
-                        style = style,
-                        maxLines = 1,
-                        softWrap = false,
-                        modifier = Modifier.padding(horizontal = Spacing.medium, vertical = Spacing.xsmall),
-                    )
-                }
+                TagChip(point = point, onClick = { onOpenTag(point.id) })
             }
+        }
+    }
+}
+
+@Composable
+private fun TagChip(point: ChartPointModel, onClick: () -> Unit) {
+    val colors = MaterialTheme.colorScheme
+    Surface(
+        onClick = onClick,
+        shape = CircleShape,
+        color = colors.surfaceContainer,
+        contentColor = colors.onSurface,
+        border = BorderStroke(width = Spacing.hairline, color = colors.outlineVariant),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = Spacing.medium, vertical = Spacing.xsmall),
+            horizontalArrangement = Arrangement.spacedBy(space = Spacing.small),
+        ) {
+            Text(text = point.label, style = MaterialTheme.typography.labelLarge, maxLines = 1, softWrap = false)
+            Text(
+                text = point.value.toString(),
+                style = MaterialTheme.typography.labelMedium,
+                color = colors.onSurfaceVariant,
+                maxLines = 1,
+                softWrap = false,
+            )
         }
     }
 }

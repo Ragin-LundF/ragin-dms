@@ -1,6 +1,7 @@
 package dms.application.port.storage
 
 import dms.application.port.storage.model.ExternalFileModel
+import dms.application.port.storage.model.FolderEntriesModel
 import dms.application.port.storage.model.StorageResult
 import dms.domain.change.model.FileFactsModel
 import dms.domain.library.model.LibraryFolderModel
@@ -71,4 +72,16 @@ interface DocumentStorage {
 
     /** Names of the entries directly inside [path], for collision checks. */
     suspend fun listNames(folder: LibraryFolderModel, path: RelativePathModel): StorageResult<List<String>>
+
+    /**
+     * Every folder and file below [path], at any depth, as paths from the root; the tool's own files and
+     * system clutter are left out, as in a scan. `NOT_FOUND` when [path] is no folder.
+     */
+    suspend fun listEntries(folder: LibraryFolderModel, path: RelativePathModel): StorageResult<FolderEntriesModel>
+
+    /**
+     * Every folder below the top level of [folder], at any depth, also empty ones; files are not read. Left
+     * out as in a scan: the tool's own folders and system clutter.
+     */
+    suspend fun listFolders(folder: LibraryFolderModel): StorageResult<Set<RelativePathModel>>
 }

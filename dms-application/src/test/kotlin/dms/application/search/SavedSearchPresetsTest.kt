@@ -2,10 +2,12 @@ package dms.application.search
 
 import dms.application.TestLibrary
 import dms.application.catalog.model.CatalogEdit
+import dms.application.search.model.FindOutcome
 import dms.domain.taxonomy.model.TagNameModel
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertIs
 
 class SavedSearchPresetsTest {
 
@@ -21,7 +23,8 @@ class SavedSearchPresetsTest {
 
             val presets = SavedSearchPresets.of(today = library.clock.today(), ids = library.ids, taxTag = tax)
             val found = presets.associate { preset ->
-                preset.name to library.searchContents.search(query = preset.query).map { it.id }
+                val outcome = assertIs<FindOutcome.Found>(value = library.findDocuments(query = preset.query))
+                preset.name to outcome.documents.map { it.id }
             }
 
             assertEquals(

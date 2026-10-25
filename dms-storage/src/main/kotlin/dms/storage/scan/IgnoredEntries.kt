@@ -1,7 +1,7 @@
 package dms.storage.scan
 
+import dms.domain.library.TemporaryNames
 import dms.storage.catalog.CatalogFiles
-import dms.storage.fs.AtomicFiles
 import dms.storage.index.FileVectorIndex
 import dms.storage.plan.FilePlanStore
 import dms.storage.platform.PlatformTrash
@@ -27,7 +27,7 @@ object IgnoredEntries {
     fun isIgnored(name: String, atRoot: Boolean): Boolean {
         return name in NAMES ||
             name.startsWith(prefix = "._") ||
-            name.startsWith(prefix = AtomicFiles.TEMP_PREFIX) ||
+            TemporaryNames.isTemporary(name = name) ||
             (atRoot && CatalogFiles.isCatalogFile(name = name))
     }
 }

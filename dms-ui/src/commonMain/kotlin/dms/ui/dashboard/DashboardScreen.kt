@@ -13,6 +13,7 @@ import dms.ui.dashboard.section.DashboardOverview
 import dms.ui.library.model.LibrarySelection
 import dms.ui.library.model.YearFilterModel
 import dms.ui.review.ReviewDialog
+import dms.ui.session.OutcomeMessages
 
 /**
  * The home screen: the main actions, the headline figures, quick access by category, tag and
@@ -24,7 +25,6 @@ fun DashboardScreen(
     viewModel: DashboardViewModel,
     platform: PlatformActions,
     onAddFiles: (List<String>) -> Unit,
-    onChooseFiles: () -> Unit,
     onOpen: (LibrarySelection, String) -> Unit,
     onOpenYear: (YearFilterModel) -> Unit,
     onOpenDocument: (DocumentIdModel) -> Unit,
@@ -32,7 +32,7 @@ fun DashboardScreen(
     onOpenInbox: () -> Unit,
 ) {
     val state by viewModel.state.collectAsState()
-    val busyReason = state.busy?.let { "Wait until \"$it\" finishes" }
+    val busyReason = state.busy?.let { OutcomeMessages.waitFor(operation = it) }
     FileDropZone(
         platform = platform,
         label = "The files go to the top level of every library folder",
@@ -43,7 +43,6 @@ fun DashboardScreen(
             state = state,
             busyReason = busyReason,
             viewModel = viewModel,
-            onChooseFiles = onChooseFiles,
             onOpen = onOpen,
             onOpenYear = onOpenYear,
             onOpenDocument = onOpenDocument,

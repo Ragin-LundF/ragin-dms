@@ -1,9 +1,9 @@
 package dms.ui.session
 
 import dms.application.common.OperationOutcome
-import dms.application.library.model.ConfigureLibraryOutcome
+import dms.application.library.model.outcome.ConfigureLibraryOutcome
 import dms.application.port.storage.model.StorageFailure
-import dms.application.sync.model.RetryReportModel
+import dms.application.sync.model.RetryOutcome
 import dms.application.sync.model.SyncOutcome
 import dms.domain.catalog.CatalogRejection
 import dms.domain.library.FileNameViolation
@@ -49,9 +49,10 @@ object OutcomeMessages {
         }
     }
 
-    fun retry(report: RetryReportModel?): UiMessageModel {
-        if (report == null) {
-            return problem(text = "No library is open")
+    fun retry(outcome: RetryOutcome): UiMessageModel {
+        val report = when (outcome) {
+            is RetryOutcome.Retried -> outcome.report
+            RetryOutcome.LibraryNotOpen -> return problem(text = "No library is open")
         }
         val text = "Retried: ${report.succeeded} done, ${report.dropped} no longer needed, " +
             "${report.stillPending} still pending"
@@ -72,6 +73,11 @@ object OutcomeMessages {
         }
     }
 
+    /** Why a button waits: the [operation] running in its lane. */
+    fun waitFor(operation: String): String {
+        return "Wait until \"$operation\" finishes"
+    }
+
     fun failure(reason: StorageFailure): String {
         return when (reason) {
             StorageFailure.FOLDER_UNREACHABLE -> "folder not reachable"
@@ -80,6 +86,7 @@ object OutcomeMessages {
             StorageFailure.VERIFICATION_FAILED -> "the copy did not match the original"
             StorageFailure.IO_ERROR -> "read or write error"
             StorageFailure.UNSUPPORTED_FORMAT -> "written by a newer version or damaged"
+            StorageFailure.CATALOG_CHANGED -> "another device changed the catalog at the same time; try again"
         }
     }
 
@@ -103,12 +110,24 @@ object OutcomeMessages {
         }
     }
 
-    /** Refusals of changes to a document's fields and links. */
+    /** Refusals of changes to a document's fields and links; [rejection] passes no other reason. */
     private fun detailRejection(reason: CatalogRejection): String {
         return when (reason) {
             CatalogRejection.FIELD_NOT_DEFINED -> "The library has no such field"
             CatalogRejection.FIELD_TYPE_MISMATCH -> "The value does not fit the field's type"
-            else -> "The documents are not linked"
+            CatalogRejection.LINK_NOT_FOUND,
+            CatalogRejection.DOCUMENT_ALREADY_EXISTS,
+            CatalogRejection.DOCUMENT_NOT_FOUND,
+            CatalogRejection.PATH_ALREADY_USED,
+            CatalogRejection.INVALID_FOLDER_MOVE,
+            CatalogRejection.CATEGORY_ALREADY_EXISTS,
+            CatalogRejection.CATEGORY_NOT_FOUND,
+            CatalogRejection.CATEGORY_NAME_TAKEN,
+            CatalogRejection.CATEGORY_IN_USE,
+            CatalogRejection.CATEGORY_HAS_CHILDREN,
+            CatalogRejection.CATEGORY_CYCLE,
+            CatalogRejection.TAG_NOT_FOUND,
+            -> "The documents are not linked"
         }
     }
 

@@ -1,17 +1,12 @@
 package dms.ui.preview
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.produceState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import dms.domain.library.model.LibraryFolderIdModel
 import dms.domain.library.model.RelativePathModel
@@ -28,23 +23,16 @@ fun FileThumbnail(
     onClick: () -> Unit,
     fallback: @Composable () -> Unit,
 ) {
-    val thumbnail by produceState<ImageBitmap?>(initialValue = null, key1 = folderId, key2 = path) {
-        value = loader.load(folderId = folderId, path = path)
-    }
-    val image = thumbnail
-    if (image == null) {
-        fallback()
-        return
-    }
     val shape = MaterialTheme.shapes.small
-    Image(
-        bitmap = image,
-        contentDescription = "Preview of ${path.fileName}",
-        contentScale = ContentScale.Fit,
+    PageThumbnail(
+        folderId = folderId,
+        path = path,
+        loader = loader,
         modifier = Modifier
             .size(width = 64.dp, height = 88.dp)
             .clip(shape = shape)
             .border(width = 1.dp, color = MaterialTheme.colorScheme.outlineVariant, shape = shape)
             .clickable(onClick = onClick),
+        fallback = fallback,
     )
 }

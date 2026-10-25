@@ -13,6 +13,9 @@ object HostOs {
 
     val isWindows: Boolean = name.contains(other = "win")
 
+    /** How the command modifier is written: "⌘" on macOS, "Ctrl+" elsewhere. */
+    val commandLabel: String = if (isMac) "⌘" else "Ctrl+"
+
     /** [key] with the platform's command modifier: ⌘ on macOS, Ctrl elsewhere. */
     fun shortcut(key: Key, shift: Boolean = false): KeyShortcut {
         return KeyShortcut(key = key, meta = isMac, ctrl = !isMac, shift = shift)

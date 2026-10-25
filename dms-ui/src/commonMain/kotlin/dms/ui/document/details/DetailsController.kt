@@ -1,5 +1,6 @@
 package dms.ui.document.details
 
+import dms.application.ask.model.RelatedOutcome
 import dms.application.common.OperationOutcome
 import dms.application.document.model.DetailEdit
 import dms.domain.catalog.model.CatalogModel
@@ -9,6 +10,7 @@ import dms.domain.field.FieldPresets
 import dms.domain.field.FieldType
 import dms.domain.field.FieldValue
 import dms.domain.field.FieldValues
+import dms.domain.field.model.FieldDefinitionModel
 import dms.domain.field.model.FieldKeyModel
 import dms.domain.retention.model.RetentionModel
 import dms.domain.rule.RuleCondition
@@ -22,19 +24,19 @@ import dms.domain.taxonomy.model.CategoryModel
 import dms.ui.document.details.model.LinkCandidateModel
 import dms.ui.document.details.model.LinkPickModel
 import dms.ui.service.AppServices
+import dms.ui.session.DateInput
 import dms.ui.session.LibrarySession
 import dms.ui.session.OutcomeMessages
 import dms.ui.session.model.UiMessageModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import java.time.LocalDate
 import java.util.Locale
 import java.util.UUID
 
 /**
- * The details of the document in the inspector beyond its metadata: custom fields, the note, the
- * linked documents and the opt-in retention. The inspector's view model owns it; every change is one
+ * The details of the document in the quickLookViewModel beyond its metadata: custom fields, the note, the
+ * linked documents and the opt-in retention. The quickLookViewModel's view model owns it; every change is one
  * catalog change through the session.
  */
 class DetailsController(
@@ -74,18 +76,34 @@ class DetailsController(
             }
             val value = FieldValues.parse(type = definition.type, raw = raw, defaultCurrency = currency)
             if (value == null) {
-                session.report(
-                    message = UiMessageModel(
-                        text = "\"${definition.label}\": ${hintOf(type = definition.type)}",
-                        isError = true,
-                    ),
-                )
+                reportMismatch(definition = definition)
                 return
             }
             values[key] = value
         }
         val kept = document.fields.filterKeys { catalog.settings.field(key = it) == null }
         edit(edit = DetailEdit.SetFields(documentId = document.id, fields = kept + values))
+    }
+
+    /**
+     * Saves the typed value of one field and keeps the others; empty removes it. `false` when the
+     * value does not fit the field's type, which the message names, or the field is gone.
+     */
+    fun saveField(document: DocumentModel, key: FieldKeyModel, typed: String): Boolean {
+        val catalog = services.library.catalog.value ?: return false
+        val definition = catalog.settings.field(key = key) ?: return false
+        if (typed.isBlank()) {
+            edit(edit = DetailEdit.SetFields(documentId = document.id, fields = document.fields - key))
+            return true
+        }
+        val currency = catalog.settings.layout.defaultCurrency
+        val value = FieldValues.parse(type = definition.type, raw = typed, defaultCurrency = currency)
+        if (value == null) {
+            reportMismatch(definition = definition)
+            return false
+        }
+        edit(edit = DetailEdit.SetFields(documentId = document.id, fields = document.fields + (key to value)))
+        return true
     }
 
     fun saveNote(document: DocumentModel, note: String) {
@@ -97,9 +115,9 @@ class DetailsController(
 
     /** Sets the keep-until date (`YYYY-MM-DD`), or removes it when empty. A done retention stays done. */
     fun saveKeepUntil(document: DocumentModel, typed: String) {
-        val date = typed.trim().takeIf { it.isNotEmpty() }?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
+        val date = typed.takeIf { it.isNotBlank() }?.let { DateInput.parse(raw = it) }
         if (typed.isNotBlank() && date == null) {
-            session.report(message = UiMessageModel(text = "The date must look like 2030-12-31", isError = true))
+            session.report(message = UiMessageModel(text = DateInput.PROBLEM, isError = true))
             return
         }
         val retention = (document.retention ?: RetentionModel()).copy(keepUntil = date)
@@ -192,7 +210,13 @@ class DetailsController(
     /** The documents closest in meaning, from the index; empty while the index has no entry for it. */
     suspend fun related(document: DocumentModel): List<LinkCandidateModel> {
         val catalog = services.library.catalog.value ?: return emptyList()
-        return services.ask.relatedDocuments(documentId = document.id).mapNotNull { id ->
+        val related = when (val outcome = services.ask.relatedDocuments(documentId = document.id)) {
+            is RelatedOutcome.Found -> outcome.documentIds
+            RelatedOutcome.LibraryNotOpen,
+            RelatedOutcome.NotFound,
+            -> emptyList()
+        }
+        return related.mapNotNull { id ->
             catalog.documents[id]?.let { candidateOf(document = it) }
         }
     }
@@ -218,6 +242,11 @@ class DetailsController(
         return listOfNotNull(document.path.value, document.metadata.title, document.metadata.correspondent)
             .joinToString(separator = " ")
             .lowercase(Locale.ROOT)
+    }
+
+    private fun reportMismatch(definition: FieldDefinitionModel) {
+        val text = "\"${definition.label}\": ${hintOf(type = definition.type)}"
+        session.report(message = UiMessageModel(text = text, isError = true))
     }
 
     private fun hintOf(type: FieldType): String {

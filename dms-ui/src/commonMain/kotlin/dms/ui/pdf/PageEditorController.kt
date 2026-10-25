@@ -23,7 +23,7 @@ import kotlinx.coroutines.launch
 /**
  * The page editor of a PDF: turn, remove and move pages, and mark where the document splits. Applying
  * writes a new version of the file (the old one goes to the trash in every folder) and then splits it,
- * if marked. The inspector's view model owns it.
+ * if marked. The quickLookViewModel's view model owns it.
  */
 class PageEditorController(
     private val services: AppServices,
@@ -40,7 +40,12 @@ class PageEditorController(
     fun open(document: DocumentModel) {
         mutableState.value = PageEditorStateModel(documentId = document.id, name = document.path.fileName)
         scope.launch {
-            val primary = session.state.value.folders?.primary ?: return@launch
+            val primary = session.state.value.folders?.primary
+            if (primary == null) {
+                mutableState.value = null
+                session.report(message = UiMessageModel(text = "No library is open", isError = true))
+                return@launch
+            }
             val counted = services.pdf.editor.pageCount(folder = primary, path = document.path)
             val count = (counted as? StorageResult.Success)?.value ?: 0
             val pages = List(size = count) { index -> PageItemModel(source = index) }

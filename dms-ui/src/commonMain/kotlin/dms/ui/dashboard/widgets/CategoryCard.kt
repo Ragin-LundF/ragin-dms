@@ -41,7 +41,6 @@ fun CategoryCard(
         }
         BarList(
             points = all,
-            color = colors.tertiary,
             onClick = { point -> if (point.id.isEmpty()) onOpenUncategorized() else onOpenCategory(point.id) },
             modifier = Modifier.verticalScroll(state = rememberScrollState()),
         )

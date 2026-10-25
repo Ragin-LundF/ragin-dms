@@ -28,7 +28,6 @@ fun CorrespondentCard(points: List<ChartPointModel>, onSearch: (String) -> Unit,
         }
         BarList(
             points = points,
-            color = colors.primary,
             onClick = { onSearch(it.label) },
             modifier = Modifier.verticalScroll(state = rememberScrollState()),
         )

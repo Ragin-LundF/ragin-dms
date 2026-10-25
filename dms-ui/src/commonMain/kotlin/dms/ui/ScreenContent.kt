@@ -7,12 +7,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
+import dms.ui.library.LibraryCommands
 import dms.ui.model.Screen
 import dms.ui.service.AppServices
 import dms.ui.session.LibrarySession
 import dms.ui.session.model.LibraryStatus
 import dms.ui.settings.SettingsScreen
 import dms.ui.settings.SettingsViewModel
+import dms.ui.shell.palette.CommandPalette
 
 /** The screen for the library's status: settings until it is configured, the chosen screen once it is open. */
 @Composable
@@ -23,6 +25,8 @@ fun ScreenContent(
     status: LibraryStatus,
     screen: Screen,
     onScreenChange: (Screen) -> Unit,
+    palette: CommandPalette,
+    libraryCommands: LibraryCommands,
 ) {
     val settings = viewModel {
         SettingsViewModel(services = services, session = session, platform = platform)
@@ -50,6 +54,8 @@ fun ScreenContent(
             screen = screen,
             settings = settings,
             onScreenChange = onScreenChange,
+            palette = palette,
+            libraryCommands = libraryCommands,
         )
     }
 }

@@ -1,7 +1,7 @@
 package dms.application.library
 
-import dms.application.library.model.ConfigureLibraryOutcome
 import dms.application.library.model.LibraryCommand
+import dms.application.library.model.outcome.ConfigureLibraryOutcome
 import dms.application.port.state.SettingsRepository
 import dms.application.port.system.IdGenerator
 import dms.domain.library.FolderRole

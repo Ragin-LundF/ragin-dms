@@ -10,7 +10,7 @@ import dms.application.port.ai.model.EmbeddingResult
 import dms.application.port.assistant.LibraryAssistant
 import dms.application.port.assistant.model.AssistantAnswer
 import dms.application.port.assistant.model.SourceChunkModel
-import dms.application.search.SearchContents
+import dms.application.search.ContentMatcher
 import dms.domain.document.model.DocumentModel
 import dms.domain.query.model.DocumentQueryModel
 import java.util.Locale
@@ -23,7 +23,7 @@ import java.util.Locale
  */
 class AskLibrary(
     private val store: CatalogStore,
-    private val search: SearchContents,
+    private val search: ContentMatcher,
     private val texts: DocumentTexts,
     private val embeddings: EmbeddingClient,
     private val vectors: VectorSearch,
@@ -32,7 +32,7 @@ class AskLibrary(
 
     suspend operator fun invoke(question: String, scope: DocumentQueryModel = DocumentQueryModel.ALL): AskOutcome {
         val library = store.current() ?: return AskOutcome.LibraryNotOpen
-        val documents = search.search(query = scope)
+        val documents = search.matching(library = library, query = scope)
         val semantic = semanticChunks(library = library, documents = documents, question = question)
         val words = wordsOf(question = question)
         val lexical = keywordChunks(library = library, documents = documents, words = words)

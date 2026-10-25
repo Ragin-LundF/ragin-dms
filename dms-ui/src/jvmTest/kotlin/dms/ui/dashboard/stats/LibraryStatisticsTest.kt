@@ -81,6 +81,35 @@ class LibraryStatisticsTest {
         assertEquals(expected = "letters", actual = stats.recent.first().folder)
     }
 
+    @Test
+    fun `growth counts the documents at the end of each of the last 30 days`() {
+        val stats = LibraryStatistics.of(catalog = sampleCatalog(), now = now, zone = ZoneOffset.UTC)
+
+        assertEquals(expected = 30, actual = stats.growth.size)
+        assertEquals(expected = 2, actual = stats.growth.first())
+        assertEquals(expected = 2, actual = stats.growth[23])
+        assertEquals(expected = 3, actual = stats.growth[24])
+        assertEquals(expected = 3, actual = stats.growth.last())
+    }
+
+    @Test
+    fun `recent documents say when they were added in words and as the exact date`() {
+        val stats = LibraryStatistics.of(catalog = sampleCatalog(), now = now, zone = ZoneOffset.UTC)
+
+        val newest = stats.recent.first()
+        assertEquals(expected = "5 days ago" to "2026-06-10", actual = newest.added to newest.addedOn)
+        assertEquals(expected = RelativePathModel.of(raw = "letters/a.pdf"), actual = newest.path)
+    }
+
+    @Test
+    fun `an empty library has no growth to draw`() {
+        val empty = sampleCatalog().copy(documents = emptyMap())
+
+        val stats = LibraryStatistics.of(catalog = empty, now = now, zone = ZoneOffset.UTC)
+
+        assertEquals(expected = emptyList(), actual = stats.growth)
+    }
+
     private fun sampleCatalog(): CatalogModel {
         val documents = listOf(
             document(id = "a", path = "letters/a.pdf", age = Duration.ofDays(5), size = 100).copy(

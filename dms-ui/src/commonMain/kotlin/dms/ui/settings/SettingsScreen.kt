@@ -12,6 +12,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import dms.ui.components.dialog.DialogHost
 import dms.ui.components.layout.ScreenHeader
+import dms.ui.session.OutcomeMessages
 import dms.ui.settings.ai.AiSettingsCard
 import dms.ui.settings.library.FieldsCard
 import dms.ui.settings.library.InboxCard
@@ -23,12 +24,12 @@ import dms.ui.theme.Spacing
 fun SettingsScreen(viewModel: SettingsViewModel) {
     val state by viewModel.state.collectAsState()
     val library by viewModel.library.state.collectAsState()
-    val busyReason = state.busy?.let { "Wait until \"$it\" finishes" }
+    val busyReason = state.busy?.let { OutcomeMessages.waitFor(operation = it) }
     Column(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(state = rememberScrollState())
-            .padding(all = Spacing.xxlarge),
+            .padding(all = Spacing.screen),
         verticalArrangement = Arrangement.spacedBy(space = Spacing.xlarge),
     ) {
         ScreenHeader(title = "Settings", subtitle = "Where your library lives on this device")

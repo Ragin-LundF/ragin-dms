@@ -1,7 +1,7 @@
 package dms.ui.library.model
 
-/** How the document list is shown: as rows with columns, or as a grid of cards. */
+/** How the documents are shown: as a grid of page previews, or as rows with columns. */
 enum class DocumentLayout {
-    LIST,
     GRID,
+    LIST,
 }

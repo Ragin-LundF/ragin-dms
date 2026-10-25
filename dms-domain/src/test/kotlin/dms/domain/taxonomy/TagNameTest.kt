@@ -5,6 +5,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotEquals
+import kotlin.test.assertNull
 
 class TagNameTest {
 
@@ -29,5 +30,15 @@ class TagNameTest {
     fun `blank and overlong tags are rejected`() {
         assertFailsWith<IllegalArgumentException> { TagNameModel.of(raw = "   ") }
         assertFailsWith<IllegalArgumentException> { TagNameModel.of(raw = "x".repeat(n = TagNameModel.MAX_LENGTH + 1)) }
+    }
+
+    @Test
+    fun `parse gives the same tag as of, and nothing for a blank or too long one`() {
+        val parsed = TagNameModel.parse(raw = "  Tax   2024 ")
+
+        assertEquals(expected = TagNameModel.of(raw = "  Tax   2024 "), actual = parsed)
+        assertEquals(expected = "Tax 2024", actual = parsed?.value)
+        assertNull(actual = TagNameModel.parse(raw = "   "))
+        assertNull(actual = TagNameModel.parse(raw = "x".repeat(n = TagNameModel.MAX_LENGTH + 1)))
     }
 }

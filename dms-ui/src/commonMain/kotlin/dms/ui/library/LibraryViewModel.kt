@@ -2,45 +2,53 @@ package dms.ui.library
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import dms.application.catalog.model.CatalogEdit
-import dms.application.common.OperationOutcome
-import dms.application.port.storage.model.ExternalFileModel
 import dms.domain.catalog.model.CatalogModel
 import dms.domain.document.model.DocumentIdModel
 import dms.domain.document.model.DocumentModel
 import dms.domain.library.model.RelativePathModel
 import dms.domain.query.model.DocumentQueryModel
-import dms.domain.taxonomy.model.CategoryIdModel
 import dms.domain.taxonomy.model.CategoryModel
-import dms.domain.taxonomy.model.TagNameModel
 import dms.ui.PlatformActions
+import dms.ui.library.adding.FileAdder
 import dms.ui.components.dialog.DialogController
-import dms.ui.components.model.ConfirmationRequestModel
-import dms.ui.components.model.TextInputRequestModel
+import dms.ui.document.quicklook.QuickLookController
 import dms.ui.export.ExportController
+import dms.ui.library.documents.DocumentOrder
+import dms.ui.library.documents.model.DocumentClick
+import dms.ui.library.documents.model.GroupKey
+import dms.ui.library.documents.model.SortColumn
 import dms.ui.library.drag.model.DragItem
 import dms.ui.library.drag.model.DropTarget
+import dms.ui.library.filter.FilterTokens
+import dms.ui.library.filter.model.FacetFilter
+import dms.ui.library.folders.FolderBrowser
 import dms.ui.library.model.DocumentLayout
-import dms.ui.library.model.DocumentRowModel
 import dms.ui.library.model.LibrarySelection
 import dms.ui.library.model.LibraryUiStateModel
 import dms.ui.library.model.LibraryViewStateModel
 import dms.ui.library.model.YearFilterModel
 import dms.ui.library.search.ContentSearch
 import dms.ui.library.search.model.ContentSearchStateModel
-import dms.ui.library.sidebar.SidebarWidth
-import dms.ui.library.sidebar.model.ToggleTarget
+import dms.ui.library.selection.BulkActions
+import dms.ui.library.selection.DocumentSelection
+import dms.ui.library.selection.model.DocumentSelectionModel
+import dms.ui.library.sidebar.model.SidebarGroup
 import dms.ui.library.smart.SmartFolders
+import dms.ui.library.state.DiskFolders
+import dms.ui.library.state.LibraryStates
+import dms.ui.library.state.PanelWidth
+import dms.ui.library.state.PendingReviews
+import dms.ui.library.state.model.LayoutPanel
+import dms.ui.library.taxonomy.TaxonomyController
+import dms.ui.preview.ThumbnailLoader
 import dms.ui.service.AppServices
 import dms.ui.session.LibrarySession
-import dms.ui.session.NameInput
-import dms.ui.session.OutcomeMessages
-import dms.ui.session.model.SessionStateModel
-import dms.ui.session.model.UiMessageModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -48,20 +56,31 @@ import kotlinx.coroutines.launch
 import java.time.ZoneId
 
 /**
- * The library: folders, categories and tags in the sidebar, the documents they select, adding files,
- * and dropping documents onto a folder, a category or a tag.
+ * The library: the sidebar's views, the search with its facet filters, the documents grouped in a grid
+ * or a list, ticking documents for the bulk bar, adding files, and dropping documents onto a folder.
  */
 class LibraryViewModel(
     private val services: AppServices,
     private val session: LibrarySession,
     private val platform: PlatformActions,
+    val quickLook: QuickLookController = QuickLookController(),
 ) : ViewModel() {
 
     private val view = MutableStateFlow(value = LibraryViewStateModel())
+    private val searchFocus = MutableStateFlow(value = 0)
 
     val dialogs: DialogController = DialogController()
 
-    val sidebarWidth: SidebarWidth = SidebarWidth()
+    /** The open catalog, for the rows the folder view's cards show. */
+    val catalog: StateFlow<CatalogModel?> = services.library.catalog
+
+    val sidebarWidth: PanelWidth = PanelWidth(
+        panel = LayoutPanel.SIDEBAR,
+        layout = session.layout,
+        stored = session.state.map { it.preferences.layout }.distinctUntilChanged(),
+        current = { session.state.value.preferences.layout },
+        scope = viewModelScope,
+    )
 
     val contentSearch: ContentSearch = ContentSearch(
         services = services,
@@ -78,6 +97,16 @@ class LibraryViewModel(
         scope = viewModelScope,
     )
 
+    /** Creating, renaming and deleting categories and tags, from the facet popovers. */
+    val taxonomy: TaxonomyController = TaxonomyController(
+        services = services,
+        session = session,
+        dialogs = dialogs,
+        select = ::select,
+    )
+
+    val thumbnails: ThumbnailLoader = ThumbnailLoader(services = services, platform = platform)
+
     val export: ExportController = ExportController(
         services = services,
         session = session,
@@ -86,113 +115,218 @@ class LibraryViewModel(
         currentQuery = ::currentQuery,
     )
 
+    /** The folders on disk, also empty ones, for the folder view and both "Move to…" pickers. */
+    private val diskFolders = DiskFolders(services = services, session = session, scope = viewModelScope)
+
+    /** The folder view behind "Folders": the tree, the open folder and its folder actions. */
+    val folders: FolderBrowser = FolderBrowser(
+        services = services,
+        session = session,
+        dialogs = dialogs,
+        disk = diskFolders,
+        scope = viewModelScope,
+    )
+
+    /** The ticked documents; ⌘A and Esc go to [DocumentSelection.selectAll] and [DocumentSelection.clear]. */
+    val documentSelection: DocumentSelection = DocumentSelection(shown = ::shownIds)
+
+    /** The actions of the bulk bar on the ticked documents. */
+    val bulk: BulkActions = BulkActions(
+        services = services,
+        session = session,
+        dialogs = dialogs,
+        chosen = ::chosenDocuments,
+        foldersOnDisk = { diskFolders.folders.value },
+        done = { documentSelection.clear() },
+    )
+
+    /** Adding files, chosen in a dialog or dropped, to the filtered folder or a given one. */
+    val files: FileAdder = FileAdder(
+        services = services,
+        session = session,
+        platform = platform,
+        scope = viewModelScope,
+        filteredFolder = ::filteredFolder,
+    )
+
+    /** Grows each time something asks to focus the search field, which then takes the focus. */
+    val searchFocusRequests: StateFlow<Int> = searchFocus.asStateFlow()
+
+    private val pendingReviews = PendingReviews(session = session, scope = viewModelScope)
+
+    private val matches = combine(flow = contentSearch.state, flow2 = smartFolders.textMatches) { search, smart ->
+        TextMatches(search = search, smart = smart)
+    }
+
+    private val choices = combine(
+        flow = view,
+        flow2 = documentSelection.state,
+        flow3 = pendingReviews.ids,
+    ) { viewState, selection, reviewIds -> Choices(view = viewState, selection = selection, reviewIds = reviewIds) }
+
     val state: StateFlow<LibraryUiStateModel> = combine(
         flow = services.library.catalog,
         flow2 = session.state,
-        flow3 = view,
-        flow4 = contentSearch.state,
-        flow5 = smartFolders.textMatches,
-    ) { catalog, sessionState, viewState, search, smartMatches ->
-        derive(catalog = catalog, sessionState = sessionState, view = viewState, search = search)
-            .let { derived -> if (smartMatches == null) derived else derived.onlyMatching(ids = smartMatches) }
+        flow3 = matches,
+        flow4 = choices,
+    ) { catalog, sessionState, textMatches, choice ->
+        LibraryStates.of(
+            catalog = catalog,
+            session = sessionState,
+            view = choice.view,
+            search = textMatches.search,
+            smartMatches = textMatches.smart,
+            selected = choice.selection.selected,
+            reviewIds = choice.reviewIds,
+            smartFolders = smartFolders::entriesOf,
+            now = services.library.clock.now(),
+            zone = ZoneId.systemDefault(),
+        )
     }.stateIn(scope = viewModelScope, started = SharingStarted.Eagerly, initialValue = LibraryUiStateModel())
 
-    fun select(selection: LibrarySelection) {
-        view.update { it.copy(selection = selection).unfolding(selection = selection) }
-    }
-
-    /** Folds or unfolds a folder, a category or a whole section of the sidebar. */
-    fun toggle(target: ToggleTarget) {
-        view.update { state ->
-            when (target) {
-                is ToggleTarget.Folder -> state.copy(expandedFolders = state.expandedFolders.flip(target.path))
-                is ToggleTarget.Category -> state.copy(
-                    expandedCategories = state.expandedCategories.flip(target.categoryId),
-                )
-
-                is ToggleTarget.Group -> state.copy(collapsedGroups = state.collapsedGroups.flip(target.group))
+    init {
+        // Quick look decides which document is shown; the view only mirrors it for the rings and rows.
+        viewModelScope.launch {
+            quickLook.state.map { it.shown }.distinctUntilChanged().collect { shown ->
+                view.update { it.copy(inspected = shown) }
+            }
+        }
+        viewModelScope.launch {
+            state.map { current -> current.documents.map { it.document.id } }.distinctUntilChanged().collect { order ->
+                quickLook.updateOrder(order = order)
             }
         }
     }
 
-    /** Shows only documents of [year]; `null` shows every year. */
-    fun filterYear(year: YearFilterModel?) {
-        view.update { it.copy(year = year) }
+    /**
+     * Opens [selection]: a sidebar view without filters, or "All documents" filtered by the category,
+     * tag or folder that [selection] names. The search text and the ticks are cleared.
+     */
+    fun select(selection: LibrarySelection) {
+        view.update { it.opening(selection = selection) }
+        documentSelection.clear()
+        quickLook.close()
+    }
+
+    /** Shows the documents of [selection] that match [query] and [year], as the dashboard and the palette ask. */
+    fun show(selection: LibrarySelection, query: String, year: YearFilterModel? = null) {
+        view.update { state ->
+            val opened = state.opening(selection = selection)
+            val withYear = year?.let { FacetFilter.Year(year = it) }
+                ?.let { FilterTokens.with(filters = opened.filters, filter = it) }
+            opened.copy(query = query, filters = withYear ?: opened.filters)
+        }
+        documentSelection.clear()
+        quickLook.close()
+    }
+
+    /** Shows every document with [documentId] open in quick look. */
+    fun reveal(documentId: DocumentIdModel) {
+        view.update { state -> state.opening(selection = LibrarySelection.Folder(path = RelativePathModel.ROOT)) }
+        documentSelection.clear()
+        quickLook.open(documentId = documentId, order = shownIds())
+    }
+
+    /** Folds or unfolds a section of the sidebar. */
+    fun toggleSection(group: SidebarGroup) {
+        view.update { state ->
+            val collapsed = state.collapsedGroups
+            state.copy(collapsedGroups = if (group in collapsed) collapsed - group else collapsed + group)
+        }
     }
 
     fun search(query: String) {
         view.update { it.copy(query = query) }
     }
 
+    /** Applies [filter] in place of the filter its facet had; a suggestion taken from the search clears the text. */
+    fun addFilter(filter: FacetFilter, clearQuery: Boolean = false) {
+        view.update { state ->
+            state.copy(
+                filters = FilterTokens.with(filters = state.filters, filter = filter),
+                query = if (clearQuery) "" else state.query,
+            )
+        }
+    }
+
+    fun removeFilter(filter: FacetFilter) {
+        view.update { it.copy(filters = it.filters - filter) }
+    }
+
+    /** Removes every facet filter and the search text. */
+    fun clearFilters() {
+        view.update { it.copy(filters = emptyList(), query = "") }
+    }
+
+    fun groupBy(key: GroupKey) {
+        view.update { it.copy(groupBy = key) }
+    }
+
+    /** Sorts the documents by [column]; a second click on the same column turns the order around. */
+    fun sortBy(column: SortColumn) {
+        view.update { it.copy(sort = DocumentOrder.next(current = it.sort, column = column)) }
+    }
+
+    /**
+     * A plain click opens [documentId] in quick look, or closes it when it is open; ⌘/Ctrl ticks or
+     * unticks it, Shift ticks every document from the last ticked one to it.
+     */
+    fun clickDocument(documentId: DocumentIdModel, click: DocumentClick) {
+        when (click) {
+            DocumentClick.PLAIN -> inspect(documentId = documentId.takeUnless { it == quickLook.state.value.shown })
+            DocumentClick.TOGGLE -> documentSelection.toggle(documentId = documentId)
+            DocumentClick.RANGE -> documentSelection.extend(documentId = documentId)
+        }
+    }
+
+    /** Opens [documentId] in quick look, in the order the documents are shown; `null` closes it. */
     fun inspect(documentId: DocumentIdModel?) {
-        view.update { it.copy(inspected = documentId) }
+        if (documentId == null) {
+            quickLook.close()
+        } else {
+            quickLook.open(documentId = documentId, order = shownIds())
+        }
     }
 
     fun setLayout(layout: DocumentLayout) {
         view.update { it.copy(layout = layout) }
     }
 
-    /** Shows the documents of [selection] that match [query] and [year], as the dashboard asks. */
-    fun show(selection: LibrarySelection, query: String, year: YearFilterModel? = null) {
-        view.update {
-            it.copy(selection = selection, query = query, year = year, inspected = null)
-                .unfolding(selection = selection)
-        }
-    }
-
-    /** Shows every document with [documentId] open in the inspector. */
-    fun reveal(documentId: DocumentIdModel) {
-        view.update {
-            it.copy(
-                selection = LibrarySelection.Folder(path = RelativePathModel.ROOT),
-                query = "",
-                year = null,
-                inspected = documentId,
-            )
-        }
-    }
-
-    /** Asks for files and copies them into the selected folder of every library folder. */
-    fun addFiles() {
-        chooseAndAdd(target = selectedFolder())
-    }
-
-    /** Asks for files and copies them into the top level of every library folder. */
-    fun addFilesToTopLevel() {
-        chooseAndAdd(target = RelativePathModel.ROOT)
-    }
-
-    fun addFiles(locations: List<String>, target: RelativePathModel = selectedFolder()) {
-        if (locations.isEmpty()) {
-            session.report(message = UiMessageModel(text = "Only files can be added, not folders", isError = true))
-            return
-        }
-        session.perform(label = "Adding ${locations.size} file(s)") {
-            val added = services.documents.addDocuments(
-                files = locations.map { ExternalFileModel(location = it) },
-                targetFolder = target,
-            )
-            val done = added.count { it.outcome is OperationOutcome.Done }
-            val duplicates = added.count { it.duplicates.isNotEmpty() }
-            val problem = added.firstOrNull { it.outcome !is OperationOutcome.Done }
-                ?.let { "${it.source.fileName}: ${OutcomeMessages.of(outcome = it.outcome, done = "").text}" }
-            val text = listOfNotNull(
-                "Added $done of ${locations.size} file(s)",
-                duplicates.takeIf { it > 0 }?.let { "$it already in the library under another name" },
-                problem,
-            ).joinToString(separator = "; ")
-            session.report(message = UiMessageModel(text = text, isError = done < locations.size))
-        }
+    /** Puts the focus into the search field (/). */
+    fun focusSearch() {
+        searchFocus.update { it + 1 }
     }
 
     /**
-     * Applies a drop: a document moves into a folder or gets a category or a tag; a category moves into
-     * another category or to the top level.
+     * Applies a drop. A document moves into a folder or gets a category or a tag; when it is ticked, the
+     * whole selection goes with it. A category moves into another category or to the top level.
      */
     fun drop(item: DragItem, target: DropTarget) {
         when (item) {
-            is DragItem.DraggedDocument -> dropDocument(document = item.document, target = target)
+            is DragItem.DraggedDocument -> dropDocuments(
+                documents = draggedWith(document = item.document),
+                target = target,
+            )
+
             is DragItem.DraggedCategory -> dropCategory(category = item.category, target = target)
+            is DragItem.DraggedFolder -> when (target) {
+                is DropTarget.Folder -> folders.editor.moveInto(path = item.path, folder = target.path)
+                is DropTarget.Category,
+                DropTarget.TopLevelCategory,
+                DropTarget.Uncategorized,
+                is DropTarget.Tag,
+                -> Unit
+            }
+        }
+    }
+
+    private fun dropDocuments(documents: List<DocumentModel>, target: DropTarget) {
+        when (target) {
+            is DropTarget.Folder -> bulk.moveTo(target = target.path, documents = documents)
+            is DropTarget.Category -> bulk.assignCategory(categoryId = target.categoryId, documents = documents)
+            DropTarget.Uncategorized -> bulk.assignCategory(categoryId = null, documents = documents)
+            is DropTarget.Tag -> bulk.addTag(tag = target.tag, documents = documents)
+            DropTarget.TopLevelCategory -> Unit
         }
     }
 
@@ -202,294 +336,70 @@ class LibraryViewModel(
         if (!movable || parentId == category.parentId || parentId == category.id) {
             return
         }
-        val where = parentId?.let { services.library.catalog.value?.categories?.get(it)?.name } ?: "the top level"
-        val edit = CatalogEdit.MoveCategory(categoryId = category.id, parentId = parentId)
-        edit(edit = edit, done = "Moved ${category.name} to $where")
+        taxonomy.moveCategory(category = category, parentId = parentId)
     }
 
-    private fun dropDocument(document: DocumentModel, target: DropTarget) {
-        val name = document.path.fileName
-        when (target) {
-            is DropTarget.Folder -> if ((document.path.parent ?: RelativePathModel.ROOT) != target.path) {
-                val where = target.path.value.ifEmpty { "the top level" }
-                session.perform(label = "Moving $name") {
-                    val outcome = services.documents.moveDocument(
-                        documentId = document.id,
-                        newPath = target.path.resolve(name = name),
-                    )
-                    session.report(message = OutcomeMessages.of(outcome = outcome, done = "Moved $name to $where"))
-                }
-            }
-
-            is DropTarget.Category -> if (document.categoryId != target.categoryId) {
-                val category = services.library.catalog.value?.categories?.get(target.categoryId)?.name
-                val edit = CatalogEdit.AssignCategory(documentId = document.id, categoryId = target.categoryId)
-                edit(edit = edit, done = "Filed $name under $category")
-            }
-
-            DropTarget.Uncategorized -> if (document.categoryId != null) {
-                val edit = CatalogEdit.AssignCategory(documentId = document.id, categoryId = null)
-                edit(edit = edit, done = "Removed the category of $name")
-            }
-
-            is DropTarget.Tag -> if (target.tag !in document.tags) {
-                val edit = CatalogEdit.AddTags(documentId = document.id, tags = setOf(target.tag))
-                edit(edit = edit, done = "Tagged $name with ${target.tag.value}")
-            }
-
-            DropTarget.TopLevelCategory -> Unit
-        }
+    /** The dragged [document], with every other ticked document when it is ticked itself. */
+    private fun draggedWith(document: DocumentModel): List<DocumentModel> {
+        return if (document.id in state.value.selectedDocuments) chosenDocuments() else listOf(document)
     }
 
-    fun newFolder() {
-        val parent = selectedFolder()
-        val title = "New folder in ${parent.value.ifEmpty { "the top level" }}"
-        askName(title = title, initial = "", confirm = "Create") { name ->
-            val path = NameInput.child(parent = parent, raw = name)
-            session.perform(label = "Creating folder ${path.value}") {
-                val outcome = services.documents.createFolder(path = path)
-                if (outcome is OperationOutcome.Done) {
-                    view.update { state ->
-                        state.copy(
-                            createdFolders = state.createdFolders + path,
-                            selection = LibrarySelection.Folder(path = path),
-                        )
-                    }
-                }
-                session.report(message = OutcomeMessages.of(outcome = outcome, done = "Created ${path.value}"))
-            }
-        }
-    }
-
-    fun renameFolder(path: RelativePathModel) {
-        askName(title = "Rename folder", initial = path.fileName, confirm = "Rename") { name ->
-            val target = NameInput.child(parent = path.parent ?: RelativePathModel.ROOT, raw = name)
-            session.perform(label = "Renaming folder ${path.value}") {
-                val outcome = services.documents.moveFolder(from = path, to = target)
-                if (outcome is OperationOutcome.Done) {
-                    view.update { state ->
-                        state.copy(
-                            createdFolders = state.createdFolders
-                                .map { relocated(path = it, from = path, to = target) }
-                                .toSet(),
-                            selection = LibrarySelection.Folder(path = target),
-                        )
-                    }
-                }
-                session.report(message = OutcomeMessages.of(outcome = outcome, done = "Renamed to ${target.value}"))
-            }
-        }
-    }
-
-    /** Creates a category; below the selected category, if one is selected. */
-    /** A new category below the selected one, or at the top level. */
-    fun newCategory() {
-        addCategory(parentId = (view.value.selection as? LibrarySelection.Category)?.categoryId)
-    }
-
-    fun newSubcategory(parent: CategoryModel) {
-        addCategory(parentId = parent.id)
-    }
-
-    private fun addCategory(parentId: CategoryIdModel?) {
-        askText(title = "New category", label = "Name", initial = "", confirm = "Create") { name ->
-            edit(edit = CatalogEdit.AddCategory(name = name.trim(), parentId = parentId))
-        }
-    }
-
-    fun renameCategory(category: CategoryModel) {
-        askText(title = "Rename category", label = "Name", initial = category.name, confirm = "Rename") { name ->
-            edit(edit = CatalogEdit.RenameCategory(categoryId = category.id, name = name.trim()))
-        }
-    }
-
-    fun removeCategory(category: CategoryModel) {
-        dialogs.ask(
-            request = ConfirmationRequestModel(
-                title = "Delete category \"${category.name}\"",
-                message = "The category leaves the catalog. No document uses it and no file changes.",
-                affected = emptyList(),
-                confirmLabel = "Delete category",
-            ),
-        ) {
-            edit(edit = CatalogEdit.RemoveCategory(categoryId = category.id))
-            view.update { it.copy(selection = LibrarySelection.Folder(path = RelativePathModel.ROOT)) }
-        }
-    }
-
-    fun renameTag(tag: TagNameModel) {
-        askText(title = "Rename tag", label = "Tag", initial = tag.value, confirm = "Rename") { name ->
-            val renamed = runCatching { TagNameModel.of(raw = name) }.getOrNull()
-            if (renamed == null) {
-                session.report(message = UiMessageModel(text = "Not a valid tag", isError = true))
-            } else {
-                edit(edit = CatalogEdit.RenameTag(from = tag, to = renamed))
-                view.update { it.copy(selection = LibrarySelection.Tag(tag = renamed)) }
-            }
-        }
-    }
-
-    fun removeTag(tag: TagNameModel) {
-        val tagged = services.library.catalog.value?.documents?.values.orEmpty().filter { tag in it.tags }
-        dialogs.ask(
-            request = ConfirmationRequestModel(
-                title = "Remove tag \"${tag.value}\"",
-                message = "The tag is removed from the catalog and from ${tagged.size} document(s). " +
-                    "The files stay as they are.",
-                affected = tagged.map { it.path.value },
-                confirmLabel = "Remove tag",
-            ),
-        ) {
-            edit(edit = CatalogEdit.RemoveTag(tag = tag))
-            view.update { it.copy(selection = LibrarySelection.Folder(path = RelativePathModel.ROOT)) }
-        }
-    }
-
-    /** Saves [edit]; reports errors always, and success only when [done] says what happened. */
-    private fun edit(edit: CatalogEdit, done: String? = null) {
-        session.perform(label = "Saving the catalog") {
-            val outcome = services.documents.editCatalog(edit = edit)
-            if (outcome !is OperationOutcome.Done || done != null) {
-                session.report(message = OutcomeMessages.of(outcome = outcome, done = done.orEmpty()))
-            }
-        }
-    }
-
-    private fun chooseAndAdd(target: RelativePathModel) {
-        viewModelScope.launch {
-            val files = platform.chooseFiles(title = "Add files to the library")
-            if (files.isNotEmpty()) {
-                addFiles(locations = files, target = target)
-            }
-        }
-    }
-
-    /** Asks for a file or folder name and passes it on only if the file name policy allows it. */
-    private fun askName(title: String, initial: String, confirm: String, submit: (String) -> Unit) {
-        askText(title = title, label = "Name", initial = initial, confirm = confirm) { name ->
-            val problem = NameInput.problem(raw = name)
-            if (problem == null) {
-                submit(name)
-            } else {
-                session.report(message = UiMessageModel(text = problem, isError = true))
-            }
-        }
-    }
-
-    private fun askText(title: String, label: String, initial: String, confirm: String, submit: (String) -> Unit) {
-        dialogs.askText(
-            request = TextInputRequestModel(
-                title = title,
-                label = label,
-                initialValue = initial,
-                confirmLabel = confirm,
-            ),
-            submit = submit,
-        )
-    }
-
-    /** What the library shows now as one query: selection, year, search text and, if on, its content term. */
+    /** What the library shows now as one query: view, filters, search text and, if on, its content term. */
     private fun currentQuery(): DocumentQueryModel {
         val current = view.value
         val catalog = services.library.catalog.value ?: return DocumentQueryModel.ALL
         val base = LibraryFilter.queryOf(
             selection = current.selection,
-            year = current.year,
+            filters = current.filters,
             now = services.library.clock.now(),
+            zone = ZoneId.systemDefault(),
             catalog = catalog,
         ) ?: DocumentQueryModel.ALL
         val text = current.query.trim().ifEmpty { null }
         return if (contentSearch.state.value.enabled) base.copy(contentText = text) else base.copy(text = text)
     }
 
-    private fun LibraryUiStateModel.onlyMatching(ids: Set<DocumentIdModel>): LibraryUiStateModel {
-        return copy(documents = documents.filter { it.document.id in ids })
+    private fun filteredFolder(): RelativePathModel {
+        return view.value.filters.filterIsInstance<FacetFilter.Folder>().firstOrNull()?.path ?: RelativePathModel.ROOT
     }
 
-    private fun selectedFolder(): RelativePathModel {
-        return (view.value.selection as? LibrarySelection.Folder)?.path ?: RelativePathModel.ROOT
+    private fun shownIds(): List<DocumentIdModel> {
+        return state.value.documents.map { it.document.id }
     }
 
-    private fun relocated(path: RelativePathModel, from: RelativePathModel, to: RelativePathModel): RelativePathModel {
-        val moves = path == from || path.isInside(folder = from)
-        return if (moves) path.relocate(from = from, to = to) else path
+    /** The ticked documents, in the order they are shown. */
+    private fun chosenDocuments(): List<DocumentModel> {
+        val current = state.value
+        return current.documents.map { it.document }.filter { it.id in current.selectedDocuments }
     }
 
-    private fun derive(
-        catalog: CatalogModel?,
-        sessionState: SessionStateModel,
-        view: LibraryViewStateModel,
-        search: ContentSearchStateModel,
-    ): LibraryUiStateModel {
-        if (catalog == null) {
-            return LibraryUiStateModel(busy = sessionState.busy, aiBusy = sessionState.aiBusy)
+    /** The view opening [selection], with the filters a category, tag or folder below the root stands for. */
+    private fun LibraryViewStateModel.opening(selection: LibrarySelection): LibraryViewStateModel {
+        val all = LibrarySelection.Folder(path = RelativePathModel.ROOT)
+        val (shown, filter) = when (selection) {
+            is LibrarySelection.Folder -> all to selection.path.takeUnless { it.isRoot }
+                ?.let { FacetFilter.Folder(path = it) }
+
+            is LibrarySelection.Category -> all to FacetFilter.Category(categoryId = selection.categoryId)
+            LibrarySelection.Uncategorized -> all to FacetFilter.Category(categoryId = null)
+            is LibrarySelection.Tag -> all to FacetFilter.Tag(tag = selection.tag)
+            LibrarySelection.Inbox,
+            LibrarySelection.NeedsReview,
+            LibrarySelection.Recent,
+            LibrarySelection.Folders,
+            is LibrarySelection.SmartFolder,
+            -> selection to null
         }
-        val documents = catalog.documents.values
-        val zone = ZoneId.systemDefault()
-        val visible = LibraryFilter.documents(
-            catalog = catalog,
-            view = view,
-            now = services.library.clock.now(),
-            zone = zone,
-            textMatches = search.matches,
-        )
-        return LibraryUiStateModel(
-            isOpen = true,
-            title = LibraryFilter.titleOf(selection = view.selection, catalog = catalog),
-            folders = LibraryTrees.folders(
-                documents = documents,
-                createdFolders = view.createdFolders,
-                expanded = view.expandedFolders,
-            ),
-            categories = LibraryTrees.categories(
-                categories = catalog.categories.values,
-                documents = documents,
-                expanded = view.expandedCategories,
-            ),
-            uncategorizedCount = documents.count { it.categoryId == null },
-            tags = catalog.tags.sorted(),
-            tagCounts = documents.flatMap { it.tags }.groupingBy { it }.eachCount(),
-            selection = view.selection,
-            query = view.query,
-            documents = visible.map { document ->
-                DocumentRowModel(
-                    document = document,
-                    categoryName = document.categoryId?.let { catalog.categories[it]?.name },
-                )
-            },
-            inspected = view.inspected?.let { catalog.documents[it] },
-            busy = sessionState.busy,
-            aiBusy = sessionState.aiBusy,
-            layout = view.layout,
-            years = LibraryFilter.years(documents = documents, zone = zone),
-            year = view.year,
-            collapsedGroups = view.collapsedGroups,
-            contentSearch = search,
-            smartFolders = smartFolders.entriesOf(catalog = catalog),
-        )
+        return copy(selection = shown, filters = listOfNotNull(filter), query = "")
     }
 
-    private fun <T> Set<T>.flip(item: T): Set<T> {
-        return if (item in this) this - item else this + item
-    }
+    /** The content search's state and the matches of a saved view that needs the documents' text. */
+    private data class TextMatches(val search: ContentSearchStateModel, val smart: Set<DocumentIdModel>?)
 
-    /** The view with the folders and categories above [selection] unfolded, so the selection shows. */
-    private fun LibraryViewStateModel.unfolding(selection: LibrarySelection): LibraryViewStateModel {
-        return when (selection) {
-            is LibrarySelection.Folder -> copy(
-                expandedFolders = expandedFolders + generateSequence(seed = selection.path.parent) { it.parent }
-                    .filterNot { it.isRoot },
-            )
-
-            is LibrarySelection.Category -> {
-                val categories = services.library.catalog.value?.categories.orEmpty()
-                val parents = generateSequence(seed = categories[selection.categoryId]?.parentId) { id ->
-                    categories[id]?.parentId
-                }.take(n = categories.size)
-                copy(expandedCategories = expandedCategories + parents)
-            }
-
-            else -> this
-        }
-    }
+    /** What the user chose, the ticks, and the documents waiting for review. */
+    private data class Choices(
+        val view: LibraryViewStateModel,
+        val selection: DocumentSelectionModel,
+        val reviewIds: Set<DocumentIdModel>,
+    )
 }

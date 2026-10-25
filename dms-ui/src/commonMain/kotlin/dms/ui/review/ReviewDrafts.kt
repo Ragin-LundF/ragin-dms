@@ -15,9 +15,9 @@ import dms.domain.taxonomy.model.CategoryModel
 import dms.domain.taxonomy.model.TagNameModel
 import dms.ui.review.model.ReviewDraftModel
 import dms.ui.review.model.ReviewFieldModel
+import dms.ui.session.DateInput
 import dms.ui.session.OutcomeMessages
 import java.time.LocalDate
-import java.time.format.DateTimeParseException
 
 /** Between a suggestion and what the user approves: the draft to edit, and the approval it makes. */
 object ReviewDrafts {
@@ -190,17 +190,13 @@ object ReviewDrafts {
     }
 
     private fun dateOf(text: String): LocalDate {
-        return try {
-            LocalDate.parse(text)
-        } catch (exception: DateTimeParseException) {
-            throw IllegalArgumentException("Write the date as YYYY-MM-DD", exception)
-        }
+        return requireNotNull(value = DateInput.parse(raw = text)) { DateInput.PROBLEM }
     }
 
     private fun tagsOf(text: String): Set<TagNameModel> {
         return text.split(',').filter { it.isNotBlank() }.map { raw ->
-            runCatching { TagNameModel.of(raw = raw) }.getOrElse { failure ->
-                throw IllegalArgumentException("Tag \"${raw.trim()}\": ${failure.message}", failure)
+            requireNotNull(value = TagNameModel.parse(raw = raw)) {
+                "Tag \"${raw.trim()}\" is longer than ${TagNameModel.MAX_LENGTH} characters"
             }
         }.toSet()
     }

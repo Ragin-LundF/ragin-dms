@@ -12,6 +12,7 @@ import dms.application.port.system.IdGenerator
 import dms.application.sync.Replicator
 import dms.domain.change.model.FileFactsModel
 import dms.domain.document.model.DocumentModel
+import dms.domain.library.TemporaryNames
 import dms.domain.library.model.LibraryFolderModel
 import dms.domain.library.model.RelativePathModel
 
@@ -37,9 +38,7 @@ class PdfVersions(
         write: suspend (LibraryFolderModel, RelativePathModel) -> StorageResult<FileFactsModel>,
     ): OperationOutcome {
         val primary = library.folders.primary
-        val temporary = (document.path.parent ?: RelativePathModel.ROOT).resolve(
-            name = "$TEMP_PREFIX${ids.newId()}.pdf",
-        )
+        val temporary = TemporaryNames.siblingOf(path = document.path, uniqueId = ids.newId())
         val written = write(primary, temporary)
         if (written is StorageResult.Failure) {
             return OperationOutcome.StorageFailed(failure = written)
@@ -75,9 +74,5 @@ class PdfVersions(
             onPrimary = { primary -> texts.write(folder = primary, documentId = document.id, text = text) },
             followUp = FolderOperation.CopyText(documentId = document.id),
         )
-    }
-
-    private companion object {
-        const val TEMP_PREFIX = ".dms-tmp-"
     }
 }

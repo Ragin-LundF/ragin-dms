@@ -12,8 +12,8 @@ import dms.domain.restructure.template.TemplateParse
 import dms.domain.restructure.template.TemplateRendering
 import dms.domain.restructure.template.model.PathTemplateModel
 import dms.domain.task.OpenTask
-import dms.ui.components.FileSizes
-import dms.ui.dashboard.ActivityTexts
+import dms.ui.components.format.FileSizes
+import dms.ui.dashboard.panel.ActivityTexts
 import dms.ui.inbox.model.FolderPickModel
 import dms.ui.inbox.model.InboxRowModel
 import dms.ui.inbox.model.InboxUiStateModel
@@ -28,9 +28,7 @@ import dms.ui.session.model.SessionStateModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -69,9 +67,8 @@ class InboxViewModel(
 
     init {
         viewModelScope.launch {
-            session.state.map { it.revision to it.lastScan }.distinctUntilChanged().collectLatest { (_, scan) ->
-                val tasks = services.library.buildDashboard(scan = scan)?.tasks.orEmpty()
-                suggestions.value = tasks.filterIsInstance<OpenTask.ReviewSuggestion>()
+            session.dashboard.collect { dashboard ->
+                suggestions.value = dashboard?.tasks.orEmpty().filterIsInstance<OpenTask.ReviewSuggestion>()
                     .associate { it.suggestion.documentId to it.suggestion }
             }
         }

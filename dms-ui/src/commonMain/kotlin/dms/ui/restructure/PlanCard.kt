@@ -24,6 +24,7 @@ import dms.ui.components.surface.AppCard
 import dms.ui.components.surface.CardTitle
 import dms.ui.restructure.model.MoveGroupModel
 import dms.ui.restructure.model.RestructureUiStateModel
+import dms.ui.session.OutcomeMessages
 import dms.ui.theme.Spacing
 
 /**
@@ -51,7 +52,7 @@ fun PlanCard(state: RestructureUiStateModel, viewModel: RestructureViewModel) {
                 GroupRow(group = group, onToggle = { viewModel.toggleGroup(folder = group.folder) })
             }
         }
-        val busyReason = state.busy?.let { "Wait until \"$it\" finishes" }
+        val busyReason = state.busy?.let { OutcomeMessages.waitFor(operation = it) }
         ActionButtons(
             buttons = listOf(
                 ActionButtonModel(

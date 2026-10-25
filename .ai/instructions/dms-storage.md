@@ -10,10 +10,14 @@ This module handles the user's real documents. A bug here loses data that may ex
 |---|---|
 | `dms.storage` | `StorageAdapters`: builds every adapter for one app data directory. |
 | `dms.storage.fs` | `FileSystemDocumentStorage` (file operations in one folder, name collisions), `PathResolver` (the one `RelativePathModel` ↔ `Path` mapping, NFC lookup), `AtomicFiles`, `ContentHasher`, `StorageIo` (I/O on `Dispatchers.IO`, exceptions to `StorageResult.Failure`). |
-| `dms.storage.catalog` | `FileCatalogRepository`, `CatalogMapper`, `CatalogMigrations`, `CatalogFiles` (file name and conflict copies). DTOs in `dms.storage.catalog.dto`. |
+| `dms.storage.catalog` | `FileCatalogRepository` (refuses to save over a newer revision: `CATALOG_CHANGED`), `CatalogMigrations`, `CatalogFiles` (file name and conflict copies). Mappers (`CatalogMapper`, `SettingsMapper`, `FieldMapper`, `QueryMapper`, `RuleMapper`, and `UnknownFields`, which carries fields of newer versions over) in `dms.storage.catalog.mapper`. DTOs in `dms.storage.catalog.dto`; every DTO with an identity or a singleton implements `ExtensibleDto`. Format fixtures in `src/test/resources/catalog/`. |
 | `dms.storage.scan` | `FileSystemLibraryScanner`, `ScanCache` (incremental hashing, kept in the app data directory), `IgnoredEntries`, `CloudPlaceholders`. DTOs in `dms.storage.scan.dto`, models in `dms.storage.scan.model`. |
 | `dms.storage.text` | `FileTextStore` for `.dms-text/<documentId>.txt`. |
 | `dms.storage.state` | Local state in the app data directory: `FileOperationJournal`, `FileTaskStore`, `FileActivityLog`, `FileSettingsRepository`, with their mappers. DTOs in `dms.storage.state.dto`. |
+| `dms.storage.export` | `FileExportWriter` (copies an export bundle into a folder or a zip outside the library) and `IndexFiles` (the CSV and HTML index). |
+| `dms.storage.index` | `FileVectorIndex`: the embedding vectors per document for Ask, in a hidden folder of every library folder. |
+| `dms.storage.plan` | `FilePlanStore`: the restructure records in `.dms-plans/`, replicated, so a restructure can be reversed. DTOs in `dms.storage.plan.dto`. |
+| `dms.storage.watch` | `FileSystemFolderWatcher`: tells the UI that a library folder changed on disk, so it can scan. |
 | `dms.storage.yaml` | `YamlMappers` (the one Jackson YAML configuration) and `YamlFile` (one atomically written YAML file). |
 | `dms.storage.platform` | `SystemTrash` with `PlatformTrash` (system trash, `.dms-trash/` fallback) and `AppDataDirectory`. |
 
@@ -23,7 +27,8 @@ Tests use temporary folders, synthetic file names and a recording `SystemTrash`,
 
 - **Never overwrite** an existing user file. On a name collision, return a collision outcome or add a suffix (`name (2).pdf`) — the use case decides which.
 - **Never delete** a user file except through the trash use case, and then move it to the trash (`java.awt.Desktop.moveToTrash`) instead of deleting permanently. Sync never deletes.
-- **Write atomically**: write to a temporary file in the target directory (`.dms-tmp-<uuid>`), flush, then `Files.move(..., ATOMIC_MOVE)`. Temporary files start with `.dms-tmp-` so the scanner and the user can recognize and clean them up.
+- **Write atomically**: write to a temporary file in the target directory (`.dms-tmp-<uuid>`), flush, then move it into place. Temporary files start with `dms.domain.library.TemporaryNames.PREFIX` (`.dms-tmp-`) so the scanner and the user can recognize and clean them up.
+- Use `ATOMIC_MOVE` only where replacing is intended (the catalog and state files). A new file is moved without it (`Files.move(temp, target)`), because on macOS and Linux an atomic move is `rename(2)`, which replaces an existing target; check for a case-insensitive clash right before the move.
 - **Copy verified**: hash the source, copy, hash the target, compare. Preserve the modification time.
 - Use `java.nio.file` APIs only. No `java.io.File`.
 - All I/O runs on `Dispatchers.IO` inside the adapter.

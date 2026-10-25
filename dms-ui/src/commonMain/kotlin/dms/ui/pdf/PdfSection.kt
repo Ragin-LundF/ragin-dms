@@ -14,7 +14,7 @@ import dms.ui.components.ActionButtons
 import dms.ui.components.SectionHeader
 import dms.ui.components.model.ActionButtonModel
 
-/** The PDF tools of the inspector: edit the pages, merge with other PDFs, make a scan searchable. */
+/** The PDF tools of the quickLookViewModel: edit the pages, merge with other PDFs, make a scan searchable. */
 @Composable
 fun PdfSection(
     document: DocumentModel,

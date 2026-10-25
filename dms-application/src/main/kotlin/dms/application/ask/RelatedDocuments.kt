@@ -1,5 +1,6 @@
 package dms.application.ask
 
+import dms.application.ask.model.RelatedOutcome
 import dms.application.library.CatalogStore
 import dms.domain.document.model.DocumentIdModel
 
@@ -9,12 +10,13 @@ class RelatedDocuments(
     private val vectors: VectorSearch,
 ) {
 
-    suspend operator fun invoke(documentId: DocumentIdModel, limit: Int = DEFAULT_LIMIT): List<DocumentIdModel> {
-        val library = store.current() ?: return emptyList()
-        val document = library.catalog.documents[documentId] ?: return emptyList()
+    suspend operator fun invoke(documentId: DocumentIdModel, limit: Int = DEFAULT_LIMIT): RelatedOutcome {
+        val library = store.current() ?: return RelatedOutcome.LibraryNotOpen
+        val document = library.catalog.documents[documentId] ?: return RelatedOutcome.NotFound
         val folder = library.folders.primary
-        val (model, centroid) = vectors.centroid(folder = folder, document = document) ?: return emptyList()
-        return library.catalog.documents.values
+        val (model, centroid) = vectors.centroid(folder = folder, document = document)
+            ?: return RelatedOutcome.Found(documentIds = emptyList())
+        val related = library.catalog.documents.values
             .filter { it.id != documentId }
             .mapNotNull { other ->
                 val (otherModel, otherCentroid) = vectors.centroid(folder = folder, document = other)
@@ -26,6 +28,7 @@ class RelatedDocuments(
             .sortedByDescending { it.second }
             .take(n = limit)
             .map { it.first }
+        return RelatedOutcome.Found(documentIds = related)
     }
 
     private companion object {

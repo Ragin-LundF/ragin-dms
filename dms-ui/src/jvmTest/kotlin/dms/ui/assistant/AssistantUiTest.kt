@@ -4,7 +4,7 @@ import dms.application.port.assistant.model.ChatRole
 import dms.domain.document.model.DocumentModel
 import dms.ui.dashboard.DashboardViewModel
 import dms.ui.dashboard.model.TaskGroup
-import dms.ui.document.InspectorViewModel
+import dms.ui.document.QuickLookViewModel
 import dms.ui.support.SampleImages
 import dms.ui.support.TestApp
 import dms.ui.support.UiTest
@@ -20,13 +20,17 @@ class AssistantUiTest {
     @Test
     fun `the summary of a document is shown`() {
         UiTest.run { app ->
-            val inspector = InspectorViewModel(services = app.services, session = app.session, platform = app.platform)
+            val quickLookViewModel = QuickLookViewModel(
+                services = app.services,
+                session = app.session,
+                platform = app.platform,
+            )
             val document = libraryWithOneImage(app = app)
             app.ai.suggestion = "A sample bill from Sample Energy."
 
-            inspector.summary.open(document = document)
+            quickLookViewModel.summary.open(document = document)
 
-            val summary = inspector.summary.state.first { it?.working == false }
+            val summary = quickLookViewModel.summary.state.first { it?.working == false }
             assertEquals(expected = "A sample bill from Sample Energy.", actual = summary?.text)
             assertTrue(actual = "summarize" in app.ai.lastChatBody)
         }
@@ -35,14 +39,18 @@ class AssistantUiTest {
     @Test
     fun `tags from the AI open a review with the tags only`() {
         UiTest.run { app ->
-            val inspector = InspectorViewModel(services = app.services, session = app.session, platform = app.platform)
+            val quickLookViewModel = QuickLookViewModel(
+                services = app.services,
+                session = app.session,
+                platform = app.platform,
+            )
             val document = libraryWithOneImage(app = app)
             app.ai.suggestion = "Tags: Invoice, Electricity"
 
-            inspector.tagWithAi(document = document)
+            quickLookViewModel.tagWithAi(document = document)
             app.idle()
 
-            val review = assertNotNull(actual = inspector.review.state.value)
+            val review = assertNotNull(actual = quickLookViewModel.review.state.value)
             assertEquals(expected = "Invoice, Electricity", actual = review.draft.tags.value)
             assertNull(actual = review.suggestion.title)
         }
@@ -51,16 +59,20 @@ class AssistantUiTest {
     @Test
     fun `a question is answered, and a failed one goes back into the input`() {
         UiTest.run { app ->
-            val inspector = InspectorViewModel(services = app.services, session = app.session, platform = app.platform)
+            val quickLookViewModel = QuickLookViewModel(
+                services = app.services,
+                session = app.session,
+                platform = app.platform,
+            )
             val document = libraryWithOneImage(app = app)
             app.ai.suggestion = "On 15 March 2024."
-            inspector.chat.open(document = document)
+            quickLookViewModel.chat.open(document = document)
 
-            inspector.chat.send(question = "When was it issued?")
-            val answered = inspector.chat.state.first { it?.waiting == false }
+            quickLookViewModel.chat.send(question = "When was it issued?")
+            val answered = quickLookViewModel.chat.state.first { it?.waiting == false }
             app.ai.reachable = false
-            inspector.chat.send(question = "Who sent it?")
-            val failed = inspector.chat.state.first { it?.problem != null }
+            quickLookViewModel.chat.send(question = "Who sent it?")
+            val failed = quickLookViewModel.chat.state.first { it?.problem != null }
 
             assertEquals(
                 expected = listOf(ChatRole.USER to "When was it issued?", ChatRole.ASSISTANT to "On 15 March 2024."),
@@ -118,7 +130,7 @@ class AssistantUiTest {
         app.configure()
         val library = app.libraryViewModel()
         app.platform.nextFiles = names.map { SampleImages.write(file = app.root.resolve("outside/$it")).toString() }
-        library.addFilesToTopLevel()
+        library.files.addFilesToTopLevel()
         app.idle()
         return library.state.first { it.documents.size == names.size }.documents.map { it.document }
     }

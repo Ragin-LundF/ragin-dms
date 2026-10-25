@@ -2,6 +2,7 @@ package dms.application.document
 
 import dms.application.TestLibrary
 import dms.application.common.OperationOutcome
+import dms.application.document.model.AddDocumentsOutcome
 import dms.application.fake.storage.FakeFolders
 import dms.application.port.storage.model.StorageFailure
 import dms.domain.library.FileNameViolation
@@ -43,7 +44,7 @@ class AddDocumentsTest {
             library.add(path = "letters/a.pdf", content = "alpha")
             val source = library.folders.external(location = "/outside/A.pdf", content = "beta")
 
-            val added = library.addDocuments(files = listOf(source), targetFolder = letters).single()
+            val added = library.added(files = listOf(source), targetFolder = letters).single()
 
             assertEquals(expected = RelativePathModel.of(raw = "letters/A (2).pdf"), actual = added.path)
             assertEquals(
@@ -60,7 +61,7 @@ class AddDocumentsTest {
             library.open()
             val source = library.folders.external(location = "/outside/con.pdf", content = "x")
 
-            val added = library.addDocuments(files = listOf(source), targetFolder = letters).single()
+            val added = library.added(files = listOf(source), targetFolder = letters).single()
 
             assertEquals(
                 expected = OperationOutcome.InvalidName(violation = FileNameViolation.RESERVED_NAME),
@@ -78,7 +79,7 @@ class AddDocumentsTest {
             library.folders.unreachable += library.syncB.id
             val source = library.folders.external(location = "/outside/a.pdf", content = "alpha")
 
-            val added = library.addDocuments(files = listOf(source), targetFolder = letters).single()
+            val added = library.added(files = listOf(source), targetFolder = letters).single()
 
             val done = assertIs<OperationOutcome.Done>(value = added.outcome)
             assertEquals(expected = setOf(library.syncB.id), actual = done.pendingFolders)
@@ -98,7 +99,7 @@ class AddDocumentsTest {
             library.folders.unreachable += library.primary.id
             val source = library.folders.external(location = "/outside/a.pdf", content = "alpha")
 
-            val added = library.addDocuments(files = listOf(source), targetFolder = letters).single()
+            val added = library.added(files = listOf(source), targetFolder = letters).single()
 
             val failed = assertIs<OperationOutcome.StorageFailed>(value = added.outcome)
             assertEquals(expected = StorageFailure.FOLDER_UNREACHABLE, actual = failed.failure.reason)
@@ -115,10 +116,22 @@ class AddDocumentsTest {
             val existing = library.add(path = "letters/a.pdf", content = "alpha")
             val source = library.folders.external(location = "/outside/b.pdf", content = "alpha")
 
-            val added = library.addDocuments(files = listOf(source), targetFolder = letters).single()
+            val added = library.added(files = listOf(source), targetFolder = letters).single()
 
             assertIs<OperationOutcome.Done>(value = added.outcome)
             assertEquals(expected = listOf(existing), actual = added.duplicates)
+        }
+    }
+
+    @Test
+    fun `nothing is added while no library is open`() {
+        runTest {
+            val library = TestLibrary()
+            val source = library.folders.external(location = "/outside/a.pdf", content = "a")
+
+            val outcome = library.addDocuments(files = listOf(source), targetFolder = RelativePathModel.ROOT)
+
+            assertEquals(expected = AddDocumentsOutcome.LibraryNotOpen, actual = outcome)
         }
     }
 }

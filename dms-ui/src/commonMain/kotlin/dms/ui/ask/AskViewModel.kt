@@ -9,6 +9,7 @@ import dms.ui.ask.model.AskUiStateModel
 import dms.ui.review.AiMessages
 import dms.ui.service.AppServices
 import dms.ui.session.LibrarySession
+import dms.ui.session.OutcomeMessages
 import dms.ui.session.model.OperationLane
 import dms.ui.session.model.OperationProgressModel
 import dms.ui.session.model.UiMessageModel
@@ -57,14 +58,24 @@ class AskViewModel(
         val text = question.trim().takeIf { it.isNotEmpty() } ?: return
         val scope = scopeQuery()
         entries.update { it + AskEntryModel(question = text, asking = true) }
-        session.perform(label = "Asking the library", lane = OperationLane.AI, cancellable = true) {
+        session.perform(
+            label = "Asking the library",
+            lane = OperationLane.AI,
+            cancellable = true,
+            // Stopped or failed: the question must not keep waiting for an answer that never comes.
+            onEnd = {
+                entries.update { asked ->
+                    asked.map { if (it.asking) it.copy(asking = false, note = "Stopped before an answer") else it }
+                }
+            },
+        ) {
             val entry = entryOf(question = text, outcome = services.ask.askLibrary(question = text, scope = scope))
             entries.update { asked -> asked.dropLast(n = 1) + entry }
         }.also { started ->
             if (!started) {
                 val busy = AskEntryModel(
                     question = text,
-                    note = "Wait until \"${session.state.value.aiBusy}\" finishes",
+                    note = OutcomeMessages.waitFor(operation = session.state.value.aiBusy.orEmpty()),
                 )
                 entries.update { asked -> asked.dropLast(n = 1) + busy }
             }

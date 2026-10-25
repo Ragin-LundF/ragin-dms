@@ -7,6 +7,7 @@ import dms.application.inbox.FileInboxDocument
 import dms.application.port.export.ExportWriter
 import dms.application.port.storage.FolderWatcher
 import dms.application.restructure.ApplyRestructurePlan
+import dms.application.restructure.ListRestructureHistory
 import dms.application.restructure.PlanRestructure
 import dms.application.restructure.RemoveEmptyFolders
 import dms.application.restructure.ReverseRestructure
@@ -21,6 +22,7 @@ class OrganizeServices(
     val planRestructure: PlanRestructure,
     val applyRestructurePlan: ApplyRestructurePlan,
     val reverseRestructure: ReverseRestructure,
+    val listRestructureHistory: ListRestructureHistory,
     val removeEmptyFolders: RemoveEmptyFolders,
     val acceptRuleProposal: AcceptRuleProposal,
     val exportDocuments: ExportDocuments,

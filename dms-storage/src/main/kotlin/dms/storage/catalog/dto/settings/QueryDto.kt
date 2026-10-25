@@ -1,7 +1,10 @@
 package dms.storage.catalog.dto.settings
 
+import com.fasterxml.jackson.annotation.JsonAnyGetter
+import com.fasterxml.jackson.annotation.JsonAnySetter
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.annotation.JsonPropertyOrder
+import dms.storage.catalog.dto.ExtensibleDto
 
 /** A document query; only the conditions that are set are written. Dates are ISO-8601. */
 @JsonInclude(JsonInclude.Include.NON_EMPTY)
@@ -36,4 +39,8 @@ data class QueryDto(
     val fields: List<FieldConditionDto> = emptyList(),
     val addedSince: String? = null,
     val contentText: String? = null,
-)
+) : ExtensibleDto {
+    @get:JsonAnyGetter
+    @field:JsonAnySetter
+    override val unknownFields: MutableMap<String, Any?> = linkedMapOf()
+}

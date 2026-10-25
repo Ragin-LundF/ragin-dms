@@ -36,6 +36,21 @@ class CatalogDetailsTest {
     }
 
     @Test
+    fun `a value whose definition was removed may stay, but not change`() {
+        val withAmount = withPresets
+            .setFields(documentId = invoice.id, fields = mapOf(FieldPresets.AMOUNT.key to amount))
+            .applied()
+        val removed = withAmount.changeSettings(settings = CatalogSettingsModel()).applied()
+        val other = FieldValue.Money(amount = BigDecimal("1"), currency = CurrencyCodeModel(value = "EUR"))
+
+        val kept = removed.setFields(documentId = invoice.id, fields = mapOf(FieldPresets.AMOUNT.key to amount))
+        val changed = removed.setFields(documentId = invoice.id, fields = mapOf(FieldPresets.AMOUNT.key to other))
+
+        assertIs<CatalogUpdate.Applied>(value = kept)
+        assertEquals(expected = CatalogUpdate.Rejected(reason = CatalogRejection.FIELD_NOT_DEFINED), actual = changed)
+    }
+
+    @Test
     fun `field values must have the type of their definition`() {
         val update = withPresets.setFields(
             documentId = invoice.id,

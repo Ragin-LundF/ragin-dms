@@ -9,7 +9,7 @@ import androidx.compose.runtime.Composable
 fun AppTheme(content: @Composable () -> Unit) {
     MaterialTheme(
         colorScheme = if (isSystemInDarkTheme()) AppColors.dark else AppColors.light,
-        typography = AppTypography.typography,
+        typography = AppTypography.withGeist(),
         shapes = AppShapes.shapes,
         content = content,
     )
