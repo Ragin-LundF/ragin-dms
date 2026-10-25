@@ -5,6 +5,7 @@ import dms.ui.library.folders.model.FolderCrumbModel
 import dms.ui.library.folders.model.FolderTileModel
 import dms.ui.support.SampleLibrary
 import dms.ui.support.UiTest
+import kotlinx.coroutines.flow.first
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -20,7 +21,7 @@ class FolderBrowserTest {
             val browser = FolderBrowsers.of(app = app, scope = backgroundScope)
 
             browser.open(path = home)
-            val state = browser.state.value
+            val state = browser.state.first { it.open == home }
 
             assertEquals(
                 expected = listOf(
@@ -46,11 +47,12 @@ class FolderBrowserTest {
             browser.open(path = home)
 
             browser.search(query = "INVOICE")
-            val found = browser.state.value.documents.map { it.path.value }
-            browser.open(path = RelativePathModel.of(raw = "Archive"))
+            val found = browser.state.first { it.query == "INVOICE" }.documents.map { it.path.value }
+            val archive = RelativePathModel.of(raw = "Archive")
+            browser.open(path = archive)
 
             assertEquals(expected = listOf("Home/invoice.txt"), actual = found)
-            assertEquals(expected = "", actual = browser.state.value.query)
+            assertEquals(expected = "", actual = browser.state.first { it.open == archive }.query)
         }
     }
 
@@ -60,12 +62,14 @@ class FolderBrowserTest {
             SampleLibrary.open(app = app, "Home/Energy/Old/gas.txt")
             val browser = FolderBrowsers.of(app = app, scope = backgroundScope)
 
-            browser.open(path = RelativePathModel.of(raw = "Home/Energy/Old"))
-            val unfolded = browser.state.value.tree.map { it.path.value }
+            val old = RelativePathModel.of(raw = "Home/Energy/Old")
+            browser.open(path = old)
+            val unfolded = browser.state.first { it.open == old }.tree.map { it.path.value }
             browser.toggle(path = home)
+            val folded = browser.state.first { it.tree.size < 3 }.tree.map { it.path.value }
 
             assertEquals(expected = listOf("Home", "Home/Energy", "Home/Energy/Old"), actual = unfolded)
-            assertEquals(expected = listOf("Home"), actual = browser.state.value.tree.map { it.path.value })
+            assertEquals(expected = listOf("Home"), actual = folded)
         }
     }
 }
