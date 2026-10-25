@@ -12,7 +12,11 @@ object DropTexts {
         if (item is DragItem.DraggedCategory) {
             return when (target) {
                 is DropTarget.Category -> "Move into ${nameOf(categoryId = target.categoryId, categories = categories)}"
-                else -> "Move to the top level"
+                DropTarget.TopLevelCategory,
+                is DropTarget.Folder,
+                DropTarget.Uncategorized,
+                is DropTarget.Tag,
+                -> "Move to the top level"
             }
         }
         return when (target) {

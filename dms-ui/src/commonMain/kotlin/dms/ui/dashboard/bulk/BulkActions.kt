@@ -59,7 +59,17 @@ class BulkActions(
                 listOf(removeAll)
             }
 
-            else -> emptyList()
+            // These groups have no action that answers all of their tasks at once.
+            TaskGroup.SUGGESTIONS,
+            TaskGroup.DEADLINES,
+            TaskGroup.RETENTION,
+            TaskGroup.LEARNED_RULES,
+            TaskGroup.MODIFIED,
+            TaskGroup.CONFLICTS,
+            TaskGroup.CATALOG_MERGE,
+            TaskGroup.FAILED_OPERATIONS,
+            TaskGroup.RESTRUCTURE,
+            -> emptyList()
         }
     }
 

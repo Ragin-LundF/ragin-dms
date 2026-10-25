@@ -82,7 +82,7 @@ private fun SparkleBadge(gradient: Brush) {
         Icon(
             imageVector = Icons.Rounded.AutoAwesome,
             contentDescription = null,
-            tint = Color.White,
+            tint = AppColors.onAiGradient,
             modifier = Modifier.size(size = Spacing.icon),
         )
     }
@@ -99,9 +99,9 @@ private fun GradientButton(label: String, gradient: Brush, enabled: Boolean, onC
             .background(brush = gradient, shape = ButtonDefaults.shape),
         colors = ButtonDefaults.buttonColors(
             containerColor = Color.Transparent,
-            contentColor = Color.White,
+            contentColor = AppColors.onAiGradient,
             disabledContainerColor = Color.Transparent,
-            disabledContentColor = Color.White,
+            disabledContentColor = AppColors.onAiGradient,
         ),
     ) {
         Icon(

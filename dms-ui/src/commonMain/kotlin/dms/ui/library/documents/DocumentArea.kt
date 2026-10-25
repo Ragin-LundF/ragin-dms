@@ -32,15 +32,17 @@ fun DocumentArea(
         onDrop = { files -> viewModel.addFiles(locations = files) },
         modifier = modifier,
     ) {
-        when {
-            state.documents.isEmpty() -> EmptyState(
+        if (state.documents.isEmpty()) {
+            EmptyState(
                 icon = Icons.Rounded.SearchOff,
                 title = if (state.query.isBlank()) "No documents here yet" else "Nothing matches",
                 message = "Drop files here, or use Add files. They are copied into every library folder.",
                 modifier = Modifier.fillMaxSize(),
             )
-
-            state.layout == DocumentLayout.LIST -> DocumentList(
+            return@FileDropZone
+        }
+        when (state.layout) {
+            DocumentLayout.LIST -> DocumentList(
                 rows = state.documents,
                 inspected = state.inspected?.id,
                 sort = state.sort,
@@ -51,7 +53,7 @@ fun DocumentArea(
                 onSort = viewModel::sortBy,
             )
 
-            else -> DocumentGrid(
+            DocumentLayout.GRID -> DocumentGrid(
                 rows = state.documents,
                 inspected = state.inspected?.id,
                 drag = drag,

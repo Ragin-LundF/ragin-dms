@@ -7,9 +7,11 @@ import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.window.FrameWindowScope
 import androidx.compose.ui.window.MenuBar
 import dms.ui.model.Screen
+import dms.ui.platform.ActionShortcuts
 import dms.ui.platform.HostOs
 import dms.ui.session.LibrarySession
 import dms.ui.session.model.LibraryStatus
+import dms.ui.shell.palette.model.PaletteAction
 
 /**
  * The native menu bar with the main actions and their shortcuts (⌘ on macOS, Ctrl elsewhere); "Go to…"
@@ -25,18 +27,24 @@ fun FrameWindowScope.AppMenuBar(
 ) {
     val state by session.state.collectAsState()
     val idle = state.busy == null && state.status is LibraryStatus.Open
+    val libraryActions = listOf(
+        PaletteAction.SCAN to session::scan,
+        PaletteAction.SYNC_ALL to session::syncToAllDestinations,
+        PaletteAction.MERGE_ALL to session::mergeAllFolders,
+        PaletteAction.RETRY_FAILED to session::retryFailedOperations,
+        PaletteAction.DETECT_DATES to session::detectDocumentDates,
+    )
+    val screens = listOf(
+        PaletteAction.OPEN_DASHBOARD to Screen.DASHBOARD,
+        PaletteAction.OPEN_TASKS to Screen.TASKS,
+        PaletteAction.OPEN_LIBRARY to Screen.LIBRARY,
+        PaletteAction.OPEN_SETTINGS to Screen.SETTINGS,
+    )
     MenuBar {
         Menu(text = "Library") {
-            Item(text = "Scan now", enabled = idle, shortcut = HostOs.shortcut(key = Key.R), onClick = session::scan)
-            Item(
-                text = "Sync to all destinations",
-                enabled = idle,
-                shortcut = HostOs.shortcut(key = Key.S, shift = true),
-                onClick = session::syncToAllDestinations,
-            )
-            Item(text = "Merge all folders", enabled = idle, onClick = session::mergeAllFolders)
-            Item(text = "Retry failed operations", enabled = idle, onClick = session::retryFailedOperations)
-            Item(text = "Detect missing document dates", enabled = idle, onClick = session::detectDocumentDates)
+            libraryActions.forEach { (action, run) ->
+                Item(text = action.label, enabled = idle, shortcut = ActionShortcuts.of(action = action), onClick = run)
+            }
             Separator()
             val cancellable = state.operations.firstOrNull { it.cancellable }
             Item(
@@ -49,26 +57,13 @@ fun FrameWindowScope.AppMenuBar(
         Menu(text = "View") {
             Item(text = "Go to…", shortcut = HostOs.shortcut(key = Key.K), onClick = onGoTo)
             Separator()
-            Item(
-                text = Screen.DASHBOARD.label,
-                shortcut = HostOs.shortcut(key = Key.One),
-                onClick = { onScreenChange(Screen.DASHBOARD) },
-            )
-            Item(
-                text = Screen.TASKS.label,
-                shortcut = HostOs.shortcut(key = Key.Two),
-                onClick = { onScreenChange(Screen.TASKS) },
-            )
-            Item(
-                text = Screen.LIBRARY.label,
-                shortcut = HostOs.shortcut(key = Key.Three),
-                onClick = { onScreenChange(Screen.LIBRARY) },
-            )
-            Item(
-                text = Screen.SETTINGS.label,
-                shortcut = HostOs.shortcut(key = Key.Comma),
-                onClick = { onScreenChange(Screen.SETTINGS) },
-            )
+            screens.forEach { (action, screen) ->
+                Item(
+                    text = screen.label,
+                    shortcut = ActionShortcuts.of(action = action),
+                    onClick = { onScreenChange(screen) },
+                )
+            }
             Separator()
             CheckboxItem(
                 text = "Show log",

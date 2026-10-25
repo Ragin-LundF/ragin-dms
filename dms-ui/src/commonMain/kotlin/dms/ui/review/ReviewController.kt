@@ -76,7 +76,8 @@ class ReviewController(
         if (started) {
             close()
         } else {
-            mutableState.value = review.copy(problem = OutcomeMessages.waitFor(operation = session.state.value.busy.orEmpty()))
+            val running = session.state.value.busy.orEmpty()
+            mutableState.value = review.copy(problem = OutcomeMessages.waitFor(operation = running))
         }
     }
 

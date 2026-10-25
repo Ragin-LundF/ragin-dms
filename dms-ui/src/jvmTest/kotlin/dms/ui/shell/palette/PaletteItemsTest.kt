@@ -35,7 +35,13 @@ class PaletteItemsTest {
 
     @Test
     fun `documents are found by title or file name, and by text after them`() {
-        val groups = PaletteItems.of(query = "POWER", catalog = catalog, textMatches = setOf(power.id, water.id))
+        val groups = PaletteItems.of(
+            query = "POWER",
+            catalog = catalog,
+            textMatches = setOf(power.id, water.id),
+            places = PaletteItems.placesOf(catalog = catalog),
+            busy = emptyMap(),
+        )
 
         val documents = groups.single { it.title == "Documents" }.items.map { it as PaletteItemModel.OpenDocument }
         assertEquals(expected = listOf(power.id, water.id), actual = documents.map { it.documentId })
@@ -45,7 +51,13 @@ class PaletteItemsTest {
 
     @Test
     fun `places carry their kind and count`() {
-        val places = PaletteItems.of(query = "energy", catalog = catalog, textMatches = emptySet())
+        val places = PaletteItems.of(
+            query = "energy",
+            catalog = catalog,
+            textMatches = emptySet(),
+            places = PaletteItems.placesOf(catalog = catalog),
+            busy = emptyMap(),
+        )
             .single { it.title == "Go to" }.items.map { it as PaletteItemModel.GoTo }
 
         assertEquals(
@@ -69,7 +81,13 @@ class PaletteItemsTest {
 
     @Test
     fun `an empty query lists every action and no documents`() {
-        val groups = PaletteItems.of(query = " ", catalog = catalog, textMatches = emptySet())
+        val groups = PaletteItems.of(
+            query = " ",
+            catalog = catalog,
+            textMatches = emptySet(),
+            places = PaletteItems.placesOf(catalog = catalog),
+            busy = emptyMap(),
+        )
 
         assertEquals(expected = listOf("Actions"), actual = groups.map { it.title })
         assertEquals(expected = PaletteAction.entries.size, actual = groups.single().items.size)
@@ -77,7 +95,13 @@ class PaletteItemsTest {
 
     @Test
     fun `a query always ends with asking the library`() {
-        val actions = PaletteItems.of(query = "scan", catalog = null, textMatches = emptySet()).single().items
+        val actions = PaletteItems.of(
+            query = "scan",
+            catalog = null,
+            textMatches = emptySet(),
+            places = PaletteItems.placesOf(catalog = null),
+            busy = emptyMap(),
+        ).single().items
 
         assertEquals(
             expected = listOf(

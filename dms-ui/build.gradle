@@ -8,6 +8,12 @@ plugins {
 // `jvmRun` task below and by `compose.desktop.application` in packaging-ui.gradle.
 ext.desktopMainClass = "dms.ui.MainKt"
 
+// The bundled resources (the Geist font and its licence) get a Res class in the app's own package.
+compose.resources {
+    packageOfResClass = "dms.ui.resources"
+    publicResClass = false
+}
+
 kotlin {
     jvm {
         // Compose's `mainClass` only configures the Compose plugin's own `run`/`package*` tasks.

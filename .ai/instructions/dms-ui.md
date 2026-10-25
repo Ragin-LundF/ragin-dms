@@ -52,7 +52,7 @@ Feature packages: `ui.dashboard`, `ui.library`, `ui.document` (inspector), `ui.r
 - `ui.settings.ai` holds the AI settings card: server address, model, timeout, "Read PDFs as images", and the connection test that lists the server's models. Saving goes through `LibrarySession.updatePreferences`, the one writer of the preferences.
 - UI tests run the real `AppContainer` with a `FakeAiServer` (a Ktor `MockEngine`) in place of LM Studio; tests never call a real AI server.
 - Confirmations and text input go through `DialogController` in `ui.components.dialog`; a view model asks, a `DialogHost` renders.
-- `ui.theme` holds colours, typography, shapes and spacing.
+- `ui.theme` holds colours, typography, shapes and spacing. The type scale is set in Geist (`AppTypography.withGeist()`), bundled in `composeResources/font` with its licence in `composeResources/files/geist-OFL.txt`; the `Res` class lives in `dms.ui.resources`.
 - Keep at most 8 files per directory.
 
 ## The dashboard

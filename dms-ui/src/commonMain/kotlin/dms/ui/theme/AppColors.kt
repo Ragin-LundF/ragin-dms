@@ -80,6 +80,9 @@ object AppColors {
      * The gradient of everything the AI does, and of the logo; nothing else uses it, so it reads as "AI".
      * White text stays readable on every stop.
      */
+    /** Text and icons on [aiGradient]. */
+    val onAiGradient: Color = Color.White
+
     val aiGradient: List<Color> = listOf(
         Color(color = 0xFF4338CA),
         Color(color = 0xFF7C3AED),

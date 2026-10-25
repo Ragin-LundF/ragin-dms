@@ -9,6 +9,7 @@ import androidx.compose.material.icons.rounded.Sync
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.graphics.vector.ImageVector
 import dms.ui.components.ActionButtons
 import dms.ui.components.model.ActionButtonModel
 import dms.ui.components.model.ButtonStyle
@@ -17,7 +18,9 @@ import dms.ui.library.LibraryViewModel
 import dms.ui.model.Screen
 import dms.ui.session.LibrarySession
 import dms.ui.shell.LocalCommandKey
+import dms.ui.session.OutcomeMessages
 import dms.ui.shell.palette.CommandPalette
+import dms.ui.shell.palette.model.PaletteAction
 import dms.ui.shell.toolbar.SplitButton
 import dms.ui.shell.toolbar.WindowToolbar
 
@@ -36,7 +39,6 @@ fun ScreenToolbar(
     val sessionState by session.state.collectAsState()
     val libraryState by library.state.collectAsState()
     val busy = sessionState.busy
-    val command = LocalCommandKey.current
     val title = if (screen == Screen.LIBRARY) libraryState.title else screen.label
     WindowToolbar(title = title, onOpenPalette = { palette.open() }) {
         when (screen) {
@@ -44,23 +46,19 @@ fun ScreenToolbar(
                 SplitButton(
                     main = ActionButtonModel(label = "Scan", icon = Icons.Rounded.Refresh, onClick = dashboard::scan),
                     menu = listOf(
-                        ActionButtonModel(
-                            label = "Sync to all",
-                            icon = Icons.Rounded.Sync,
-                            shortcut = "$command⇧S",
-                            onClick = dashboard::syncToAllDestinations,
-                        ),
-                        ActionButtonModel(
-                            label = "Merge all folders…",
+                        menuItem(action = PaletteAction.SYNC_ALL, icon = Icons.Rounded.Sync, waitingFor = busy) {
+                            dashboard.syncToAllDestinations()
+                        },
+                        menuItem(
+                            action = PaletteAction.MERGE_ALL,
                             icon = Icons.AutoMirrored.Rounded.MergeType,
-                            onClick = dashboard::mergeAllFolders,
-                        ),
-                        ActionButtonModel(
-                            label = "Tag untagged with AI",
+                            waitingFor = busy,
+                        ) { dashboard.mergeAllFolders() },
+                        menuItem(
+                            action = PaletteAction.TAG_UNTAGGED,
                             icon = Icons.Rounded.AutoAwesome,
-                            disabledReason = sessionState.aiBusy,
-                            onClick = dashboard.aiBatches::tagAll,
-                        ),
+                            waitingFor = sessionState.aiBusy,
+                        ) { dashboard.aiBatches.tagAll() },
                     ),
                     menuLabel = "More library actions",
                     busyReason = busy,
@@ -78,6 +76,27 @@ fun ScreenToolbar(
             -> Unit
         }
     }
+}
+
+/**
+ * A menu item for [action], with its label and shortcut from the palette's list, so menu bar, palette and
+ * toolbar name it alike; it waits while [waitingFor] names what runs in its lane.
+ */
+@Composable
+private fun menuItem(
+    action: PaletteAction,
+    icon: ImageVector,
+    waitingFor: String?,
+    onClick: () -> Unit,
+): ActionButtonModel {
+    val command = LocalCommandKey.current
+    return ActionButtonModel(
+        label = action.label,
+        icon = icon,
+        disabledReason = waitingFor?.let { OutcomeMessages.waitFor(operation = it) },
+        shortcut = action.shortcutKey?.let { key -> command + (if (action.shift) "⇧" else "") + key },
+        onClick = onClick,
+    )
 }
 
 @Composable

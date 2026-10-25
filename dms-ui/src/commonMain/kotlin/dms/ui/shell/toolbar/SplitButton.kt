@@ -12,8 +12,9 @@ import dms.ui.components.model.ActionButtonModel
 import dms.ui.theme.Spacing
 
 /**
- * A button with a menu of related actions beside it, such as Scan with Sync and Merge. Both wait while
- * [busyReason] names a running operation, and say so in their tooltip.
+ * A button with a menu of related actions beside it, such as Scan with Sync and Merge. The button waits
+ * while [busyReason] names a running operation; each menu item waits only for its own lane, through its
+ * own `disabledReason`, and says so in its tooltip.
  */
 @Composable
 fun SplitButton(main: ActionButtonModel, menu: List<ActionButtonModel>, menuLabel: String, busyReason: String?) {
@@ -25,8 +26,8 @@ fun SplitButton(main: ActionButtonModel, menu: List<ActionButtonModel>, menuLabe
         ActionMenu(
             actions = menu,
             contentDescription = menuLabel,
-            enabled = busyReason == null,
-            busyReason = busyReason,
+            enabled = true,
+            busyReason = null,
             icon = Icons.Rounded.ArrowDropDown,
         )
     }

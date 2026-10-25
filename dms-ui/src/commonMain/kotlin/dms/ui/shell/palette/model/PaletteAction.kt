@@ -14,7 +14,7 @@ enum class PaletteAction(
 ) {
     SCAN(label = "Scan now", shortcutKey = "R", lane = OperationLane.LIBRARY),
     SYNC_ALL(label = "Sync to all destinations", shortcutKey = "S", lane = OperationLane.LIBRARY, shift = true),
-    MERGE_ALL(label = "Merge all folders…", shortcutKey = "M", lane = OperationLane.LIBRARY, shift = true),
+    MERGE_ALL(label = "Merge all folders", shortcutKey = "M", lane = OperationLane.LIBRARY, shift = true),
     RETRY_FAILED(label = "Retry failed operations", shortcutKey = null, lane = OperationLane.LIBRARY),
     DETECT_DATES(label = "Detect missing document dates", shortcutKey = null, lane = OperationLane.LIBRARY),
     ADD_FILES(label = "Add files…", shortcutKey = null, lane = OperationLane.LIBRARY),
