@@ -2,6 +2,8 @@ package dms.ui.support
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.job
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -20,6 +22,8 @@ object UiTest {
                 try {
                     block(app)
                 } finally {
+                    // Background work still reading the app's files must end before the files are deleted.
+                    backgroundScope.coroutineContext.job.cancelAndJoin()
                     app.close()
                 }
             }
