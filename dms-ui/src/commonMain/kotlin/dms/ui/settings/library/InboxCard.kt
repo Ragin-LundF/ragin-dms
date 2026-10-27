@@ -15,7 +15,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -34,11 +34,11 @@ import dms.ui.theme.Spacing
  */
 @Composable
 fun InboxCard(inbox: InboxSettingsModel, busyReason: String?, controller: LibrarySettingsController) {
-    var enabled by remember(inbox) { mutableStateOf(value = inbox.enabled) }
-    var path by remember(inbox) { mutableStateOf(value = inbox.path.value) }
-    var aiAnalysis by remember(inbox) { mutableStateOf(value = inbox.aiAnalysis) }
-    var aiTargetFolder by remember(inbox) { mutableStateOf(value = inbox.aiTargetFolder) }
-    var autoAnalyze by remember(inbox) { mutableStateOf(value = inbox.autoAnalyze) }
+    var enabled by rememberSaveable(inbox) { mutableStateOf(value = inbox.enabled) }
+    var path by rememberSaveable(inbox) { mutableStateOf(value = inbox.path.value) }
+    var aiAnalysis by rememberSaveable(inbox) { mutableStateOf(value = inbox.aiAnalysis) }
+    var aiTargetFolder by rememberSaveable(inbox) { mutableStateOf(value = inbox.aiTargetFolder) }
+    var autoAnalyze by rememberSaveable(inbox) { mutableStateOf(value = inbox.autoAnalyze) }
     val problem = controller.inboxPathProblem(path = path)
     AppCard(modifier = Modifier.widthIn(max = 920.dp)) {
         CardTitle(

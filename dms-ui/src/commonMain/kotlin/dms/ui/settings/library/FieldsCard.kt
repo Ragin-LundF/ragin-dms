@@ -24,6 +24,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -85,9 +86,9 @@ private fun DefinitionRow(definition: FieldDefinitionModel, enabled: Boolean, on
 
 @Composable
 private fun NewFieldRow(busyReason: String?, controller: LibrarySettingsController) {
-    var label by remember { mutableStateOf(value = "") }
-    var type by remember { mutableStateOf(value = FieldType.TEXT) }
-    var role by remember { mutableStateOf<FieldRole?>(value = null) }
+    var label by rememberSaveable { mutableStateOf(value = "") }
+    var type by rememberSaveable { mutableStateOf(value = FieldType.TEXT) }
+    var role by rememberSaveable { mutableStateOf<FieldRole?>(value = null) }
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(space = Spacing.small),
@@ -131,7 +132,7 @@ private fun NewFieldRow(busyReason: String?, controller: LibrarySettingsControll
 
 @Composable
 private fun CurrencyRow(current: String, busyReason: String?, controller: LibrarySettingsController) {
-    var typed by remember(current) { mutableStateOf(value = current) }
+    var typed by rememberSaveable(current) { mutableStateOf(value = current) }
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(space = Spacing.small),

@@ -1,6 +1,7 @@
 package dms.storage.state
 
 import dms.application.port.state.SettingsRepository
+import dms.application.port.state.model.AiProvider
 import dms.application.port.state.model.AiSettingsModel
 import dms.application.port.state.model.LayoutPreferencesModel
 import dms.application.port.state.model.PreferencesModel
@@ -55,6 +56,9 @@ class FileSettingsRepository(path: Path) : SettingsRepository {
                     // A hand-edited value out of range is moved into it instead of making the file unreadable.
                     inputCharacters = settings.ai.inputCharacters
                         .coerceIn(range = AiSettingsModel.INPUT_CHARACTERS_RANGE),
+                    // An unknown provider falls back to the local server instead of making the file unreadable.
+                    provider = AiProvider.entries.firstOrNull { it.name == settings.ai.provider } ?: AiProvider.LOCAL,
+                    anthropicModel = settings.ai.anthropicModel,
                 ),
                 layout = LayoutPreferencesModel(
                     sidebarWidth = settings.layout.sidebarWidth.coerceIn(range = LayoutPreferencesModel.SIDEBAR_WIDTHS),
@@ -81,6 +85,8 @@ class FileSettingsRepository(path: Path) : SettingsRepository {
                     acceptSuggestedFileNames = ai.acceptSuggestedFileNames,
                     embeddingModel = ai.embeddingModel,
                     inputCharacters = ai.inputCharacters,
+                    provider = ai.provider.name,
+                    anthropicModel = ai.anthropicModel,
                 ),
                 layout = LayoutDto(
                     sidebarWidth = preferences.layout.sidebarWidth,

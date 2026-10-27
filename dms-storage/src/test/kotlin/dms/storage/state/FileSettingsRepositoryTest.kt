@@ -1,5 +1,6 @@
 package dms.storage.state
 
+import dms.application.port.state.model.AiProvider
 import dms.application.port.state.model.AiSettingsModel
 import dms.application.port.state.model.LayoutPreferencesModel
 import dms.application.port.state.model.PreferencesModel
@@ -68,6 +69,8 @@ class FileSettingsRepositoryTest {
                     preferVisionForPdfs = true,
                     acceptSuggestedFileNames = true,
                     inputCharacters = 30_000,
+                    provider = AiProvider.ANTHROPIC,
+                    anthropicModel = "claude-sonnet-5-5",
                 ),
                 layout = LayoutPreferencesModel(
                     sidebarWidth = 280,
@@ -101,5 +104,18 @@ class FileSettingsRepositoryTest {
             location = FolderLocationModel(value = location),
             role = role,
         )
+    }
+
+    @Test
+    fun `an older AI block, or an unknown provider, loads as Local AI with the default Claude model`() {
+        runTest {
+            Files.writeString(path, "ai:\n  baseUrl: http://localhost:9999/v1\n  provider: SOMETHING\n")
+
+            val ai = FileSettingsRepository(path = path).loadPreferences().ai
+
+            assertEquals(expected = AiProvider.LOCAL, actual = ai.provider)
+            assertEquals(expected = AiSettingsModel.DEFAULT_ANTHROPIC_MODEL, actual = ai.anthropicModel)
+            assertEquals(expected = "http://localhost:9999/v1", actual = ai.baseUrl)
+        }
     }
 }

@@ -3,7 +3,9 @@ package dms.ai.client
 import dms.ai.AiAdapters
 import dms.application.port.ai.model.ClassificationFailure
 import dms.application.port.ai.model.EmbeddingResult
+import dms.application.port.state.model.AiProvider
 import dms.application.port.state.model.AiSettingsModel
+import io.ktor.client.request.HttpRequestData
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
 import io.ktor.client.engine.mock.toByteArray
@@ -20,20 +22,28 @@ import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
+import kotlin.test.assertNull
 
 class OpenAiEmbeddingsTest {
 
     private val bodies = mutableListOf<String>()
     private val paths = mutableListOf<String>()
+    private val requests = mutableListOf<HttpRequestData>()
 
     private fun adapters(settings: AiSettingsModel, answer: (String) -> Pair<HttpStatusCode, String>): AiAdapters {
         val engine = MockEngine { request ->
             bodies += request.body.toByteArray().decodeToString()
             paths += request.url.encodedPath
+            requests += request
             val (status, body) = answer(request.url.encodedPath)
             respond(content = body, status = status, headers = headersOf(HttpHeaders.ContentType, "application/json"))
         }
-        return AiAdapters(settings = { settings }, locate = { _, _ -> null }, engine = engine)
+        return AiAdapters(
+            settings = { settings },
+            locate = { _, _ -> null },
+            engine = engine,
+            anthropicKey = { "sample-key" },
+        )
     }
 
     @Test
@@ -237,6 +247,23 @@ class OpenAiEmbeddingsTest {
                     message = answer,
                 )
             }
+        }
+    }
+
+    @Test
+    fun `while Anthropic answers the chats, embeddings go to the local server without the key`() {
+        runTest {
+            val settings = AiSettingsModel(provider = AiProvider.ANTHROPIC, embeddingModel = "sample-embed")
+            val ai = adapters(settings = settings) {
+                HttpStatusCode.OK to """{"data":[{"index":0,"embedding":[1.0]}]}"""
+            }
+
+            assertIs<EmbeddingResult.Vectors>(value = ai.embeddings.embed(texts = listOf("first")))
+
+            val request = requests.single()
+            assertEquals(expected = "localhost", actual = request.url.host)
+            assertEquals(expected = "/v1/embeddings", actual = request.url.encodedPath)
+            assertNull(actual = request.headers["x-api-key"])
         }
     }
 }

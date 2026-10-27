@@ -38,7 +38,8 @@ object AiMessages {
     fun failure(reason: ClassificationFailure): String {
         return when (reason) {
             ClassificationFailure.PROVIDER_UNAVAILABLE ->
-                "The AI server does not answer. Start LM Studio's server, or check Settings › AI"
+                "The AI does not answer. Start LM Studio's server, or for Anthropic set ANTHROPIC_API_KEY; " +
+                    "check Settings › AI"
 
             ClassificationFailure.MODEL_CANNOT_READ_IMAGES ->
                 "The model cannot read images. Load a vision model, such as Gemma 3 or Qwen2.5-VL"

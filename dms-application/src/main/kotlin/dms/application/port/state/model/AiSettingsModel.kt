@@ -8,6 +8,8 @@ package dms.application.port.state.model
  * otherwise the user checks it when the name is better. [embeddingModel] makes the vectors of the
  * library's index; `null` uses the first embedding model the server offers. [inputCharacters] is how much
  * of a document's text is read and sent to the AI; small local models need less, large ones take more.
+ * [provider] picks who answers: the local server at [baseUrl] with [model], or Anthropic with
+ * [anthropicModel]. Both are kept, so switching changes nothing else; embeddings always use the local server.
  */
 data class AiSettingsModel(
     val baseUrl: String = DEFAULT_BASE_URL,
@@ -17,6 +19,8 @@ data class AiSettingsModel(
     val acceptSuggestedFileNames: Boolean = false,
     val embeddingModel: String? = null,
     val inputCharacters: Int = DEFAULT_INPUT_CHARACTERS,
+    val provider: AiProvider = AiProvider.LOCAL,
+    val anthropicModel: String = DEFAULT_ANTHROPIC_MODEL,
 ) {
     init {
         require(value = inputCharacters in INPUT_CHARACTERS_RANGE) { "Input budget must be in $INPUT_CHARACTERS_RANGE" }
@@ -27,5 +31,6 @@ data class AiSettingsModel(
         val INPUT_CHARACTERS_RANGE: IntRange = 1_000..200_000
         const val DEFAULT_BASE_URL: String = "http://localhost:1234/v1"
         const val DEFAULT_TIMEOUT_SECONDS: Int = 300
+        const val DEFAULT_ANTHROPIC_MODEL: String = "claude-opus-5-5"
     }
 }
