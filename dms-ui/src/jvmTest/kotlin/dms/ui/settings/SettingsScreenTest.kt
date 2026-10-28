@@ -168,6 +168,6 @@ class SettingsScreenTest {
         const val FOLDERS_SUBTITLE = "Every change is written to the primary first, then to each sync folder"
         const val SCANNING_SUBTITLE = "What happens with files the library does not know yet"
         const val INBOX_SUBTITLE = "A folder in your library where new documents arrive, on every device"
-        const val AI_SWITCH = "Read PDFs as images"
+        const val AI_SWITCH = "Use AI"
     }
 }

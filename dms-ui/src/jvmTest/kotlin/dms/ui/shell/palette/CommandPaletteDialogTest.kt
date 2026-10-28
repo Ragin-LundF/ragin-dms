@@ -55,9 +55,11 @@ class CommandPaletteDialogTest {
         val app = TestApp(scope = scope)
         val chosen = mutableListOf<PaletteItemModel>()
         try {
+            app.session.updatePreferences { it.copy(ai = it.ai.copy(enabled = true)) }
             val palette = CommandPalette(services = app.services, session = app.session, scope = scope)
             palette.open(initial = typed)
             runComposeUiTest {
+                waitUntil { app.session.state.value.aiEnabled }
                 setContent { CommandPaletteDialog(palette = palette, onChoose = { chosen += it }) }
                 waitUntil { palette.state.value.open && palette.state.value.query == typed }
 

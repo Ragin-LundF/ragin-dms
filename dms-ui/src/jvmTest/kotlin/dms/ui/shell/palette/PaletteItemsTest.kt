@@ -12,6 +12,7 @@ import dms.domain.taxonomy.model.CategoryIdModel
 import dms.domain.taxonomy.model.CategoryModel
 import dms.domain.taxonomy.model.TagNameModel
 import dms.ui.library.model.LibrarySelection
+import dms.ui.session.model.OperationLane
 import dms.ui.shell.palette.model.PaletteAction
 import dms.ui.shell.palette.model.PaletteItemModel
 import java.time.Instant
@@ -110,6 +111,30 @@ class PaletteItemsTest {
             ),
             actual = actions,
         )
+    }
+
+    @Test
+    fun `without AI set up, no AI action and no question to the library is offered`() {
+        val actions = PaletteItems.of(
+            query = "",
+            catalog = null,
+            textMatches = emptySet(),
+            places = emptyList(),
+            busy = emptyMap(),
+            aiEnabled = false,
+        ).single().items
+        val asked = PaletteItems.of(
+            query = "power bill",
+            catalog = null,
+            textMatches = emptySet(),
+            places = emptyList(),
+            busy = emptyMap(),
+            aiEnabled = false,
+        ).flatMap { it.items }
+
+        val offered = actions.filterIsInstance<PaletteItemModel.Run>().map { it.action }
+        assertEquals(expected = PaletteAction.entries.filter { it.lane != OperationLane.AI }, actual = offered)
+        assertTrue(actual = asked.none { it is PaletteItemModel.AskLibrary })
     }
 
     private fun document(id: String, path: String, title: String?, tags: Set<TagNameModel>): DocumentModel {

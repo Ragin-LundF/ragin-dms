@@ -47,15 +47,24 @@ fun AiSettingsCard(
             subtitle = "Local server or Anthropic. It only suggests; you decide",
         )
         Column(verticalArrangement = Arrangement.spacedBy(space = Spacing.medium)) {
-            // The general switches come first, so they keep their place when the provider fields change.
-            AiSwitches(draft = draft, onChange = { draft = it })
-            AiServerFields(draft = draft, onChange = { draft = it })
-            if (connection.models.isNotEmpty() && testedProvider == draft.provider) {
-                ProviderModelChips(models = connection.models, draft = draft, onChange = { draft = it })
+            SettingSwitch(
+                title = "Use AI",
+                text = "Shows the AI features: suggestions, tags, summaries, questions and converting scans to " +
+                    "real PDFs. When off, the app shows none of them and sends nothing anywhere.",
+                checked = draft.enabled,
+                onCheckedChange = { draft = draft.copy(enabled = it) },
+            )
+            if (draft.enabled) {
+                // The general switches come first, so they keep their place when the provider fields change.
+                AiSwitches(draft = draft, onChange = { draft = it })
+                AiServerFields(draft = draft, onChange = { draft = it })
+                if (connection.models.isNotEmpty() && testedProvider == draft.provider) {
+                    ProviderModelChips(models = connection.models, draft = draft, onChange = { draft = it })
+                }
+                AiConnectionLine(connection = connection)
             }
-            AiConnectionLine(connection = connection)
             ActionButtons(
-                buttons = listOf(
+                buttons = listOfNotNull(
                     ActionButtonModel(
                         label = "Test connection",
                         icon = Icons.Rounded.NetworkCheck,
@@ -66,7 +75,7 @@ fun AiSettingsCard(
                                 onTest(tested)
                             }
                         },
-                    ),
+                    ).takeIf { draft.enabled },
                     ActionButtonModel(
                         label = "Save",
                         icon = Icons.Rounded.Save,

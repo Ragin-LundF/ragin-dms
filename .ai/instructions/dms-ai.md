@@ -51,3 +51,15 @@ The provider settings (`AiSettingsModel`: base URL, model, timeout, "prefer visi
 - Reading never modifies the source file. Rendered images stay in memory or in the app's cache directory, never in a library folder.
 - Reading a cloud placeholder downloads it; reading runs only for documents the user asked to classify.
 - Batch classification (hundreds of documents) runs in the background, reports progress, and can be paused and cancelled.
+
+## Rebuilding scans ("Convert to real PDF")
+
+`dms.ai.rebuild.AiPageLayoutReader` implements `PageLayoutReader` for the rebuild in `dms-pdf`.
+
+- The page goes out as lossless PNG, at most 1568 px on the long side and both sides a multiple of 28 (the patch size of Qwen-VL models), from `VisionImages.layoutPng`. Classification keeps its JPEG at 1600 px.
+- The prompts are `rebuild-layout.md` (system), `rebuild-layout-request.md` (the sent size) and `rebuild-line.md`. The answer is constrained by `prompt.RebuildLayoutSchema` (strict): `lines[]` with `bbox`, `text`, `bold`, `font` (sans/serif/mono) and `legible`, and `graphics[]` with `kind` and `bbox`.
+- Boxes are asked for in 0..1000. If any value of an answer is above 1000, the whole answer is in pixels of the sent image (`LayoutMapper`). Boxes leave the adapter in 0..1000 of the page.
+- Layout requests wait at least 600 s, whatever the configured timeout: a 27B model needs minutes per page. A timeout fails only that page, which then stays as it was.
+- NUL repair: under a JSON grammar some models write `\u0000` for every non-ASCII character. `RebuildPdf` reads such a line again with `readLine`, as plain text without `response_format`, from a crop of the page, and takes the new reading only if `LineRepair` finds every known character in place (each run of n lost characters may become 1..n characters). Otherwise the line stays an image.
+- Never log the layout or line texts.
+- `LayoutReaderIntegrationTest` sends a synthetic invoice to the running model; it runs only with `-Pai.integration=true` (optionally `-Pai.baseUrl`, `-Pai.model`).

@@ -37,11 +37,13 @@ import dms.application.fake.ai.FakeAssistant
 import dms.application.fake.ai.FakeClassifier
 import dms.application.fake.ai.FakeContentReader
 import dms.application.fake.ai.FakeEmbeddings
+import dms.application.fake.ai.FakeLayoutReader
 import dms.application.fake.ai.FakeLibraryAssistant
 import dms.application.fake.export.FakeExportWriter
 import dms.application.fake.index.InMemoryVectorIndex
 import dms.application.fake.pdf.FakeOcr
 import dms.application.fake.pdf.FakePdfEditor
+import dms.application.fake.pdf.FakePdfRebuilder
 import dms.application.fake.state.InMemoryActivityLog
 import dms.application.fake.state.InMemorySettings
 import dms.application.fake.state.InMemoryTaskStore
@@ -76,6 +78,9 @@ import dms.application.pdf.MakeAllSearchable
 import dms.application.pdf.MakeSearchable
 import dms.application.pdf.MergeDocuments
 import dms.application.pdf.PdfVersions
+import dms.application.pdf.rebuild.KeepRebuild
+import dms.application.pdf.rebuild.RebuildAvailability
+import dms.application.pdf.rebuild.RebuildPdf
 import dms.application.pdf.ScansWithoutText
 import dms.application.pdf.SplitDocument
 import dms.application.port.storage.model.ExternalFileModel
@@ -140,6 +145,8 @@ class TestLibrary {
     val exports: FakeExportWriter = FakeExportWriter()
     val pdf: FakePdfEditor = FakePdfEditor(folders = folders)
     val ocr: FakeOcr = FakeOcr(folders = folders)
+    val rebuilder: FakePdfRebuilder = FakePdfRebuilder(folders = folders)
+    val layoutReader: FakeLayoutReader = FakeLayoutReader()
 
     val replicator: Replicator = Replicator(
         storage = folders,
@@ -381,6 +388,24 @@ class TestLibrary {
     val makeAllSearchable: MakeAllSearchable = MakeAllSearchable(store = store, makeSearchable = makeSearchable)
     val scansWithoutText: ScansWithoutText = ScansWithoutText(store = store, pdf = pdf)
     val embedPdfMetadata: EmbedPdfMetadata = EmbedPdfMetadata(store = store, pdf = pdf, versions = pdfVersions)
+    val rebuildAvailability: RebuildAvailability = RebuildAvailability(store = store, pdf = pdf)
+    val rebuildPdf: RebuildPdf = RebuildPdf(
+        store = store,
+        pdf = pdf,
+        rebuilder = rebuilder,
+        reader = layoutReader,
+        availability = rebuildAvailability,
+    )
+    val keepRebuild: KeepRebuild = KeepRebuild(
+        store = store,
+        rebuilder = rebuilder,
+        versions = pdfVersions,
+        replicator = replicator,
+        names = names,
+        activity = activity,
+        clock = clock,
+        ids = ids,
+    )
     private val documentTexts: DocumentTexts = DocumentTexts(reader = reader, texts = folders)
     private val vectorSearch: VectorSearch = VectorSearch(index = index)
     val indexLibrary: IndexLibrary = IndexLibrary(

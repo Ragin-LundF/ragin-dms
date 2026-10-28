@@ -30,10 +30,15 @@ import dms.ui.theme.Spacing
 
 /**
  * The inbox: on or off, its folder inside the library (the same in every library folder), and how
- * much the AI does with what arrives. Edits apply when saved.
+ * much the AI does with what arrives, shown only while AI is set up ([aiEnabled]). Edits apply when saved.
  */
 @Composable
-fun InboxCard(inbox: InboxSettingsModel, busyReason: String?, controller: LibrarySettingsController) {
+fun InboxCard(
+    inbox: InboxSettingsModel,
+    aiEnabled: Boolean,
+    busyReason: String?,
+    controller: LibrarySettingsController,
+) {
     var enabled by rememberSaveable(inbox) { mutableStateOf(value = inbox.enabled) }
     var path by rememberSaveable(inbox) { mutableStateOf(value = inbox.path.value) }
     var aiAnalysis by rememberSaveable(inbox) { mutableStateOf(value = inbox.aiAnalysis) }
@@ -59,17 +64,17 @@ fun InboxCard(inbox: InboxSettingsModel, busyReason: String?, controller: Librar
                 enabled = enabled,
                 modifier = Modifier.fillMaxWidth(),
             )
-            SwitchRow(text = "Use AI for inbox documents", checked = aiAnalysis, enabled = enabled) { aiAnalysis = it }
-            SwitchRow(
-                text = "AI suggests the target folder",
-                checked = aiTargetFolder,
-                enabled = enabled && aiAnalysis,
-            ) { aiTargetFolder = it }
-            SwitchRow(
-                text = "Analyze automatically when files arrive",
-                checked = autoAnalyze,
-                enabled = enabled && aiAnalysis,
-            ) { autoAnalyze = it }
+            if (aiEnabled) {
+                InboxAiSwitches(
+                    enabled = enabled,
+                    aiAnalysis = aiAnalysis,
+                    aiTargetFolder = aiTargetFolder,
+                    autoAnalyze = autoAnalyze,
+                    onAiAnalysis = { aiAnalysis = it },
+                    onAiTargetFolder = { aiTargetFolder = it },
+                    onAutoAnalyze = { autoAnalyze = it },
+                )
+            }
             ActionButtons(
                 buttons = listOf(
                     ActionButtonModel(
@@ -103,4 +108,30 @@ private fun SwitchRow(text: String, checked: Boolean, enabled: Boolean = true, o
         Text(text = text, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(weight = 1f))
         Switch(checked = checked, onCheckedChange = onChange, enabled = enabled)
     }
+}
+
+/** What the AI does with the inbox, offered only while AI is set up. */
+@Composable
+private fun InboxAiSwitches(
+    enabled: Boolean,
+    aiAnalysis: Boolean,
+    aiTargetFolder: Boolean,
+    autoAnalyze: Boolean,
+    onAiAnalysis: (Boolean) -> Unit,
+    onAiTargetFolder: (Boolean) -> Unit,
+    onAutoAnalyze: (Boolean) -> Unit,
+) {
+    SwitchRow(text = "Use AI for inbox documents", checked = aiAnalysis, enabled = enabled, onChange = onAiAnalysis)
+    SwitchRow(
+        text = "AI suggests the target folder",
+        checked = aiTargetFolder,
+        enabled = enabled && aiAnalysis,
+        onChange = onAiTargetFolder,
+    )
+    SwitchRow(
+        text = "Analyze automatically when files arrive",
+        checked = autoAnalyze,
+        enabled = enabled && aiAnalysis,
+        onChange = onAutoAnalyze,
+    )
 }

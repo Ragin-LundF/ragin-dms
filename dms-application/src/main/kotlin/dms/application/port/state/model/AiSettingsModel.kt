@@ -10,8 +10,11 @@ package dms.application.port.state.model
  * of a document's text is read and sent to the AI; small local models need less, large ones take more.
  * [provider] picks who answers: the local server at [baseUrl] with [model], or Anthropic with
  * [anthropicModel]. Both are kept, so switching changes nothing else; embeddings always use the local server.
+ * [enabled] is whether the user set up AI on this device at all; while it is off, the app shows no AI
+ * feature.
  */
 data class AiSettingsModel(
+    val enabled: Boolean = false,
     val baseUrl: String = DEFAULT_BASE_URL,
     val model: String? = null,
     val preferVisionForPdfs: Boolean = false,

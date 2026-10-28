@@ -164,7 +164,7 @@ class InboxViewModel(
         return InboxUiStateModel(
             enabled = inbox.enabled,
             path = inbox.path.value,
-            aiAnalysis = inbox.aiAnalysis,
+            aiAnalysis = inbox.aiAnalysis && sessionState.aiEnabled,
             rows = rows,
             folders = ReviewDrafts.folderPathsOf(catalog = catalog)
                 .filterNot { it == inbox.path.value || it.startsWith(prefix = inbox.path.value + "/") },

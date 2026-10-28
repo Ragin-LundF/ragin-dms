@@ -24,10 +24,12 @@ import java.util.Locale
 /**
  * The app's left column: the brand, the screens in their groups with the inbox and task counts, and
  * Settings at the bottom. While [collapsed] it is a rail of icons that name themselves on hover.
+ * [hidden] screens are left out, such as Ask while no AI is set up.
  */
 @Composable
 fun NavigationSidebar(
     screen: Screen,
+    hidden: Set<Screen>,
     counts: NavigationCountsModel,
     collapsed: Boolean,
     onToggleCollapsed: () -> Unit,
@@ -47,7 +49,7 @@ fun NavigationSidebar(
             BrandMark(compact = collapsed)
             NavGroup.entries.forEach { group ->
                 GroupLabel(group = group, compact = collapsed)
-                Screen.entries.filter { it.group == group }.forEach { entry ->
+                Screen.entries.filter { it.group == group && it !in hidden }.forEach { entry ->
                     NavItem(
                         screen = entry,
                         selected = entry == screen,

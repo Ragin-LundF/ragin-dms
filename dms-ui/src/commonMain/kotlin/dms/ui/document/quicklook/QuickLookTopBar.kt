@@ -21,6 +21,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import dms.domain.document.model.DocumentModel
@@ -46,6 +48,7 @@ fun QuickLookTopBar(
     onClose: () -> Unit,
 ) {
     val unreadable = "The AI does not read this kind of file".takeIf { !document.kind.readableByAi }
+    val aiEnabled by viewModel.aiEnabled.collectAsState()
     Row(
         modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.medium, vertical = Spacing.small),
         verticalAlignment = Alignment.CenterVertically,
@@ -63,13 +66,15 @@ fun QuickLookTopBar(
                 icon = Icons.Rounded.FolderOpen,
             ) { viewModel.showInFileManager(document = document) },
         )
-        ActionIconButton(
-            button = ActionButtonModel(
-                label = "Ask about this document…",
-                icon = Icons.AutoMirrored.Rounded.Chat,
-                disabledReason = unreadable,
-            ) { viewModel.chat.open(document = document) },
-        )
+        if (aiEnabled) {
+            ActionIconButton(
+                button = ActionButtonModel(
+                    label = "Ask about this document…",
+                    icon = Icons.AutoMirrored.Rounded.Chat,
+                    disabledReason = unreadable,
+                ) { viewModel.chat.open(document = document) },
+            )
+        }
         ActionMenu(
             actions = moreActions(
                 document = document,
@@ -77,6 +82,7 @@ fun QuickLookTopBar(
                 aiReason = unreadable ?: aiBusyReason,
                 busyReason = busyReason,
                 viewModel = viewModel,
+                aiEnabled = aiEnabled,
             ),
             contentDescription = "Rename, move, trash ${document.path.fileName}…",
             enabled = true,
@@ -103,8 +109,10 @@ private fun moreActions(
     aiReason: String?,
     busyReason: String?,
     viewModel: QuickLookViewModel,
+    aiEnabled: Boolean,
 ): List<ActionButtonModel> {
-    return listOf(
+    // Without AI set up, ⋯ offers no AI action.
+    val ai = if (!aiEnabled) emptyList() else listOf(
         ActionButtonModel(label = "Summarize with AI", icon = Icons.Rounded.Summarize, disabledReason = unreadable) {
             viewModel.summary.open(document = document)
         },
@@ -114,6 +122,8 @@ private fun moreActions(
         ActionButtonModel(label = "Classify with AI", icon = Icons.Rounded.AutoAwesome, disabledReason = aiReason) {
             viewModel.classifyWithAi(document = document)
         },
+    )
+    return ai + listOf(
         ActionButtonModel(
             label = "Rename…",
             icon = Icons.Rounded.DriveFileRenameOutline,

@@ -68,9 +68,16 @@ class ChatTransport(
      * Sends the request [body] builds for the chosen model. [hasImages] tells a refused request apart:
      * a model without vision answers images with HTTP 400. A [structured] request asks for JSON; its
      * answer may come as the reasoning of a reasoning model when the answer itself is empty.
+     * [minTimeoutSeconds] lengthens the configured timeout for requests known to be slow.
      */
-    suspend fun complete(hasImages: Boolean, structured: Boolean = false, body: (String) -> JsonObject): ChatReply {
+    suspend fun complete(
+        hasImages: Boolean,
+        structured: Boolean = false,
+        minTimeoutSeconds: Int = 0,
+        body: (String) -> JsonObject,
+    ): ChatReply {
         val ai = settings()
+        val timeoutMillis = maxOf(ai.timeoutSeconds, minTimeoutSeconds) * MILLIS
         missingKey(settings = ai)?.let { detail ->
             return ChatReply.Failed(reason = ClassificationFailure.PROVIDER_UNAVAILABLE, detail = detail)
         }
@@ -91,8 +98,8 @@ class ChatTransport(
                 contentType(type = ContentType.Application.Json)
                 setBody(body = if (anthropic) AnthropicRequest.of(openAi = body(model)) else body(model))
                 timeout {
-                    requestTimeoutMillis = ai.timeoutSeconds * MILLIS
-                    socketTimeoutMillis = ai.timeoutSeconds * MILLIS
+                    requestTimeoutMillis = timeoutMillis
+                    socketTimeoutMillis = timeoutMillis
                 }
             }
             replyOf(

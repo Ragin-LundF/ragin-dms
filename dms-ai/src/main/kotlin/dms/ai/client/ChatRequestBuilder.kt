@@ -35,14 +35,31 @@ object ChatRequestBuilder {
             ChatMessageModel(role = "system", content = JsonPrimitive(value = PromptTexts.system(request = request))),
             ChatMessageModel(role = "user", content = content(text = text, images = images)),
         )
+        return structured(
+            model = model,
+            temperature = CLASSIFICATION_TEMPERATURE,
+            messages = messages,
+            schemaName = "document_classification",
+            schema = SuggestionSchema.schema,
+        )
+    }
+
+    /** A chat whose answer the server constrains to [schema] (strict). */
+    fun structured(
+        model: String,
+        temperature: Double,
+        messages: List<ChatMessageModel>,
+        schemaName: String,
+        schema: JsonObject,
+    ): JsonObject {
         return buildJsonObject {
-            fill(model = model, temperature = CLASSIFICATION_TEMPERATURE, messages = messages)
+            fill(model = model, temperature = temperature, messages = messages)
             putJsonObject(key = "response_format") {
                 put(key = "type", value = "json_schema")
                 putJsonObject(key = "json_schema") {
-                    put(key = "name", value = "document_classification")
+                    put(key = "name", value = schemaName)
                     put(key = "strict", value = true)
-                    put(key = "schema", element = SuggestionSchema.schema)
+                    put(key = "schema", element = schema)
                 }
             }
         }

@@ -47,6 +47,7 @@ class FileSettingsRepository(path: Path) : SettingsRepository {
             PreferencesModel(
                 addNewFilesWhileScanning = settings.addNewFilesWhileScanning,
                 ai = AiSettingsModel(
+                    enabled = settings.ai.isEnabled(),
                     baseUrl = settings.ai.baseUrl,
                     model = settings.ai.model,
                     preferVisionForPdfs = settings.ai.preferVisionForPdfs,
@@ -78,6 +79,7 @@ class FileSettingsRepository(path: Path) : SettingsRepository {
             val updated = current.copy(
                 addNewFilesWhileScanning = preferences.addNewFilesWhileScanning,
                 ai = AiSettingsDto(
+                    enabled = ai.enabled,
                     baseUrl = ai.baseUrl,
                     model = ai.model,
                     preferVisionForPdfs = ai.preferVisionForPdfs,

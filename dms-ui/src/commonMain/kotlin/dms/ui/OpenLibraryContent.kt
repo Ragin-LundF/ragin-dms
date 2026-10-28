@@ -73,12 +73,13 @@ fun OpenLibraryContent(
         library.reveal(documentId = documentId)
         onScreenChange(Screen.LIBRARY)
     }
-    val commands = remember(library, dashboard, ask) {
+    val commands = remember(library, dashboard, ask, quickLookViewModel) {
         PaletteCommands(
             session = session,
             dashboard = dashboard,
             library = library,
             ask = ask,
+            quickLook = quickLookViewModel,
             onScreenChange = onScreenChange,
             onOpenDocument = openDocument,
         )

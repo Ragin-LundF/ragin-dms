@@ -16,6 +16,8 @@ import java.nio.file.Path
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
+import kotlin.test.assertFalse
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
 
@@ -116,6 +118,25 @@ class FileSettingsRepositoryTest {
             assertEquals(expected = AiProvider.LOCAL, actual = ai.provider)
             assertEquals(expected = AiSettingsModel.DEFAULT_ANTHROPIC_MODEL, actual = ai.anthropicModel)
             assertEquals(expected = "http://localhost:9999/v1", actual = ai.baseUrl)
+        }
+    }
+
+    @Test
+    fun `AI is off on a new device, on for an older file whose AI settings were changed, and kept as saved`() {
+        runTest {
+            assertFalse(actual = FileSettingsRepository(path = path).loadPreferences().ai.enabled)
+
+            Files.writeString(path, "ai:\n  model: sample-model\n")
+            assertTrue(actual = FileSettingsRepository(path = path).loadPreferences().ai.enabled)
+
+            Files.writeString(path, "ai:\n  timeoutSeconds: 300\n")
+            assertFalse(actual = FileSettingsRepository(path = path).loadPreferences().ai.enabled)
+
+            val repository = FileSettingsRepository(path = path)
+            repository.savePreferences(preferences = PreferencesModel(ai = AiSettingsModel(enabled = true)))
+            assertTrue(actual = FileSettingsRepository(path = path).loadPreferences().ai.enabled)
+            repository.savePreferences(preferences = PreferencesModel(ai = AiSettingsModel(model = "sample-model")))
+            assertFalse(actual = FileSettingsRepository(path = path).loadPreferences().ai.enabled)
         }
     }
 }

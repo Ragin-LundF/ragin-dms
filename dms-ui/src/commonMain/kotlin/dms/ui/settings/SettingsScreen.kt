@@ -115,7 +115,12 @@ private fun SectionCard(
             onDetectDates = viewModel::detectDates,
         )
         SettingsSection.INBOX -> settings?.let {
-            InboxCard(inbox = it.layout.inbox, busyReason = busyReason, controller = viewModel.library)
+            InboxCard(
+                inbox = it.layout.inbox,
+                aiEnabled = state.ai.enabled,
+                busyReason = busyReason,
+                controller = viewModel.library,
+            )
         }
         SettingsSection.FIELDS -> settings?.let {
             FieldsCard(settings = it, busyReason = busyReason, controller = viewModel.library)

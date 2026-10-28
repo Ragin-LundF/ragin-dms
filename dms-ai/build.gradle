@@ -16,3 +16,13 @@ dependencies {
     testImplementation libs.kotlinx.coroutines.test
     testImplementation libs.ktor.client.mock
 }
+
+// The test against a running LM Studio runs only on request: ./gradlew :dms-ai:test -Pai.integration=true
+// (optional: -Pai.baseUrl=http://localhost:1234/v1 -Pai.model=<model id>).
+tasks.named("test") {
+    ["ai.integration", "ai.baseUrl", "ai.model"].each { name ->
+        if (project.hasProperty(name)) {
+            systemProperty name, project.property(name)
+        }
+    }
+}

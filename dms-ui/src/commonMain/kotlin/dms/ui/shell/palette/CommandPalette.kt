@@ -28,7 +28,11 @@ import kotlinx.coroutines.flow.stateIn
  * the buttons do. Actions whose lane is busy say why and are not chosen.
  */
 @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
-class CommandPalette(private val services: AppServices, session: LibrarySession, scope: CoroutineScope) {
+class CommandPalette(
+    private val services: AppServices,
+    private val session: LibrarySession,
+    scope: CoroutineScope,
+) {
 
     private val open = MutableStateFlow(value = false)
     private val query = MutableStateFlow(value = "")
@@ -58,7 +62,14 @@ class CommandPalette(private val services: AppServices, session: LibrarySession,
         flow4 = places,
         flow5 = busy,
     ) { typed, catalog, matches, allPlaces, running ->
-        Inputs(query = typed, catalog = catalog, textMatches = matches, places = allPlaces, busy = running)
+        Inputs(
+            query = typed,
+            catalog = catalog,
+            textMatches = matches,
+            places = allPlaces,
+            busy = running,
+            aiEnabled = session.state.value.aiEnabled,
+        )
     }
         .stateIn(scope = scope, started = SharingStarted.Eagerly, initialValue = currentInputs())
 
@@ -118,6 +129,7 @@ class CommandPalette(private val services: AppServices, session: LibrarySession,
 
     /** "Ask the library" for what is typed, closing the palette; `null` for an empty query. */
     fun ask(): PaletteItemModel? {
+        if (!session.state.value.aiEnabled) return null
         val question = query.value.trim().takeIf { it.isNotEmpty() } ?: return null
         close()
         return PaletteItemModel.AskLibrary(question = question)
@@ -138,6 +150,7 @@ class CommandPalette(private val services: AppServices, session: LibrarySession,
             textMatches = textMatches.value,
             places = places.value,
             busy = busy.value,
+            aiEnabled = session.state.value.aiEnabled,
         )
     }
 
@@ -151,6 +164,7 @@ class CommandPalette(private val services: AppServices, session: LibrarySession,
             textMatches = inputs.textMatches,
             places = inputs.places,
             busy = inputs.busy,
+            aiEnabled = inputs.aiEnabled,
         )
         memo = inputs to groups
         return groups
@@ -172,6 +186,7 @@ class CommandPalette(private val services: AppServices, session: LibrarySession,
         val textMatches: Set<DocumentIdModel>,
         val places: List<PaletteItemModel.GoTo>,
         val busy: Map<OperationLane, String>,
+        val aiEnabled: Boolean,
     )
 
     private companion object {

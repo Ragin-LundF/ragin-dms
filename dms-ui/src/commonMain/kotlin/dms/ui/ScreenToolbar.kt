@@ -58,8 +58,8 @@ fun ScreenToolbar(
                             action = PaletteAction.TAG_UNTAGGED,
                             icon = Icons.Rounded.AutoAwesome,
                             waitingFor = sessionState.aiBusy,
-                        ) { dashboard.aiBatches.tagAll() },
-                    ),
+                        ) { dashboard.aiBatches.tagAll() }.takeIf { sessionState.aiEnabled },
+                    ).filterNotNull(),
                     menuLabel = "More library actions",
                     busyReason = busy,
                 )

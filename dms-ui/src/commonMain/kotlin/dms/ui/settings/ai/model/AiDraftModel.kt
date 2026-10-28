@@ -10,6 +10,7 @@ import dms.application.port.state.model.AiSettingsModel
  * which one answers.
  */
 data class AiDraftModel(
+    val enabled: Boolean = true,
     val baseUrl: String,
     val model: String,
     val timeoutSeconds: String,
@@ -52,6 +53,7 @@ data class AiDraftModel(
             return null
         }
         return AiSettingsModel(
+            enabled = enabled,
             baseUrl = baseUrl.trim().trimEnd('/'),
             model = model.trim().ifEmpty { null },
             preferVisionForPdfs = preferVisionForPdfs,
@@ -68,6 +70,7 @@ data class AiDraftModel(
 
         fun of(settings: AiSettingsModel): AiDraftModel {
             return AiDraftModel(
+                enabled = settings.enabled,
                 baseUrl = settings.baseUrl,
                 model = settings.model.orEmpty(),
                 timeoutSeconds = settings.timeoutSeconds.toString(),

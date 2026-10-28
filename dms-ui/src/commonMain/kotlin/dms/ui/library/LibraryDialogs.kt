@@ -9,11 +9,12 @@ import dms.ui.export.ExportDialog
 import dms.ui.library.picker.FolderPickerDialog
 import dms.ui.pdf.MergeDialog
 import dms.ui.pdf.PageEditorDialog
+import dms.ui.pdf.rebuild.RebuildCompareDialog
 import dms.ui.review.ReviewDialog
 
 /**
  * The dialogs the library and its quickLookViewModel can open: confirmations, the folder picker of the bulk
- * bar's "Move", review, summary, chat and export.
+ * bar's "Move", review, summary, chat, export, the page editor, merging and the rebuild comparison.
  */
 @Composable
 fun LibraryDialogs(viewModel: LibraryViewModel, quickLookViewModel: QuickLookViewModel) {
@@ -26,4 +27,5 @@ fun LibraryDialogs(viewModel: LibraryViewModel, quickLookViewModel: QuickLookVie
     ExportDialog(controller = viewModel.export)
     PageEditorDialog(controller = quickLookViewModel.pages)
     MergeDialog(actions = quickLookViewModel.pdf)
+    RebuildCompareDialog(controller = quickLookViewModel.rebuild)
 }

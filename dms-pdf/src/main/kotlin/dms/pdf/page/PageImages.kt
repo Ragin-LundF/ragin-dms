@@ -12,17 +12,23 @@ import javax.imageio.ImageIO
 import kotlin.math.max
 import kotlin.math.roundToInt
 
-/** Small pictures of single pages for the page editor, as PNG. */
+/** Pictures of single pages for the page editor and the rebuild comparison, as PNG. */
 object PageImages {
 
-    private const val DPI = 48f
+    /** Enough for thumbnails; larger pictures are rendered at the resolution their size needs. */
+    private const val MIN_DPI = 48f
+    private const val MAX_DPI = 150f
+    private const val POINTS_PER_INCH = 72f
 
     fun render(file: Path, page: Int, maxSide: Int): PageImageModel? {
         PdfFiles.load(file = file).use { pdf ->
             if (page !in 0 until pdf.numberOfPages) {
                 return null
             }
-            val image = PDFRenderer(pdf).renderImageWithDPI(page, DPI, ImageType.RGB)
+            val box = pdf.getPage(page).cropBox
+            val needed = maxSide * POINTS_PER_INCH / max(box.width, box.height)
+            val dpi = needed.coerceIn(minimumValue = MIN_DPI, maximumValue = MAX_DPI)
+            val image = PDFRenderer(pdf).renderImageWithDPI(page, dpi, ImageType.RGB)
             return encode(image = scaled(image = image, maxSide = maxSide))
         }
     }

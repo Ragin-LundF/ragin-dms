@@ -18,6 +18,7 @@ object OutcomeMessages {
             OperationOutcome.LibraryNotOpen -> problem(text = "No library is open")
             OperationOutcome.NotFound -> problem(text = "The document or file no longer exists")
             OperationOutcome.ScanOutdated -> problem(text = "The folders changed since the last scan; scan again")
+            OperationOutcome.SourceChanged -> problem(text = "The file changed in the meantime; nothing was changed")
             OperationOutcome.NotConfirmed -> problem(text = "Nothing was changed without confirmation")
             is OperationOutcome.InvalidName -> problem(text = nameProblem(violation = outcome.violation))
             OperationOutcome.NameTaken -> problem(text = "Another entry there already has this name (ignoring case)")

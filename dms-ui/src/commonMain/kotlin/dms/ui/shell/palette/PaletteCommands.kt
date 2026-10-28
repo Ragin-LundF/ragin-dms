@@ -3,9 +3,11 @@ package dms.ui.shell.palette
 import dms.domain.document.model.DocumentIdModel
 import dms.ui.ask.AskViewModel
 import dms.ui.dashboard.DashboardViewModel
+import dms.ui.document.QuickLookViewModel
 import dms.ui.library.LibraryViewModel
 import dms.ui.model.Screen
 import dms.ui.session.LibrarySession
+import dms.ui.session.model.UiMessageModel
 import dms.ui.shell.palette.model.PaletteAction
 import dms.ui.shell.palette.model.PaletteItemModel
 
@@ -18,6 +20,7 @@ class PaletteCommands(
     private val dashboard: DashboardViewModel,
     private val library: LibraryViewModel,
     private val ask: AskViewModel,
+    private val quickLook: QuickLookViewModel,
     private val onScreenChange: (Screen) -> Unit,
     private val onOpenDocument: (DocumentIdModel) -> Unit,
 ) {
@@ -50,11 +53,23 @@ class PaletteCommands(
             // The AI batches show their progress and results on the dashboard, so it comes to the front.
             PaletteAction.TAG_UNTAGGED -> onDashboard { dashboard.aiBatches.tagAll() }
             PaletteAction.CLASSIFY_UNCATEGORIZED -> onDashboard { dashboard.aiBatches.classifyAll() }
+            PaletteAction.CONVERT_TO_REAL_PDF -> convertOpenDocument()
             PaletteAction.OPEN_DASHBOARD -> onScreenChange(Screen.DASHBOARD)
             PaletteAction.OPEN_TASKS -> onScreenChange(Screen.TASKS)
             PaletteAction.OPEN_LIBRARY -> onScreenChange(Screen.LIBRARY)
             PaletteAction.OPEN_SETTINGS -> onScreenChange(Screen.SETTINGS)
         }
+    }
+
+    /** Converts the document open in the quick look, as its button does; without one it says so. */
+    private fun convertOpenDocument() {
+        val shown = quickLook.quickLook.state.value.shown
+        val document = shown?.let { quickLook.catalog.value?.documents?.get(it) }
+        if (document == null) {
+            session.report(message = UiMessageModel(text = "Open a scanned PDF in the library first", isError = true))
+            return
+        }
+        quickLook.rebuild.start(document = document)
     }
 
     private fun onDashboard(block: () -> Unit) {
