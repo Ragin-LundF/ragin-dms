@@ -2,6 +2,38 @@
 
 All notable changes to ragin-dms are listed here.
 
+## 1.3.0
+
+### Turn scans into real PDFs
+
+- New "Convert to real PDF" for scanned PDFs that have no text yet. You find it in a document's PDF
+  tools in quick look and in the command palette.
+- Your AI model reads every page. Each line it can read without doubt becomes real text that you can
+  select, copy and search. Logos, stamps, signatures, handwriting, tables and every line the AI is not
+  sure about stay exactly as they were scanned.
+- Crooked scans are straightened first.
+- Compare the original and the new PDF side by side, page by page. Flip between them, or mark what
+  became text and what stayed an image. You also see both file sizes and why some lines stayed images.
+- Then choose: keep the original, use the new PDF (the scan goes to your system's trash), or keep both.
+  The new PDF is then added next to the original, with the same category, tags and fields.
+- Your library only changes when you choose. If the PDF changes while it is being converted, or
+  before you choose, the original is not replaced.
+- This needs an AI model that can read images. A local model takes a few minutes per page. You can
+  cancel at any time, and a page the AI cannot read stays as it was.
+
+### AI
+
+- Use Anthropic's Claude as an alternative to your local AI server. The API key is read from the
+  ANTHROPIC_API_KEY environment variable and is never saved. Ask still builds its index with your local
+  server.
+- A new "Use AI" switch in Settings › AI. While it is off, the app shows no AI features at all. It is
+  off on a new computer and stays on if you already use AI.
+
+### Settings
+
+- Settings show one section at a time, chosen from a list: Library folders, Scanning, Inbox, Custom
+  fields, Matching rules and AI. Changes you have not saved yet are kept when you switch sections.
+
 ## 1.2.0
 
 ### A new look for the library

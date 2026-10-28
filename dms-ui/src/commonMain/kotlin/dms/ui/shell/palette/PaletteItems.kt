@@ -71,13 +71,17 @@ object PaletteItems {
         return tags + categories + folders + smartFolders
     }
 
-    /** The groups for [query]; [busy] names what runs in each lane, if anything. */
+    /**
+     * The groups for [query]; [busy] names what runs in each lane, if anything. Without [aiEnabled], no
+     * AI action and no question to the library is offered.
+     */
     fun of(
         query: String,
         catalog: CatalogModel?,
         textMatches: Set<DocumentIdModel>,
         places: List<PaletteItemModel.GoTo>,
         busy: Map<OperationLane, String>,
+        aiEnabled: Boolean = true,
     ): List<PaletteGroupModel> {
         val wanted = query.trim().lowercase(Locale.ROOT)
         val documents = catalog?.let { documents(catalog = it, wanted = wanted, textMatches = textMatches) }.orEmpty()
@@ -91,7 +95,10 @@ object PaletteItems {
         return listOf(
             PaletteGroupModel(title = "Documents", items = documents),
             PaletteGroupModel(title = "Go to", items = matchingPlaces),
-            PaletteGroupModel(title = "Actions", items = actions(query = query.trim(), wanted = wanted, busy = busy)),
+            PaletteGroupModel(
+                title = "Actions",
+                items = actions(query = query.trim(), wanted = wanted, busy = busy, aiEnabled = aiEnabled),
+            ),
         ).filter { it.items.isNotEmpty() }
     }
 
@@ -116,8 +123,14 @@ object PaletteItems {
             byText.map { itemOf(document = it, detail = "Found in its text · ${it.path.value}") }
     }
 
-    private fun actions(query: String, wanted: String, busy: Map<OperationLane, String>): List<PaletteItemModel> {
+    private fun actions(
+        query: String,
+        wanted: String,
+        busy: Map<OperationLane, String>,
+        aiEnabled: Boolean,
+    ): List<PaletteItemModel> {
         val matching = PaletteAction.entries
+            .filter { aiEnabled || it.lane != OperationLane.AI }
             .filter { wanted.isEmpty() || it.label.lowercase(Locale.ROOT).contains(other = wanted) }
             .map { action ->
                 val running = action.lane?.let { busy[it] }
@@ -126,7 +139,7 @@ object PaletteItems {
                     disabledReason = running?.let { OutcomeMessages.waitFor(operation = it) },
                 )
             }
-        val ask = PaletteItemModel.AskLibrary(question = query).takeIf { query.isNotEmpty() }
+        val ask = PaletteItemModel.AskLibrary(question = query).takeIf { aiEnabled && query.isNotEmpty() }
         return matching + listOfNotNull(ask)
     }
 

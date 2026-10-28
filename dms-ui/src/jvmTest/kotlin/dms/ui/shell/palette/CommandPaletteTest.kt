@@ -18,6 +18,7 @@ class CommandPaletteTest {
     @Test
     fun `opening shows every action, typing narrows them and starts at the first line`() {
         UiTest.run { app ->
+            app.enableAi()
             val palette = CommandPalette(services = app.services, session = app.session, scope = backgroundScope)
 
             palette.open()
@@ -43,6 +44,7 @@ class CommandPaletteTest {
     @Test
     fun `the arrow keys wrap around, and choosing returns the line and closes`() {
         UiTest.run { app ->
+            app.enableAi()
             val palette = CommandPalette(services = app.services, session = app.session, scope = backgroundScope)
             palette.open(initial = "sync")
 
@@ -58,6 +60,7 @@ class CommandPaletteTest {
     @Test
     fun `asking takes what is typed, and an empty query asks nothing`() {
         UiTest.run { app ->
+            app.enableAi()
             val palette = CommandPalette(services = app.services, session = app.session, scope = backgroundScope)
             palette.open()
 
@@ -73,6 +76,7 @@ class CommandPaletteTest {
     @Test
     fun `an action whose lane is busy says why and is not chosen, while others still are`() {
         UiTest.run { app ->
+            app.enableAi()
             val palette = CommandPalette(services = app.services, session = app.session, scope = backgroundScope)
             val release = CompletableDeferred<Unit>()
             app.session.perform(label = "Long scan") { release.await() }

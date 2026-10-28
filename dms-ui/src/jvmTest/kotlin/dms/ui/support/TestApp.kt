@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import dms.application.library.model.LibraryCommand
+import dms.application.port.state.model.AiSettingsModel
 import dms.application.port.state.model.PreferencesModel
 import dms.domain.library.model.FolderLocationModel
 import dms.storage.platform.SystemTrash
@@ -53,7 +54,10 @@ class TestApp(scope: CoroutineScope) {
      */
     suspend fun configure(withSync: Boolean = true, addNewFiles: Boolean = false) {
         services.library.settings.savePreferences(
-            preferences = PreferencesModel(addNewFilesWhileScanning = addNewFiles),
+            preferences = PreferencesModel(
+                addNewFilesWhileScanning = addNewFiles,
+                ai = AiSettingsModel(enabled = true),
+            ),
         )
         services.library.configureLibrary(
             command = LibraryCommand.CreatePrimary(
@@ -70,6 +74,12 @@ class TestApp(scope: CoroutineScope) {
             )
         }
         session.open()
+        idle()
+    }
+
+    /** Switches AI on, as the "Use AI" switch in Settings does, for tests without a configured library. */
+    suspend fun enableAi() {
+        session.updatePreferences { it.copy(ai = it.ai.copy(enabled = true)) }
         idle()
     }
 

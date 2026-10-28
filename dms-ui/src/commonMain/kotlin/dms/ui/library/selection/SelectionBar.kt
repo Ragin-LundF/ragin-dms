@@ -64,13 +64,15 @@ fun SelectionBar(state: LibraryUiStateModel, viewModel: LibraryViewModel, modifi
                 disabledReason = busyReason,
                 onClick = bulk::move,
             )
-            BarButton(
-                label = "Tag with AI",
-                icon = Icons.Rounded.AutoAwesome,
-                disabledReason = aiBusyReason,
-                ai = true,
-                onClick = bulk::tagWithAi,
-            )
+            if (state.aiEnabled) {
+                BarButton(
+                    label = "Tag with AI",
+                    icon = Icons.Rounded.AutoAwesome,
+                    disabledReason = aiBusyReason,
+                    ai = true,
+                    onClick = bulk::tagWithAi,
+                )
+            }
             BarButton(
                 label = "Trash…",
                 icon = Icons.Rounded.Delete,

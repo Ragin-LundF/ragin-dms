@@ -91,7 +91,7 @@ class AskViewModelTest {
 
             val entry = ask.state.value.entries.single()
             assertNull(actual = entry.answer)
-            assertTrue(actual = entry.note.orEmpty().startsWith(prefix = "The AI server does not answer"))
+            assertTrue(actual = entry.note.orEmpty().startsWith(prefix = "The AI does not answer"))
         }
     }
 

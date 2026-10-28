@@ -25,6 +25,8 @@ data class DashboardUiStateModel(
     val lastScanAt: Instant? = null,
     val busy: String? = null,
     val aiBusy: String? = null,
+    /** Whether AI is set up; without it the dashboard offers no AI run. */
+    val aiEnabled: Boolean = true,
     val stats: LibraryStatsModel = LibraryStatsModel(),
     val classifyCandidates: Int = 0,
     val tagCandidates: Int = 0,

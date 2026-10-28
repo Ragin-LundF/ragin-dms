@@ -96,7 +96,8 @@ class SettingsViewModelTest {
             val connection = viewModel.state.first { it.aiConnection.models.isNotEmpty() }.aiConnection
             assertEquals(expected = listOf("sample-a", "sample-b"), actual = connection.models)
             assertFalse(actual = connection.isError)
-            assertEquals(expected = AiSettingsModel(), actual = app.services.library.settings.loadPreferences().ai)
+            val saved = app.services.library.settings.loadPreferences().ai
+            assertEquals(expected = AiSettingsModel(enabled = true), actual = saved)
         }
     }
 

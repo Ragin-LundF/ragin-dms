@@ -55,6 +55,9 @@ import dms.application.pdf.MergeDocuments
 import dms.application.pdf.PdfVersions
 import dms.application.pdf.ScansWithoutText
 import dms.application.pdf.SplitDocument
+import dms.application.pdf.rebuild.KeepRebuild
+import dms.application.pdf.rebuild.RebuildAvailability
+import dms.application.pdf.rebuild.RebuildPdf
 import dms.application.port.system.IdGenerator
 import dms.application.preview.DocumentThumbnails
 import dms.application.resolution.DismissTask
@@ -142,6 +145,7 @@ class AppContainer(
                 PathResolver.root(folder = folder)?.let { PathResolver.target(root = it, path = path) }
             },
         ),
+        rebuildDirectory = appDataDirectory.resolve("rebuild"),
     )
     private val trashDocument = TrashDocument(
         store = store,
@@ -394,6 +398,7 @@ class AppContainer(
             texts = adapters.texts,
             ids = ids,
         )
+        val rebuildAvailability = RebuildAvailability(store = store, pdf = pdf.editor)
         val makeSearchable = MakeSearchable(
             store = store,
             pdf = pdf.editor,
@@ -430,6 +435,29 @@ class AppContainer(
             embedPdfMetadata = EmbedPdfMetadata(store = store, pdf = pdf.editor, versions = versions),
             editor = pdf.editor,
             ocr = pdf.ocr,
+            rebuildAvailability = rebuildAvailability,
+            rebuildPdf = RebuildPdf(
+                store = store,
+                pdf = pdf.editor,
+                rebuilder = pdf.rebuilder,
+                reader = ai.layoutReader,
+                availability = rebuildAvailability,
+            ),
+            keepRebuild = keepRebuild(versions = versions),
+            rebuilder = pdf.rebuilder,
+        )
+    }
+
+    private fun keepRebuild(versions: PdfVersions): KeepRebuild {
+        return KeepRebuild(
+            store = store,
+            rebuilder = pdf.rebuilder,
+            versions = versions,
+            replicator = replicator,
+            names = names,
+            activity = activity,
+            clock = clock,
+            ids = ids,
         )
     }
 

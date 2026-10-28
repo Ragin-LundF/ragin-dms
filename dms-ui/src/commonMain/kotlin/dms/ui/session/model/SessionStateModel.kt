@@ -26,6 +26,12 @@ data class SessionStateModel(
             return busyIn(lane = OperationLane.LIBRARY)
         }
 
+    /** Whether the user set up AI on this device; while it is off, no AI feature is shown. */
+    val aiEnabled: Boolean
+        get() {
+            return preferences.ai.enabled
+        }
+
     /** The AI run that runs now, which every other AI run waits for. */
     val aiBusy: String?
         get() {

@@ -1,5 +1,6 @@
 package dms.storage.state
 
+import dms.application.port.state.model.AiProvider
 import dms.application.port.state.model.AiSettingsModel
 import dms.application.port.state.model.LayoutPreferencesModel
 import dms.application.port.state.model.PreferencesModel
@@ -15,6 +16,8 @@ import java.nio.file.Path
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
+import kotlin.test.assertFalse
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
 
@@ -68,6 +71,8 @@ class FileSettingsRepositoryTest {
                     preferVisionForPdfs = true,
                     acceptSuggestedFileNames = true,
                     inputCharacters = 30_000,
+                    provider = AiProvider.ANTHROPIC,
+                    anthropicModel = "claude-sonnet-5-5",
                 ),
                 layout = LayoutPreferencesModel(
                     sidebarWidth = 280,
@@ -101,5 +106,37 @@ class FileSettingsRepositoryTest {
             location = FolderLocationModel(value = location),
             role = role,
         )
+    }
+
+    @Test
+    fun `an older AI block, or an unknown provider, loads as Local AI with the default Claude model`() {
+        runTest {
+            Files.writeString(path, "ai:\n  baseUrl: http://localhost:9999/v1\n  provider: SOMETHING\n")
+
+            val ai = FileSettingsRepository(path = path).loadPreferences().ai
+
+            assertEquals(expected = AiProvider.LOCAL, actual = ai.provider)
+            assertEquals(expected = AiSettingsModel.DEFAULT_ANTHROPIC_MODEL, actual = ai.anthropicModel)
+            assertEquals(expected = "http://localhost:9999/v1", actual = ai.baseUrl)
+        }
+    }
+
+    @Test
+    fun `AI is off on a new device, on for an older file whose AI settings were changed, and kept as saved`() {
+        runTest {
+            assertFalse(actual = FileSettingsRepository(path = path).loadPreferences().ai.enabled)
+
+            Files.writeString(path, "ai:\n  model: sample-model\n")
+            assertTrue(actual = FileSettingsRepository(path = path).loadPreferences().ai.enabled)
+
+            Files.writeString(path, "ai:\n  timeoutSeconds: 300\n")
+            assertFalse(actual = FileSettingsRepository(path = path).loadPreferences().ai.enabled)
+
+            val repository = FileSettingsRepository(path = path)
+            repository.savePreferences(preferences = PreferencesModel(ai = AiSettingsModel(enabled = true)))
+            assertTrue(actual = FileSettingsRepository(path = path).loadPreferences().ai.enabled)
+            repository.savePreferences(preferences = PreferencesModel(ai = AiSettingsModel(model = "sample-model")))
+            assertFalse(actual = FileSettingsRepository(path = path).loadPreferences().ai.enabled)
+        }
     }
 }

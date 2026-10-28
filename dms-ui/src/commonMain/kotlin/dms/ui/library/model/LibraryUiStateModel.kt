@@ -46,6 +46,8 @@ data class LibraryUiStateModel(
     val inspected: DocumentModel? = null,
     val busy: String? = null,
     val aiBusy: String? = null,
+    /** Whether AI is set up; without it the library offers no AI action. */
+    val aiEnabled: Boolean = true,
     val layout: DocumentLayout = DocumentLayout.GRID,
     val collapsedGroups: Set<SidebarGroup> = emptySet(),
     val contentSearch: ContentSearchStateModel = ContentSearchStateModel(),

@@ -43,6 +43,7 @@ object LibraryStates {
         val closed = LibraryUiStateModel(
             busy = session.busy,
             aiBusy = session.aiBusy,
+            aiEnabled = session.aiEnabled,
             layout = view.layout,
             groupBy = view.groupBy,
             selection = view.selection,

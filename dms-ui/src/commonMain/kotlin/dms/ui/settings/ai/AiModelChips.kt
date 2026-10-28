@@ -9,12 +9,12 @@ import androidx.compose.runtime.Composable
 import dms.ui.theme.Spacing
 
 /**
- * The models the server offered in the last test; picking one fills the model field. The first chip
- * leaves the field blank, which uses the server's first loaded model.
+ * The models the server offered in the last test; picking one fills the model field. The first chip,
+ * [firstLabel], leaves the field blank: the server's first loaded model, or Anthropic's default one.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun AiModelChips(models: List<String>, selected: String, onSelect: (String) -> Unit) {
+fun AiModelChips(models: List<String>, selected: String, firstLabel: String, onSelect: (String) -> Unit) {
     FlowRow(
         horizontalArrangement = Arrangement.spacedBy(space = Spacing.small),
         verticalArrangement = Arrangement.spacedBy(space = Spacing.small),
@@ -22,7 +22,7 @@ fun AiModelChips(models: List<String>, selected: String, onSelect: (String) -> U
         FilterChip(
             selected = selected.isBlank(),
             onClick = { onSelect("") },
-            label = { Text(text = "First loaded model") },
+            label = { Text(text = firstLabel) },
         )
         models.forEach { model ->
             FilterChip(

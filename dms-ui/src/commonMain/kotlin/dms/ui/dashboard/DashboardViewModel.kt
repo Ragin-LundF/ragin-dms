@@ -307,9 +307,10 @@ class DashboardViewModel(
             lastScanAt = sessionState.lastScanAt,
             busy = sessionState.busy,
             aiBusy = sessionState.aiBusy,
+            aiEnabled = sessionState.aiEnabled,
             classifyCandidates = aiCandidates(dashboard = dashboard) { it.classification == null },
             tagCandidates = aiCandidates(dashboard = dashboard) { it.tags.isEmpty() },
-            inbox = inboxOf(catalog = services.library.catalog.value),
+            inbox = inboxOf(catalog = services.library.catalog.value, aiEnabled = sessionState.aiEnabled),
             upcoming = upcomingOf(dashboard = dashboard, catalog = services.library.catalog.value),
             stats = LibraryStatistics.of(
                 catalog = services.library.catalog.value,
@@ -319,12 +320,12 @@ class DashboardViewModel(
         )
     }
 
-    private fun inboxOf(catalog: CatalogModel?): InboxSummaryModel? {
+    private fun inboxOf(catalog: CatalogModel?, aiEnabled: Boolean): InboxSummaryModel? {
         val inbox = catalog?.settings?.layout?.inbox?.takeIf { it.enabled } ?: return null
         return InboxSummaryModel(
             path = inbox.path.value,
             count = catalog.documents.values.count { inbox.contains(candidate = it.path) },
-            aiAnalysis = inbox.aiAnalysis,
+            aiAnalysis = inbox.aiAnalysis && aiEnabled,
         )
     }
 

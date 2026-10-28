@@ -336,7 +336,7 @@ class LibrarySession(
         }
         log.info(text = "Inbox: ${collected.size} new documents")
         val inbox = services.library.catalog.value?.settings?.layout?.inbox ?: return
-        if (inbox.autoAnalyze && inbox.aiAnalysis) {
+        if (inbox.autoAnalyze && inbox.aiAnalysis && state.value.aiEnabled) {
             analyzeInbox()
         }
     }

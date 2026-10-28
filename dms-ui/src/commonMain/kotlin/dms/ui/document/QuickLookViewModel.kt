@@ -30,6 +30,7 @@ import dms.ui.document.suggestion.DashboardFeed
 import dms.ui.document.suggestion.SuggestionValues
 import dms.ui.pdf.PageEditorController
 import dms.ui.pdf.PdfActions
+import dms.ui.pdf.rebuild.RebuildController
 import dms.ui.preview.ThumbnailLoader
 import dms.ui.review.AiMessages
 import dms.ui.review.ReviewController
@@ -40,7 +41,10 @@ import dms.ui.session.NameInput
 import dms.ui.session.OutcomeMessages
 import dms.ui.session.model.OperationLane
 import dms.ui.session.model.UiMessageModel
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 
 /**
  * Changes to the one document shown in the quick look: metadata, category, tags, fields, name, place;
@@ -66,6 +70,13 @@ class QuickLookViewModel(
         scope = viewModelScope,
     )
     val pdf: PdfActions = PdfActions(services = services, session = session, dialogs = dialogs, scope = viewModelScope)
+    val rebuild: RebuildController = RebuildController(
+        services = services,
+        session = session,
+        platform = platform,
+        dialogs = dialogs,
+        scope = viewModelScope,
+    )
 
     val thumbnails: ThumbnailLoader = ThumbnailLoader(services = services, platform = platform)
 
@@ -73,6 +84,11 @@ class QuickLookViewModel(
     val feed: DashboardFeed = DashboardFeed(session = session, scope = viewModelScope)
 
     val quickLook: QuickLookController = QuickLookController()
+
+    /** Whether AI is set up; without it the quick look offers no AI action. */
+    val aiEnabled: StateFlow<Boolean> = session.state
+        .map { it.aiEnabled }
+        .stateIn(scope = viewModelScope, started = SharingStarted.Eagerly, initialValue = session.state.value.aiEnabled)
 
     /** The open catalog, for the sections that show more than the document itself. */
     val catalog: StateFlow<CatalogModel?> = services.library.catalog

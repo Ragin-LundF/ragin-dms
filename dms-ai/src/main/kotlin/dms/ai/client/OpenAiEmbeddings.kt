@@ -5,6 +5,7 @@ import dms.application.port.ai.EmbeddingClient
 import dms.application.port.ai.model.ClassificationFailure
 import dms.application.port.ai.model.EmbeddingResult
 import dms.application.port.ai.model.ModelList
+import dms.application.port.state.model.AiProvider
 import dms.application.port.state.model.AiSettingsModel
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
@@ -25,7 +26,8 @@ import java.util.Locale
 
 /**
  * Embeddings on any server with the OpenAI `/embeddings` API (LM Studio, Ollama's `/v1`). The model
- * is the one chosen in the AI settings, or else the first embedding model the server lists.
+ * is the one chosen in the AI settings, or else the first embedding model the server lists. Anthropic has
+ * no embeddings, so this always uses the local server, also while Anthropic answers the chats.
  */
 class OpenAiEmbeddings(
     private val http: HttpClient,
@@ -34,14 +36,14 @@ class OpenAiEmbeddings(
 ) : EmbeddingClient {
 
     override suspend fun model(): String? {
-        val ai = settings()
+        val ai = local()
         ai.embeddingModel?.takeIf { it.isNotBlank() }?.let { return it }
         val models = transport.models(settings = ai) as? ModelList.Available ?: return null
         return models.models.firstOrNull { it.lowercase(Locale.ROOT).contains(other = "embed") }
     }
 
     override suspend fun embed(texts: List<String>): EmbeddingResult {
-        val ai = settings()
+        val ai = local()
         val model = model() ?: return EmbeddingResult.Failed(
             reason = ClassificationFailure.PROVIDER_UNAVAILABLE,
             detail = "No embedding model: load one in LM Studio or choose it in the AI settings",
@@ -85,6 +87,10 @@ class OpenAiEmbeddings(
             // No JSON, or not the embeddings schema; Ktor wraps every deserialization error in this.
             EmbeddingResult.Failed(reason = ClassificationFailure.INVALID_RESPONSE, detail = exception.message)
         }
+    }
+
+    private suspend fun local(): AiSettingsModel {
+        return settings().copy(provider = AiProvider.LOCAL)
     }
 
     private companion object {

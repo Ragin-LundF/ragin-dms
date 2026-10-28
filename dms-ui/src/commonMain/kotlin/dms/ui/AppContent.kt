@@ -51,6 +51,7 @@ fun AppContent(
     val scope = rememberCoroutineScope()
     val navigationCounts = remember { NavigationCounts(services = services, session = session, scope = scope) }
     val counts by navigationCounts.counts.collectAsState()
+    LeaveAskWithoutAi(aiEnabled = sessionState.aiEnabled, screen = screen, onScreenChange = onScreenChange)
     LaunchedEffect(key1 = sessionState.message) {
         val message = sessionState.message ?: return@LaunchedEffect
         snackbar.showSnackbar(
@@ -67,6 +68,7 @@ fun AppContent(
         Row(modifier = Modifier.fillMaxSize().padding(paddingValues = padding)) {
             NavigationSidebar(
                 screen = screen,
+                hidden = if (sessionState.aiEnabled) emptySet() else setOf(Screen.ASK),
                 counts = counts,
                 // The library needs the width for its own sidebar, so the navigation is a rail there.
                 collapsed = navigationCollapsed || screen == Screen.LIBRARY,
@@ -99,5 +101,13 @@ fun AppContent(
                 )
             }
         }
+    }
+}
+
+/** Ask needs the AI: when the user switches AI off while it shows, the dashboard takes its place. */
+@Composable
+private fun LeaveAskWithoutAi(aiEnabled: Boolean, screen: Screen, onScreenChange: (Screen) -> Unit) {
+    LaunchedEffect(key1 = aiEnabled, key2 = screen) {
+        if (!aiEnabled && screen == Screen.ASK) onScreenChange(Screen.DASHBOARD)
     }
 }

@@ -14,6 +14,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -36,6 +37,7 @@ import dms.ui.theme.Spacing
 @Composable
 fun MoreSection(document: DocumentModel, catalog: CatalogModel, busyReason: String?, viewModel: QuickLookViewModel) {
     var open by remember { mutableStateOf(value = false) }
+    val aiEnabled by viewModel.aiEnabled.collectAsState()
     Column(verticalArrangement = Arrangement.spacedBy(space = Spacing.medium)) {
         Row(
             modifier = Modifier
@@ -68,7 +70,14 @@ fun MoreSection(document: DocumentModel, catalog: CatalogModel, busyReason: Stri
                 busyReason = busyReason,
                 controller = viewModel.details,
             )
-            PdfSection(document = document, busyReason = busyReason, pages = viewModel.pages, actions = viewModel.pdf)
+            PdfSection(
+                document = document,
+                busyReason = busyReason,
+                pages = viewModel.pages,
+                actions = viewModel.pdf,
+                rebuild = viewModel.rebuild,
+                aiEnabled = aiEnabled,
+            )
         }
     }
 }

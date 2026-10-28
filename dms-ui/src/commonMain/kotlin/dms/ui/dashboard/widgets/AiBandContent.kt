@@ -13,7 +13,7 @@ object AiBandContent {
     fun of(state: DashboardUiStateModel): AiBandModel? {
         val untagged = state.tagCandidates
         val unclassified = state.classifyCandidates
-        if (untagged == 0 && unclassified == 0) {
+        if (!state.aiEnabled || untagged == 0 && unclassified == 0) {
             return null
         }
         return AiBandModel(

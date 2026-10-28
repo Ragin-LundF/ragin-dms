@@ -7,6 +7,7 @@ import dms.application.port.ai.model.ClassificationResult
 import dms.application.port.ai.model.DocumentContent
 import dms.application.port.ai.model.ModelList
 import dms.application.port.ai.model.PageImageModel
+import dms.application.port.state.model.AiProvider
 import dms.application.port.state.model.AiSettingsModel
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.MockRequestHandleScope
@@ -130,17 +131,121 @@ class OpenAiCompatibleClientTest {
         }
     }
 
+    @Test
+    fun `Anthropic gets a Messages API request with the key, and its text block is the answer`() {
+        runTest {
+            val anthropic = AiSettingsModel(provider = AiProvider.ANTHROPIC, anthropicModel = "claude-opus-5-5")
+            val requests = mutableListOf<HttpRequestData>()
+            val text = Json.encodeToString(value = """{"title":"Sample bill"}""")
+            val client = clientAnswering(settings = anthropic, anthropicKey = "sample-key") { request ->
+                requests += request
+                json(text = """{"content":[{"type":"thinking","thinking":""},{"type":"text","text":$text}]}""")
+            }
+
+            val result = client.suggest(request = Requests.request())
+
+            assertEquals(
+                expected = "Sample bill",
+                actual = assertIs<ClassificationResult.Suggested>(value = result).suggestion.title,
+            )
+            val request = requests.single()
+            assertEquals(expected = "/v1/messages", actual = request.url.encodedPath)
+            assertEquals(expected = "sample-key", actual = request.headers["x-api-key"])
+            assertEquals(expected = "2023-06-01", actual = request.headers["anthropic-version"])
+            assertTrue(actual = "output_config" in sentBodies.single())
+        }
+    }
+
+    @Test
+    fun `Anthropic without an API key fails before any request`() {
+        runTest {
+            val anthropic = AiSettingsModel(provider = AiProvider.ANTHROPIC, anthropicModel = "claude-opus-5-5")
+            val client = clientAnswering(settings = anthropic, anthropicKey = null) { error("No request expected") }
+
+            val failed = assertIs<ClassificationResult.Failed>(value = client.suggest(request = Requests.request()))
+
+            assertEquals(expected = ClassificationFailure.PROVIDER_UNAVAILABLE, actual = failed.reason)
+            assertEquals(expected = "ANTHROPIC_API_KEY is not set", actual = failed.detail)
+        }
+    }
+
+    @Test
+    fun `an Anthropic refusal is a failure`() {
+        runTest {
+            val anthropic = AiSettingsModel(provider = AiProvider.ANTHROPIC, anthropicModel = "claude-opus-5-5")
+            val client = clientAnswering(settings = anthropic, anthropicKey = "sample-key") {
+                json(text = """{"content":[],"stop_reason":"refusal"}""")
+            }
+
+            val failed = assertIs<ClassificationResult.Failed>(value = client.suggest(request = Requests.request()))
+
+            assertEquals(expected = ClassificationFailure.INVALID_RESPONSE, actual = failed.reason)
+        }
+    }
+
+    @Test
+    fun `the Anthropic key is never sent to the local server`() {
+        runTest {
+            val requests = mutableListOf<HttpRequestData>()
+            val local = settings.copy(model = null)
+            val client = clientAnswering(settings = local, anthropicKey = "sample-key") { request ->
+                requests += request
+                if (request.url.encodedPath.endsWith(suffix = "/models")) {
+                    json(text = """{"data":[{"id":"first-model"}]}""")
+                } else {
+                    json(text = answer(content = "{}"))
+                }
+            }
+
+            client.suggest(request = Requests.request())
+
+            val paths = requests.map { it.url.encodedPath }
+            assertEquals(expected = listOf("/v1/models", "/v1/chat/completions"), actual = paths)
+            assertTrue(actual = requests.all { it.headers["x-api-key"] == null })
+        }
+    }
+
+    @Test
+    fun `Anthropic's model list is read with the key, and without a key it is unavailable`() {
+        runTest {
+            val anthropic = AiSettingsModel(provider = AiProvider.ANTHROPIC)
+            val requests = mutableListOf<HttpRequestData>()
+            val keyed = clientAnswering(settings = anthropic, anthropicKey = "sample-key") { request ->
+                requests += request
+                json(text = """{"data":[{"id":"claude-opus-5-5"}]}""")
+            }
+            val keyless = clientAnswering(settings = anthropic, anthropicKey = null) { error("No request expected") }
+
+            val models = assertIs<ModelList.Available>(value = keyed.models(settings = anthropic))
+            val missing = assertIs<ModelList.Unavailable>(value = keyless.models(settings = anthropic))
+
+            assertEquals(expected = listOf("claude-opus-5-5"), actual = models.models)
+            val request = requests.single()
+            assertEquals(expected = "api.anthropic.com", actual = request.url.host)
+            assertEquals(expected = "/v1/models", actual = request.url.encodedPath)
+            assertEquals(expected = "sample-key", actual = request.headers["x-api-key"])
+            assertEquals(expected = "ANTHROPIC_API_KEY is not set", actual = missing.detail)
+        }
+    }
+
     private fun clientAnswering(
         settings: AiSettingsModel = this.settings,
+        anthropicKey: String? = null,
         handler: suspend MockRequestHandleScope.(HttpRequestData) -> HttpResponseData,
     ): OpenAiCompatibleClient {
         val engine = MockEngine { request ->
-            if (request.url.encodedPath.endsWith(suffix = "/chat/completions")) {
+            val path = request.url.encodedPath
+            if (path.endsWith(suffix = "/chat/completions") || path.endsWith(suffix = "/messages")) {
                 sentBodies += Json.parseToJsonElement(string = request.body.toByteArray().decodeToString()).jsonObject
             }
             handler(request)
         }
-        return AiAdapters(settings = { settings }, locate = { _, _ -> null }, engine = engine).client
+        return AiAdapters(
+            settings = { settings },
+            locate = { _, _ -> null },
+            engine = engine,
+            anthropicKey = { anthropicKey },
+        ).client
     }
 
     private fun MockRequestHandleScope.json(text: String): HttpResponseData {

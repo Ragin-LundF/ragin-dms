@@ -31,6 +31,9 @@ sealed interface OperationOutcome {
     /** The folders no longer look the way the task describes; scan again and decide anew. */
     data object ScanOutdated : OperationOutcome
 
+    /** The file changed after the work on it began; nothing was changed. */
+    data object SourceChanged : OperationOutcome
+
     /** A destructive operation was requested without the user's confirmation. */
     data object NotConfirmed : OperationOutcome
 

@@ -16,6 +16,13 @@ class AiBandContentTest {
     }
 
     @Test
+    fun `there is no band without AI set up, whatever there is to do`() {
+        val state = DashboardUiStateModel(tagCandidates = 5, classifyCandidates = 2, aiEnabled = false)
+
+        assertNull(actual = AiBandContent.of(state = state))
+    }
+
+    @Test
     fun `the band names both counts and offers both runs`() {
         val band = AiBandContent.of(state = DashboardUiStateModel(tagCandidates = 5, classifyCandidates = 2))
 
