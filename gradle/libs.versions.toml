@@ -9,7 +9,7 @@ compose-lifecycle = "2.11.0"
 # The icon set is no longer released with Compose; 1.7.3 is its last version and works with newer Compose.
 compose-material-icons = "1.7.3"
 jackson3 = "3.2.4"
-ktor = "3.6.0"
+ktor = "3.6.1"
 pdfbox = "3.0.8"
 poi = "6.0.0"
 java-keyring = "1.0.4"
