@@ -109,3 +109,26 @@ fn the_log_keeps_only_the_newest_lines() {
     assert_eq!(entries.len(), SessionLog::CAPACITY);
     assert_eq!(entries.first().map(|entry| entry.text.as_str()), Some("line 1"));
 }
+
+#[test]
+fn cancel_frees_the_lane_while_a_blocking_call_still_runs() {
+    let (session, _recorder, finished) = session();
+    let (started, running) = channel::<()>();
+    let (release, blocked) = channel::<()>();
+    let (answered, answer) = channel::<Option<u32>>();
+    session.perform("Asking the library", Lane::Ai, true, move |operation| {
+        let result = operation.run_until_cancelled(move || {
+            let _ = started.send(());
+            // Stands for a request to the AI server that cannot be interrupted.
+            let _ = blocked.recv();
+            42
+        });
+        answered.send(result).map_err(|error| error.to_string())
+    });
+    running.recv().expect("started");
+    session.cancel(Lane::Ai);
+    wait(&finished);
+    assert_eq!(answer.recv().expect("answer"), None);
+    assert!(session.state().busy_in(Lane::Ai).is_none());
+    drop(release);
+}

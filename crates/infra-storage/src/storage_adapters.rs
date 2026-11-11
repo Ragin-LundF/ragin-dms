@@ -8,6 +8,7 @@ use crate::index::FileVectorIndex;
 use crate::plan::FilePlanStore;
 use crate::platform::{PlatformTrash, SystemTrash};
 use crate::scan::FileSystemLibraryScanner;
+use crate::sidecar::{FilePreviewStore, FileSidecarLayout};
 use crate::state::{FileActivityLog, FileOperationJournal, FileSettingsRepository, FileTaskStore};
 use crate::text::FileTextStore;
 use crate::watch::FileSystemFolderWatcher;
@@ -22,6 +23,8 @@ pub struct StorageAdapters {
     pub plans: Arc<FilePlanStore>,
     pub exports: Arc<FileExportWriter>,
     pub index: Arc<FileVectorIndex>,
+    pub previews: Arc<FilePreviewStore>,
+    pub sidecar_layout: Arc<FileSidecarLayout>,
     pub watcher: Arc<FileSystemFolderWatcher>,
     pub journal: Arc<FileOperationJournal>,
     pub tasks: Arc<FileTaskStore>,
@@ -46,6 +49,8 @@ impl StorageAdapters {
             plans: Arc::new(FilePlanStore),
             exports: Arc::new(FileExportWriter),
             index: Arc::new(FileVectorIndex),
+            previews: Arc::new(FilePreviewStore),
+            sidecar_layout: Arc::new(FileSidecarLayout),
             watcher: Arc::new(FileSystemFolderWatcher),
             journal: Arc::new(FileOperationJournal::new(app_data_directory.join("journal.yaml"))),
             tasks: Arc::new(FileTaskStore::new(app_data_directory.join("tasks.yaml"))),

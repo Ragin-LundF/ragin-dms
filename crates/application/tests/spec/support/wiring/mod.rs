@@ -17,4 +17,5 @@ mod resolution;
 mod restructure;
 mod rule;
 mod search;
+mod sidecar;
 mod sync;

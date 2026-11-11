@@ -7,6 +7,12 @@ const PROVIDERS: { id: AiProviderDto; label: string }[] = [
   { id: "anthropic", label: "Anthropic" },
 ];
 
+/** What each model is for; shown under its field and above its list of models. */
+export const CHAT_MODEL_USE =
+  "Reads your documents and writes: suggestions, tags, summaries, chat, the answers of Ask and Convert to real PDF.";
+export const EMBEDDING_MODEL_USE =
+  "Only used by Ask and Related documents: turns text into numbers to find matching passages. Writes no text.";
+
 const digits = (typed: string) => typed.replace(/\D/g, "");
 
 /**
@@ -53,13 +59,21 @@ export function AiServerFields({ draft, check, onChange }: { draft: AiDraftDto; 
             error={check?.addressValid === false ? "LM Studio: http://localhost:1234/v1" : null}
             style={{ width: 520 }}
           />
-          <div className="row gap-m">
-            <TextField label="Model" value={draft.model} placeholder="First loaded model" onChange={(model) => onChange({ ...draft, model })} style={{ width: 360 }} />
+          <div className="row gap-m settings-top">
             <TextField
-              label="Embedding model for Ask"
+              label="Chat model"
+              value={draft.model}
+              placeholder="First loaded model"
+              onChange={(model) => onChange({ ...draft, model })}
+              support={CHAT_MODEL_USE}
+              style={{ width: 360 }}
+            />
+            <TextField
+              label="Embedding model"
               value={draft.embeddingModel}
               placeholder="First embedding model of the server"
               onChange={(embeddingModel) => onChange({ ...draft, embeddingModel })}
+              support={EMBEDDING_MODEL_USE}
               style={{ width: 360 }}
             />
           </div>

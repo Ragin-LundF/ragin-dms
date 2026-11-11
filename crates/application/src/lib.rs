@@ -29,4 +29,5 @@ pub mod restructure;
 pub mod rule;
 pub mod search;
 pub mod services;
+pub mod sidecar;
 pub mod sync;

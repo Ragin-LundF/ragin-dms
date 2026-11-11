@@ -79,7 +79,7 @@ impl PdfEngine {
             return Ok(None);
         };
         let image = render_rgb(&page, THUMBNAIL_DPI)?;
-        Ok(Some(images::vision_jpeg(&DynamicImage::ImageRgb8(image), max_side)?))
+        Ok(Some(images::thumbnail_jpeg(&DynamicImage::ImageRgb8(image), max_side)?))
     }
 }
 

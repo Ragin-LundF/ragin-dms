@@ -17,6 +17,7 @@ use dms_application::port::ai::{AiServer, ClassificationRequest, ClassificationR
 use dms_application::port::pdf::PageChange;
 use dms_application::port::state::Preferences;
 use dms_application::port::storage::{CatalogLoad, CatalogRepository};
+use dms_application::preview::ThumbnailOutcome;
 use dms_application::restructure::{PlanOutcome, RestructureHistoryOutcome, RestructureOutcome, RestructureScope};
 use dms_application::services::AppServices;
 use dms_domain::catalog::Catalog;
@@ -53,6 +54,12 @@ fn a_synthetic_library_goes_through_every_main_flow() {
     write_png(&primary.join("Receipt.png"));
     write_docx(&primary.join("Budget.docx"), "Budget plan");
     std::fs::copy(primary.join("Contract.pdf"), primary.join("Contract copy.pdf")).expect("copy");
+    write_noise_png(&primary.join("Photo.png"));
+    // Search texts and Ask index of version 1.x, flat in their hidden folders.
+    std::fs::create_dir_all(primary.join(".dms-text")).expect("folder");
+    std::fs::write(primary.join(".dms-text/aa11.txt"), "text of 1.x").expect("flat text");
+    std::fs::create_dir_all(cloud.join(".dms-index")).expect("folder");
+    std::fs::write(cloud.join(".dms-index/bb22.vec"), "index of 1.x").expect("flat index");
 
     let app = TestApp::start(&root.path().join("app-data"), root.path().join("trash"));
     let services = app.services();
@@ -65,6 +72,13 @@ fn a_synthetic_library_goes_through_every_main_flow() {
     configure(services, &LibraryCommand::AddSyncFolder { display_name: "Cloud".into(), location: location(&cloud) });
     app.run(AppContext::open);
     assert!(matches!(app.ctx.session.state().status, LibraryStatus::Open { .. }), "{:?}", app.messages());
+    // Opening moved the flat files into subfolders before the scan and marked both folders.
+    assert_eq!(std::fs::read_to_string(primary.join(".dms-text/aa/aa11.txt")).expect("moved text"), "text of 1.x");
+    assert_eq!(std::fs::read_to_string(cloud.join(".dms-index/bb/bb22.vec")).expect("moved index"), "index of 1.x");
+    assert!(!primary.join(".dms-text/aa11.txt").exists() && !cloud.join(".dms-index/bb22.vec").exists());
+    for folder in [&primary, &cloud] {
+        assert_eq!(std::fs::read_to_string(folder.join(".dms-text/.layout")).expect("marker"), "2\n");
+    }
     let catalog = app.catalog();
     let names = file_names(&catalog);
     for name in ["Invoice 2025.pdf", "scan-0001.pdf", "Receipt.png", "Budget.docx"] {
@@ -104,6 +118,23 @@ fn a_synthetic_library_goes_through_every_main_flow() {
     done(services.sync.merge_duplicates.run(&contract, true));
     assert!(!file_names(&app.catalog()).contains(&waiting.to_owned()));
     assert_eq!(app.trashed_names(), vec![waiting]);
+
+    // A preview small against its document is stored in every folder for the content hash; the small receipt's
+    // preview would be a tenth of its size or more, so it stays in memory only.
+    let photo = app.document("Photo.png");
+    let receipt = app.document("Receipt.png");
+    for document in [&photo, &receipt] {
+        let outcome = services.library.thumbnails.run(&app.primary().id, &document.path);
+        assert!(matches!(outcome, ThumbnailOutcome::Rendered(_)), "{outcome:?}");
+    }
+    let preview_of = |document: &Document, folder: &Path| {
+        let name = format!("{}.{}.jpg", document.id.value(), &document.content_hash.value()[..12]);
+        sidecar_folder(folder, &document.id).join(name)
+    };
+    for folder in [&primary, &cloud] {
+        assert!(preview_of(&photo, folder).is_file(), "photo preview in {}", folder.display());
+        assert!(!preview_of(&receipt, folder).exists(), "no receipt preview in {}", folder.display());
+    }
 
     // Edit metadata, tags and category.
     let invoice = app.document("Invoice 2025.pdf").id;
@@ -186,6 +217,10 @@ fn a_synthetic_library_goes_through_every_main_flow() {
     done(services.ai.approve_suggestion.run(&scan, &approval));
     let approved = app.document_by_id(&scan);
     assert_eq!(approved.metadata.title.as_deref(), Some("Parking ticket"));
+    for folder in [&primary, &cloud] {
+        let text = sidecar_folder(folder, &scan).join(format!("{}.txt", scan.value()));
+        assert!(text.is_file(), "search text in its subfolder in {}", folder.display());
+    }
     assert!(approved.classification.is_some());
 
     // PDF tools: a text layer from the AI's transcription, rotate a page, merge two PDFs.
@@ -471,6 +506,23 @@ fn write_png(file: &Path) {
     })
     .save(file)
     .expect("write PNG");
+}
+
+/// A photo-like picture: noise compresses badly, so the file is large against its preview.
+fn write_noise_png(file: &Path) {
+    let mut seed: u32 = 7;
+    image::RgbImage::from_fn(800, 600, |_, _| {
+        seed = seed.wrapping_mul(1_664_525).wrapping_add(1_013_904_223);
+        let [red, green, blue, _] = seed.to_be_bytes();
+        image::Rgb([red, green, blue])
+    })
+    .save(file)
+    .expect("write PNG");
+}
+
+/// `.dms-text/<xx>/` of a document in `folder`.
+fn sidecar_folder(folder: &Path, document_id: &DocumentId) -> PathBuf {
+    folder.join(".dms-text").join(document_id.value()[..2].to_lowercase())
 }
 
 fn write_docx(file: &Path, text: &str) {

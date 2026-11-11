@@ -9,9 +9,22 @@ All notable changes to ragin-dms are listed here.
 - The whole app is rewritten in Rust with Tauri. It looks and works as before.
 - Much smaller download: the app is about 39 MB instead of about 150 MB.
 - It needs less memory and starts faster.
-- Same library and settings files: there is nothing to migrate, and version 1.3 can still open a library
-  that 2.0 has used.
+- Same catalog and settings files, and version 1.3 can still open a library that 2.0 has used. Only the hidden
+  search texts and the Ask index move into subfolders (see below), so 1.3 no longer finds them there: its text
+  search finds less, and it builds its Ask index again.
 - A new Edit menu with undo, cut, copy, paste and select all.
+
+### Hidden files in subfolders
+
+- The search texts in `.dms-text/` and the Ask index in `.dms-index/` are now kept in small subfolders, named
+  after the first two characters of each document's id, so no folder holds thousands of files.
+- When a library is opened, its existing files are moved there once, before the scan ("Moving search texts into
+  subfolders"). Nothing is overwritten or deleted: a file whose subfolder already holds one stays where it is and
+  is listed in the log. A sync folder that is offline is moved when it is next reachable.
+- Thumbnails are saved beside the search text of a document, so they no longer have to be drawn again after every
+  start. A thumbnail is saved only while it is smaller than a tenth of its document; others are kept in memory
+  only. Thumbnails are saved in every library folder that is reachable at that moment.
+- A thumbnail now changes when its document changes. Before, it showed the old content until the app was restarted.
 
 ### PDF engine
 

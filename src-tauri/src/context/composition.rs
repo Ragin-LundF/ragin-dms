@@ -46,6 +46,8 @@ pub fn ports(data_dir: &Path, pdfium: &Path, trash: Arc<dyn SystemTrash>) -> Res
         texts: storage.texts,
         plans: storage.plans,
         index: storage.index,
+        previews: storage.previews,
+        sidecar_layout: storage.sidecar_layout,
         journal: storage.journal,
         watcher: storage.watcher,
         settings,

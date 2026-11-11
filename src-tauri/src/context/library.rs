@@ -10,6 +10,7 @@ use dms_application::inbox::CollectInboxOutcome;
 use dms_application::library::{OpenLibraryOutcome, ScanOutcome, ScanProgress, ScanResult};
 use dms_application::port::state::Preferences;
 use dms_application::services::AppServices;
+use dms_application::sidecar::{FolderMigrationResult, SidecarMigrationOutcome, SidecarMigrationProgress};
 use dms_domain::change::DetectedChange;
 use dms_domain::library::FolderRole;
 
@@ -146,6 +147,9 @@ impl AppContext {
     /// A text for the log when the services are missing.
     pub fn rescan(self: &Arc<Self>, operation: &Operation) -> Result<(), String> {
         let services = self.services_or_err()?;
+        if !self.migrate_sidecar_layout(services, operation) {
+            return Ok(());
+        }
         let adding = self.session.state().add_new_files_while_scanning;
         let reporter = ScanReporter::default();
         let progress = Reporting::new(operation, |step: &ScanProgress| reporter.report(operation, step));
@@ -167,6 +171,54 @@ impl AppContext {
             self.adopt_new_files(services, operation, &result);
         }
         Ok(())
+    }
+
+    /// Moves the flat 1.x search texts and Ask index of every reachable folder into subfolders before a scan; a
+    /// folder already moved is skipped at once, an offline one is moved by a later scan. `false` when cancelled.
+    fn migrate_sidecar_layout(&self, services: &AppServices, operation: &Operation) -> bool {
+        const STEP: &str = "Moving search texts into subfolders";
+        let progress = Reporting::new(operation, |step: &SidecarMigrationProgress| {
+            let mut line = OperationProgress::new(STEP, step.done, Some(step.total));
+            line.detail = Some(step.folder_name.clone());
+            operation.progress(line);
+        });
+        let (migrations, cancelled) = match services.library.migrate_sidecar_layout.run(&progress) {
+            SidecarMigrationOutcome::LibraryNotOpen => return true,
+            SidecarMigrationOutcome::Done(migrations) => (migrations, false),
+            SidecarMigrationOutcome::Cancelled(migrations) => (migrations, true),
+        };
+        for migration in &migrations {
+            let name = &migration.folder_name;
+            match &migration.result {
+                FolderMigrationResult::AlreadyCurrent => {}
+                FolderMigrationResult::Failed(error) => self.session.info(format!(
+                    "Search texts of {name} not moved into subfolders yet: {}",
+                    messages::failure(error.reason)
+                )),
+                FolderMigrationResult::Moved { moved, kept, failed, marked } => {
+                    self.session.info(format!("{STEP}: {moved} files moved in {name}"));
+                    if !kept.is_empty() {
+                        let identical = kept.iter().filter(|kept| kept.identical).count();
+                        self.session.info(format!(
+                            "{} old files left in place in {name}, their subfolder already has a file ({identical} \
+                             with the same content)",
+                            kept.len()
+                        ));
+                    }
+                    for (file, error) in failed {
+                        self.session.error(format!(
+                            "Could not move the file of document {} in {name}: {}",
+                            file.document_id.value(),
+                            messages::failure(error.reason)
+                        ));
+                    }
+                    if !marked && !cancelled {
+                        self.session.info(format!("{name} is moved again at the next scan"));
+                    }
+                }
+            }
+        }
+        !cancelled
     }
 
     /// Catalogs what arrived in the inbox of any folder and, with "Analyze automatically" on, lets the AI suggest

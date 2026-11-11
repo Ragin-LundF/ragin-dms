@@ -35,14 +35,16 @@ pub fn ask_library(ctx: AppState<'_>, question: String, scope_index: u32) {
     let context = Arc::clone(&ctx);
     let asked = question.clone();
     let started = ctx.session.perform(label, Lane::Ai, true, move |op| {
-        let result = backend::ask_library(&context, &asked, &scope);
-        if let Ok(outcome) = &result
+        let question = asked.clone();
+        let result = op.run_until_cancelled(move || backend::ask_library(&context, &question, &scope));
+        if let Some(Ok(outcome)) = &result
             && !op.is_cancelled()
         {
             state::replace(position, view::entry_of(&asked, outcome));
         }
         state::stop_waiting();
-        result.map(|_| ()).map_err(|error| error.message)
+        // A cancelled question (`None`) ends quietly; its answer is dropped when it arrives.
+        result.map_or(Ok(()), |answer| answer.map(|_| ()).map_err(|error| error.message))
     });
     if !started {
         let running = ctx.session.state().busy_in(Lane::Ai).unwrap_or(label).to_owned();

@@ -6,7 +6,7 @@ use dms_application::port::ai::{DocumentContent, PageImage};
 use image::{DynamicImage, ImageError, ImageReader};
 
 use crate::adapter::convert;
-use crate::images::{VISION_MAX_SIDE, vision_jpeg};
+use crate::images::{VISION_MAX_SIDE, thumbnail_jpeg, vision_jpeg};
 
 const NOT_SUPPORTED: &str = "The image format is not supported";
 
@@ -24,7 +24,7 @@ pub(crate) fn read(file: &Path) -> DocumentContent {
 
 /// The image at most `max_side` pixels on its long side; `None` for a file that is no readable image.
 pub(crate) fn thumbnail(file: &Path, max_side: u32) -> Option<PageImage> {
-    vision_jpeg(&decode(file).ok()?, max_side).ok().map(convert::page_image)
+    thumbnail_jpeg(&decode(file).ok()?, max_side).ok().map(convert::page_image)
 }
 
 /// The picture in `file`, recognized by its content rather than its extension, as Java's `ImageIO` did.

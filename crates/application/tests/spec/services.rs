@@ -31,6 +31,8 @@ fn services_of(library: &TestLibrary) -> AppServices {
         texts: library.folders.clone(),
         plans: library.plans.clone(),
         index: library.index.clone(),
+        previews: library.previews.clone(),
+        sidecar_layout: library.sidecar_layout.clone(),
         journal: library.journal.clone(),
         watcher: Arc::new(NoWatcher),
         settings: library.settings.clone(),

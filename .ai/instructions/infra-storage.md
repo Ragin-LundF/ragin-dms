@@ -13,10 +13,11 @@ This crate handles the user's real documents. A bug here loses data that may exi
 | `catalog` | `FileCatalogRepository` (refuses to save over a newer revision: `CatalogChanged`), `CatalogMigrations`, `CatalogFiles` (file name and conflict copies). Mappers (`catalog_mapper`, `settings_mapper`, `field_mapper`, `query_mapper`, `rule_mapper`, and `unknown_fields`, which carries fields of newer versions over) in `catalog::mapper`. DTOs in `catalog::dto`; every DTO with an identity or a singleton implements `ExtensibleDto`. |
 | `yaml` | The YAML layer of every file the tool writes: `saphyr-parser` events into an own `Node` tree with Jackson's JSON schema, and an own port of the snakeyaml-engine emitter with Jackson's quoting rules, so the output is byte-identical to version 1.x. `YamlFile`: one atomically written YAML file. No serde. |
 | `scan` | `FileSystemLibraryScanner`, `ScanCache` (incremental hashing, kept in the app data directory), `IgnoredEntries`, `CloudPlaceholders`. |
-| `text` | `FileTextStore` for `.dms-text/<documentId>.txt`. |
+| `text` | `FileTextStore` for `.dms-text/<xx>/<documentId>.txt`. |
+| `sidecar` | `sidecar_paths`, the one rule for where a per-document file lives (see below); `FilePreviewStore` (saved thumbnails); `FileSidecarLayout` (moves the flat 1.x layout into subfolders, the `.layout` marker). |
 | `state` | Local state in the app data directory: `FileOperationJournal`, `FileTaskStore`, `FileActivityLog`, `FileSettingsRepository`, with their mappers. DTOs in `state::dto`. |
 | `export` | `FileExportWriter` (copies an export bundle into a folder or a zip outside the library) and `index_files` (the CSV and HTML index). |
-| `index` | `FileVectorIndex`: the embedding vectors per document for Ask (`.vec`, Java `DataOutput` format), in a hidden folder of every library folder. |
+| `index` | `FileVectorIndex`: the embedding vectors per document for Ask (`.dms-index/<xx>/<documentId>.vec`, Java `DataOutput` format). |
 | `plan` | `FilePlanStore`: the restructure records in `.dms-plans/`, replicated, so a restructure can be reversed. |
 | `watch` | `FileSystemFolderWatcher` (`notify`): tells the app that a library folder changed on disk, so it can scan. |
 | `platform` | `SystemTrash` with `PlatformTrash` (the `trash` crate, `.dms-trash/` fallback) and `AppDataDirectory`. |
@@ -27,6 +28,7 @@ Tests use temporary folders, synthetic file names and a recording `SystemTrash`,
 
 - **Never overwrite** an existing user file. On a name collision, return a collision outcome or add a suffix (`name (2).pdf`) — the use case decides which.
 - **Never delete** a user file except through the trash use case, and then move it to the trash (`SystemTrash`) instead of deleting permanently. Sync never deletes. No `fs::remove_file`/`remove_dir_all` on user files.
+- The only files the crate deletes itself are its own derived files that no reader uses anymore: leftover `.dms-tmp-*` files of a failed write, and the previews of a document's older content hashes (`.dms-text/<xx>/<documentId>.<hash12>.jpg`, removed by `FilePreviewStore::write` when the preview of the current hash is written). Search texts, `.vec` files and plans are never deleted.
 - **Write atomically**: write to a temporary file in the target directory (`.dms-tmp-<uuid>`), flush and sync, then move it into place. Temporary files start with `dms_domain::library::TemporaryNames::PREFIX` (`.dms-tmp-`) so the scanner and the user can recognize and clean them up.
 - Replace by rename only where replacing is intended (the catalog and state files). A new file is placed without replacing (`atomic_files::move_without_replacing`: `renameat2`/`renamex_np` with `NOREPLACE` via `rustix` on macOS and Linux, check plus rename on Windows), because a plain `rename` replaces an existing target; check for a case-insensitive clash right before the move.
 - **Copy verified**: hash the source, copy, hash the target, compare. Preserve the modification time.
@@ -50,7 +52,7 @@ The app runs on macOS, Windows and Linux, and one library is often spread over f
 - Unknown fields are preserved, not dropped, and keep their order, so a newer version of the tool does not lose data when an older one saves on another device.
 - The catalog stores **relative NFC paths only**. Folder locations are per-device settings and never go into the catalog.
 - Never trust the catalog over the disk: the scanner compares both and reports differences; it does not "fix" either side.
-- The same compatibility rule applies to every other file this crate writes (settings, tasks, activity, journal, scan cache, plans, `.vec`, export index): version 1.x and 2.x share them, with no migration.
+- The same compatibility rule applies to every other file this crate writes (settings, tasks, activity, journal, scan cache, plans, `.vec`, export index): version 1.x and 2.x share their format. Deliberate 2.0 exception: the per-document files moved into subfolders (see below).
 
 ## Library folders and synchronization
 
@@ -73,10 +75,19 @@ One folder is the **primary**, any number are **sync folders**. All are equal in
   - macOS: placeholders may be dataless files or `.<name>.icloud` stubs; treat stubs as "present, not downloaded" under their real name.
   - Windows: placeholders carry the `RECALL_ON_DATA_ACCESS` / `OFFLINE` attributes; do not read them during a scan.
 - Sync clients create **conflict copies** (`dms-catalog 2.yaml`, `dms-catalog (conflicted copy).yaml`, …). Detect conflict copies of the catalog, merge them, and report them — never ignore them.
-- Ignore: `.DS_Store`, `._*`, `Icon\r`, `Thumbs.db`, `desktop.ini`, `.dms-tmp-*`, `.dms-trash/`, `dms-catalog*.yaml` in the folder root, and `.dms-text/` (handled separately). The list lives in `IgnoredEntries` only.
+- Ignore: `.DS_Store`, `._*`, `Icon\r`, `Thumbs.db`, `desktop.ini`, `.dms-tmp-*`, `.dms-trash/`, `dms-catalog*.yaml` in the folder root, and `.dms-text/`, `.dms-index/` and `.dms-plans/` at any depth together with everything below them (a scan never descends into them). The list lives in `IgnoredEntries` only.
 
-## The `.dms-text/` store
+## The per-document files (`.dms-text/`, `.dms-index/`)
 
-- A hidden folder in every library folder: `.dms-text/<documentId>.txt`, UTF-8. Named by document id, so renames and moves do not touch it.
-- It is derived data: written when a document is read for classification, replicated like any other write, and safe to rebuild.
-- A missing or stale text file is never an error; search just finds less.
+Every per-document file lives in a subfolder named after the **first two characters of the document id, in lower case** (`3f/` for `3F25…`), so no folder holds thousands of files. `sidecar::sidecar_paths` is the only place that builds these paths; it refuses ids that are no plain file name (path separators, a leading dot), so a damaged catalog cannot point outside the hidden folder.
+
+| File | Content |
+|---|---|
+| `.dms-text/<xx>/<documentId>.txt` | The document's text for search, UTF-8. |
+| `.dms-text/<xx>/<documentId>.<hash12>.jpg` | The saved thumbnail: JPEG, long side 320 px, quality 70, `hash12` = the first 12 hex characters of the content hash it was rendered for. Saved only while smaller than a tenth of the document; otherwise memory only. |
+| `.dms-index/<xx>/<documentId>.vec` | The embeddings for Ask (Java `DataOutput` format, unchanged). |
+| `.dms-text/.layout` | Marker `2`: the folder was moved to this layout completely. |
+
+- Named by document id, so renames and moves do not touch them. All are derived data, written atomically and safe to rebuild. Texts and `.vec` files are replicated through `Replicator` (`CopyText`, `CopyIndex`, journaled for offline sync folders). Previews are written to the folders reachable right now and never journaled: an offline folder renders its own preview later.
+- A missing or stale file is never an error; search finds less, a thumbnail is rendered again, Ask indexes again.
+- **Flat 1.x layout.** Version 1.x kept the files flat (`.dms-text/<documentId>.txt`, `.dms-index/<documentId>.vec`). Reads fall back to the flat file when the subfolder has none; writes always go to the subfolder. `MigrateSidecarLayout` (run by the desktop session before every scan, skipped at once when `.layout` says `2`) moves the flat files by rename, never replacing: when the subfolder already has a file for the document, both stay and the flat one is reported. The marker is written only when every flat file of the folder was handled; a cancelled run or a failed move leaves the folder unmarked, and the next run continues. Version 1.3 does not know the subfolders: it searches without the texts and builds its Ask index again.

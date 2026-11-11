@@ -8,6 +8,7 @@ use crate::port::export::ExportWriter;
 use crate::port::index::VectorIndex;
 use crate::port::pdf::{OcrTool, PdfEditor, PdfRebuilder};
 use crate::port::plan::PlanStore;
+use crate::port::sidecar::{PreviewStore, SidecarLayout};
 use crate::port::state::{ActivityLog, SettingsRepository, TaskStore};
 use crate::port::storage::{
     CatalogRepository, DocumentStorage, FolderWatcher, LibraryScanner, OperationJournal, TextStore,
@@ -24,6 +25,8 @@ pub struct AppPorts {
     pub texts: Arc<dyn TextStore>,
     pub plans: Arc<dyn PlanStore>,
     pub index: Arc<dyn VectorIndex>,
+    pub previews: Arc<dyn PreviewStore>,
+    pub sidecar_layout: Arc<dyn SidecarLayout>,
     pub journal: Arc<dyn OperationJournal>,
     pub watcher: Arc<dyn FolderWatcher>,
     pub settings: Arc<dyn SettingsRepository>,

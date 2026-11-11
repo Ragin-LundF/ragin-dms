@@ -15,6 +15,7 @@ use crate::support::fake::ai::{
 };
 use crate::support::fake::export::FakeExportWriter;
 use crate::support::fake::index::InMemoryVectorIndex;
+use crate::support::fake::sidecar::{FakeSidecarLayout, InMemoryPreviewStore};
 use crate::support::fake::state::{InMemoryActivityLog, InMemorySettings, InMemoryTaskStore};
 use crate::support::fake::storage::{FakeFolders, InMemoryJournal, InMemoryPlanStore};
 use crate::support::fake::system::{FixedClock, SequentialIds};
@@ -42,6 +43,8 @@ pub struct TestLibrary {
     pub assistant: Arc<FakeAssistant>,
     pub plans: Arc<InMemoryPlanStore>,
     pub index: Arc<InMemoryVectorIndex>,
+    pub previews: Arc<InMemoryPreviewStore>,
+    pub sidecar_layout: Arc<FakeSidecarLayout>,
     pub embeddings: Arc<FakeEmbeddings>,
     pub library_assistant: Arc<FakeLibraryAssistant>,
     pub exports: Arc<FakeExportWriter>,
@@ -73,6 +76,7 @@ impl TestLibrary {
         let ids = Arc::new(SequentialIds::default());
         let plans = Arc::new(InMemoryPlanStore::new(folders.unreachable.clone()));
         let index = Arc::new(InMemoryVectorIndex::new(folders.unreachable.clone()));
+        let previews = Arc::new(InMemoryPreviewStore::new(folders.unreachable.clone()));
         let reader = Arc::new(FakeContentReader::default());
         let activity_log = Arc::new(InMemoryActivityLog::default());
         let replicator = Arc::new(Replicator::new(
@@ -103,6 +107,8 @@ impl TestLibrary {
             assistant: Arc::new(FakeAssistant::default()),
             plans,
             index,
+            previews,
+            sidecar_layout: Arc::new(FakeSidecarLayout::new(folders.unreachable.clone())),
             embeddings: Arc::new(FakeEmbeddings::default()),
             library_assistant: Arc::new(FakeLibraryAssistant::default()),
             exports: Arc::new(FakeExportWriter::default()),

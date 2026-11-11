@@ -5,6 +5,7 @@ use crate::port::state::SettingsRepository;
 use crate::port::system::Clock;
 use crate::preview::DocumentThumbnails;
 use crate::search::{FindDocuments, SearchContents};
+use crate::sidecar::MigrateSidecarLayout;
 
 /// Opening, configuring, scanning and searching the library, and the catalog of the open library (`store`).
 pub struct LibraryServices {
@@ -13,6 +14,7 @@ pub struct LibraryServices {
     pub clock: Arc<dyn Clock>,
     pub configure_library: Arc<ConfigureLibrary>,
     pub open_library: Arc<OpenLibrary>,
+    pub migrate_sidecar_layout: Arc<MigrateSidecarLayout>,
     pub scan_library: Arc<ScanLibrary>,
     pub detect_document_dates: Arc<DetectDocumentDates>,
     pub build_dashboard: Arc<BuildDashboard>,

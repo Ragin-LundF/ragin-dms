@@ -28,7 +28,7 @@ fn an_entry_is_written_to_the_hidden_index_folder_and_read_back() {
     FileVectorIndex.write(&folder(temp.path()), &vectors).expect("written");
     let read = FileVectorIndex.read(&folder(temp.path()), &document_id()).expect("an entry");
 
-    assert!(temp.path().join(".dms-index/doc-1.vec").is_file());
+    assert!(temp.path().join(".dms-index/do/doc-1.vec").is_file());
     assert_eq!(read, vectors);
     assert!(read.is_current("sample-embed", &vectors.content_hash, "1a2b"));
     assert!(!read.is_current("other", &vectors.content_hash, "1a2b"));
@@ -41,6 +41,19 @@ fn a_missing_or_broken_entry_reads_as_none() {
 
     assert_eq!(FileVectorIndex.read(&folder(temp.path()), &document_id()), None);
     assert_eq!(FileVectorIndex.read(&folder(temp.path()), &DocumentId::new("other").expect("id")), None);
+}
+
+#[test]
+fn an_entry_of_a_folder_not_moved_into_subfolders_yet_is_read_from_the_flat_file() {
+    let temp = tempfile::tempdir().expect("temp dir");
+    let golden = fs::read(std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/jackson/doc-1.vec"))
+        .expect("golden");
+    fs::create_dir_all(temp.path().join(".dms-index")).expect("folder");
+    fs::write(temp.path().join(".dms-index/doc-1.vec"), golden).expect("flat file");
+
+    let read = FileVectorIndex.read(&folder(temp.path()), &document_id()).expect("an entry");
+
+    assert_eq!(read.metadata_hash, "1a2b");
 }
 
 /// The bytes Java's `DataOutputStream` wrote: modified UTF-8 for `U+0000` and the emoji, big-endian floats.
@@ -64,7 +77,7 @@ fn an_entry_has_the_bytes_the_kotlin_version_wrote_and_reads_them_back() {
 
     FileVectorIndex.write(&folder(temp.path()), &vectors).expect("written");
 
-    assert_eq!(fs::read(temp.path().join(".dms-index/doc-1.vec")).expect("written file"), golden);
+    assert_eq!(fs::read(temp.path().join(".dms-index/do/doc-1.vec")).expect("written file"), golden);
     assert_eq!(FileVectorIndex.read(&folder(temp.path()), &document_id()), Some(vectors));
 }
 

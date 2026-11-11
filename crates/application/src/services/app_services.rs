@@ -31,6 +31,7 @@ use crate::search::{ContentMatcher, FindDocuments, SearchContents};
 use crate::services::{
     AiServices, AppPorts, AskServices, DocumentServices, LibraryServices, OrganizeServices, PdfServices, SyncServices,
 };
+use crate::sidecar::MigrateSidecarLayout;
 use crate::sync::{MergeAllFolders, Replicator, RetryFailedOperations, SyncFromPrimary};
 
 /// Every use case the UI calls, wired once from the adapters. Stateful parts (the catalog store, the content
@@ -156,6 +157,7 @@ impl Core {
             clock: p.clock.clone(),
             configure_library: Arc::new(ConfigureLibrary::new(p.settings.clone(), p.ids.clone())),
             open_library: self.open_library.clone(),
+            migrate_sidecar_layout: Arc::new(MigrateSidecarLayout::new(self.store.clone(), p.sidecar_layout.clone())),
             scan_library: Arc::new(ScanLibrary::new(self.store.clone(), p.scanner.clone(), add_scanned_files)),
             detect_document_dates: Arc::new(DetectDocumentDates::new(
                 self.store.clone(),
@@ -171,7 +173,7 @@ impl Core {
             )),
             search_contents: Arc::new(SearchContents::new(self.store.clone(), self.matcher.clone())),
             find_documents: Arc::new(FindDocuments::new(self.store.clone(), self.matcher.clone())),
-            thumbnails: Arc::new(DocumentThumbnails::new(self.store.clone(), p.previewer.clone())),
+            thumbnails: Arc::new(DocumentThumbnails::new(self.store.clone(), p.previewer.clone(), p.previews.clone())),
         }
     }
 

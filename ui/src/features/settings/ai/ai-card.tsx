@@ -8,8 +8,8 @@ import {type ActionButton, ActionButtons, AppCard, CardTitle} from "../../../sha
 import {useStore} from "../../../shared/store";
 import {useAiDraftCheck} from "../queries";
 import {useDraft} from "../use-draft";
-import {AiConnectionLine, AiModelChips, connectionStore} from "./ai-connection";
-import {AiServerFields} from "./ai-server-fields";
+import {AiConnectionLine, AiModelChips, connectionStore, isEmbeddingModel} from "./ai-connection";
+import {AiServerFields, CHAT_MODEL_USE, EMBEDDING_MODEL_USE} from "./ai-server-fields";
 import {SettingSwitch} from "./setting-switch";
 
 function draftOf(settings: AiSettingsDto_Serialize): AiDraftDto {
@@ -94,13 +94,16 @@ export function AiSettingsCard({ settings, busyReason }: { settings: AiSettingsD
               onChange={(acceptSuggestedFileNames) => setDraft({ ...draft, acceptSuggestedFileNames })}
             />
             <AiServerFields draft={draft} check={check} onChange={setDraft} />
-            {models.length > 0 && testedProvider === draft.provider && (
+            {models.length > 0 && testedProvider === draft.provider && draft.provider === "anthropic" && (
               <AiModelChips
                 models={models}
-                selected={draft.provider === "anthropic" ? draft.anthropicModel : draft.model}
-                firstLabel={draft.provider === "anthropic" ? "Default model" : "First loaded model"}
-                onSelect={(model) => setDraft(draft.provider === "anthropic" ? { ...draft, anthropicModel: model } : { ...draft, model })}
+                selected={draft.anthropicModel}
+                firstLabel="Default model"
+                onSelect={(anthropicModel) => setDraft({ ...draft, anthropicModel })}
               />
+            )}
+            {models.length > 0 && testedProvider === draft.provider && draft.provider === "local" && (
+              <LocalModelChoice models={models} draft={draft} onChange={setDraft} />
             )}
             <AiConnectionLine checking={connection.checking} result={connection.result} />
           </>
@@ -108,5 +111,36 @@ export function AiSettingsCard({ settings, busyReason }: { settings: AiSettingsD
         <ActionButtons buttons={buttons} enabled={busyReason === null} busyReason={busyReason} />
       </div>
     </AppCard>
+  );
+}
+
+/**
+ * The local server's models in two lists, so each can be picked by a click: chat models for everything that writes,
+ * embedding models for Ask. A server without a model that looks like an embedding model offers all models there.
+ */
+function LocalModelChoice({ models, draft, onChange }: { models: string[]; draft: AiDraftDto; onChange: (draft: AiDraftDto) => void }) {
+  const embedding = models.filter(isEmbeddingModel);
+  const chat = models.filter((model) => !isEmbeddingModel(model));
+  return (
+    <div className="column gap-m">
+      <div className="column gap-s">
+        <span className="label-large">Chat model</span>
+        <span className="body-small muted">{CHAT_MODEL_USE}</span>
+        <AiModelChips models={chat} selected={draft.model} firstLabel="First loaded model" onSelect={(model) => onChange({ ...draft, model })} />
+      </div>
+      <div className="column gap-s">
+        <span className="label-large">Embedding model</span>
+        <span className="body-small muted">
+          {EMBEDDING_MODEL_USE}
+          {embedding.length === 0 && " The server lists no embedding model by name, so all models are shown; load one such as nomic-embed-text in LM Studio."}
+        </span>
+        <AiModelChips
+          models={embedding.length > 0 ? embedding : models}
+          selected={draft.embeddingModel}
+          firstLabel="First embedding model"
+          onSelect={(embeddingModel) => onChange({ ...draft, embeddingModel })}
+        />
+      </div>
+    </div>
   );
 }

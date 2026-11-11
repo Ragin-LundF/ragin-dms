@@ -31,3 +31,12 @@ export function AiModelChips({ models, selected, firstLabel, onSelect }: { model
     </div>
   );
 }
+
+/** Name parts of models that cannot chat, as the Rust client's `NOT_FOR_CHAT` skips them. */
+const NOT_FOR_CHAT = ["embed", "rerank", "e5-", "bge-", "gte-"];
+
+/** `true` for models that only make embeddings (or rerank), judged by name like the Rust client does. */
+export function isEmbeddingModel(model: string): boolean {
+  const name = model.toLowerCase();
+  return NOT_FOR_CHAT.some((part) => name.includes(part));
+}

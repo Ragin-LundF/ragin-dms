@@ -19,4 +19,5 @@ mod restructure;
 mod rule;
 mod search;
 mod services;
+mod sidecar;
 mod sync;

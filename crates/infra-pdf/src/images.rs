@@ -22,6 +22,8 @@ impl std::fmt::Debug for PageImage {
 pub(crate) const PNG: &str = "image/png";
 pub(crate) const JPEG: &str = "image/jpeg";
 pub(crate) const JPEG_QUALITY: u8 = 85;
+/// Thumbnails are small and stored beside the text of every document, so they trade detail for size.
+const THUMBNAIL_QUALITY: u8 = 70;
 
 /// The long side of a picture for a vision model.
 pub const VISION_MAX_SIDE: u32 = 1600;
@@ -38,8 +40,12 @@ pub(crate) fn png_of(image: &DynamicImage) -> Result<PageImage, PdfError> {
 }
 
 pub(crate) fn jpeg_bytes(image: &DynamicImage) -> Result<Vec<u8>, PdfError> {
+    jpeg_bytes_at(image, JPEG_QUALITY)
+}
+
+fn jpeg_bytes_at(image: &DynamicImage, quality: u8) -> Result<Vec<u8>, PdfError> {
     let mut bytes = Vec::new();
-    JpegEncoder::new_with_quality(&mut bytes, JPEG_QUALITY).encode_image(image).map_err(PdfError::unsupported)?;
+    JpegEncoder::new_with_quality(&mut bytes, quality).encode_image(image).map_err(PdfError::unsupported)?;
     Ok(bytes)
 }
 
@@ -53,9 +59,18 @@ pub(crate) fn decode(image: &PageImage) -> Result<DynamicImage, PdfError> {
 /// # Errors
 /// [`PdfError::UnsupportedFormat`] if the picture cannot be encoded.
 pub fn vision_jpeg(image: &DynamicImage, max_side: u32) -> Result<PageImage, PdfError> {
+    scaled_jpeg(image, max_side, JPEG_QUALITY)
+}
+
+/// A thumbnail: like [`vision_jpeg`], at a lower JPEG quality.
+pub(crate) fn thumbnail_jpeg(image: &DynamicImage, max_side: u32) -> Result<PageImage, PdfError> {
+    scaled_jpeg(image, max_side, THUMBNAIL_QUALITY)
+}
+
+fn scaled_jpeg(image: &DynamicImage, max_side: u32, quality: u8) -> Result<PageImage, PdfError> {
     let rgb = on_white(image);
     let scaled = scaled_down(&rgb, max_side);
-    Ok(PageImage { bytes: jpeg_bytes(&DynamicImage::ImageRgb8(scaled))?, mime_type: JPEG })
+    Ok(PageImage { bytes: jpeg_bytes_at(&DynamicImage::ImageRgb8(scaled), quality)?, mime_type: JPEG })
 }
 
 /// A page for reading its layout: at most [`LAYOUT_SIDE`] on the long side, both sides a multiple of 28

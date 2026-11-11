@@ -201,6 +201,24 @@ impl Operation {
         self.cancelled.load(Ordering::SeqCst)
     }
 
+    /// Runs a blocking `call` that cannot check for cancellation itself, such as one request to the AI server, and
+    /// returns `None` as soon as the operation is cancelled. The call then ends on its own thread and its result is
+    /// dropped, so Cancel frees the lane at once instead of after the server's timeout.
+    pub fn run_until_cancelled<T: Send + 'static>(&self, call: impl FnOnce() -> T + Send + 'static) -> Option<T> {
+        let (sender, receiver) = std::sync::mpsc::channel();
+        std::thread::spawn(move || {
+            // A receiver that stopped waiting is fine: the result is no longer wanted.
+            let _ = sender.send(call());
+        });
+        loop {
+            match receiver.recv_timeout(std::time::Duration::from_millis(100)) {
+                Ok(result) => return Some(result),
+                Err(std::sync::mpsc::RecvTimeoutError::Timeout) if !self.is_cancelled() => {}
+                Err(_) => return None,
+            }
+        }
+    }
+
     /// Shows how far the operation is; cleared when it ends.
     pub fn progress(&self, progress: OperationProgress) {
         self.session.set_progress(self.lane, progress);

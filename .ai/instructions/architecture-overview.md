@@ -18,7 +18,7 @@ The repository is one Cargo workspace (`Cargo.toml`: members `crates/*` and `src
 |---|---|---|---|
 | `crates/domain` (`dms-domain`) | Entities | Entities, value objects, domain rules: `Document`, `Catalog`, `Category`, `TagName`, `LibraryFolder`, `DetectedChange`, `OpenTask`, typed ids and paths. | small pure crates only (`thiserror`, `chrono`, `chrono-tz`, `indexmap`, `unicode-normalization`, `num-bigint`) |
 | `crates/application` (`dms-application`) | Use cases | Use cases (`AddDocuments`, `CreateFolder`, `SuggestClassification`, …), the `Replicator` that applies every write to all library folders (primary first, journal for failed sync folders), the **ports** they need (`DocumentStorage`, `CatalogRepository`, `DocumentClassifier`, `DocumentContentReader`, …) in `port::*`, and `services::AppServices`, the bundle of all use cases built from `AppPorts`. | `dms-domain` |
-| `crates/infra-storage` (`dms-infra-storage`) | Adapter | File system access in one folder per call, the catalog file (own YAML reader and emitter), scanning, the `.dms-text/` store, local state (journal, tasks, activity, settings), export, vector index, plans, folder watcher, system trash. Implements the storage, state, export, index and plan ports. | `dms-application` |
+| `crates/infra-storage` (`dms-infra-storage`) | Adapter | File system access in one folder per call, the catalog file (own YAML reader and emitter), scanning, the `.dms-text/` store with the saved previews, the sidecar layout migration, local state (journal, tasks, activity, settings), export, vector index, plans, folder watcher, system trash. Implements the storage, state, export, index, plan and sidecar ports. | `dms-application` |
 | `crates/infra-ai` (`dms-infra-ai`) | Adapter | `ureq` client for key-less OpenAI-compatible APIs (LM Studio, Ollama) and Anthropic, prompts (`prompts/*.md`), structured output, embeddings, the page layout reader for the rebuild. Implements `DocumentClassifier`, `AiServer`, `DocumentAssistant`, `LibraryAssistant`, `EmbeddingClient`, `PageLayoutReader`. | `dms-application` |
 | `crates/infra-pdf` (`dms-infra-pdf`) | Adapter | PDFium (`pdfium-render`) and `lopdf`: reading documents as text or page images (PDF, images, Office via `zip`/`quick-xml`/`calamine`), thumbnails and page pictures, page tools (rotate, delete, reorder, extract, merge), invisible text layers, embedded metadata (document info and XMP), the rebuild of scans, and the installed OCR program (`ocrmypdf`). Implements `DocumentContentReader`, `DocumentPreviewer`, `PdfEditor`, `PdfRebuilder`, `OcrTool`. | `dms-application` |
 | `src-tauri` (`ragin-dms-desktop`) | Frameworks & drivers | The Tauri shell: commands, DTOs and presenters per screen area, the session (lanes, progress, log), outcome messages, menu, the `dms://` preview protocol, and the **composition root** (`context/composition.rs`) that wires the adapters into `AppServices`. | all crates above |
@@ -43,7 +43,7 @@ infra-pdf ───────────────────────�
 
 ## Ports and adapters
 
-- A port is a trait in `dms_application::port::<area>` (`storage`, `state`, `ai`, `assistant`, `pdf`, `export`, `index`, `plan`, `system`), named after the capability (`DocumentStorage`, `DocumentClassifier`), not after a technology. Every port is `Send + Sync`.
+- A port is a trait in `dms_application::port::<area>` (`storage`, `state`, `ai`, `assistant`, `pdf`, `export`, `index`, `plan`, `sidecar`, `system`), named after the capability (`DocumentStorage`, `DocumentClassifier`), not after a technology. Every port is `Send + Sync`.
 - Port signatures use domain and port types only. No `std::path::Path`, `File`, HTTP or JSON types cross a port.
 - Port functions are blocking `fn(&self, …)`. The desktop app calls use cases on a worker thread (`tauri::async_runtime::spawn_blocking` or a session operation); use cases never spawn threads themselves.
 - Expected failures cross a port as a value (`StorageResult<T>` = `Result<T, StorageError>`, or an outcome enum), never as a panic. Panics are for broken invariants only (`expect("invariant: …")`).
@@ -58,7 +58,7 @@ ScanLibrary (all folders)            or   UI drop / file picker -> AddDocuments
 User: "Adopt & suggest"
   -> SuggestClassification
      -> DocumentContentReader::read    (text layer, page images, or Office text)
-     -> TextStore::write               (.dms-text/<documentId>.txt)
+     -> TextStore::write               (.dms-text/<xx>/<documentId>.txt)
      -> DocumentClassifier::suggest    (suggestion only)
   -> OpenTask::ReviewSuggestion on the dashboard
 User: approve (all or selected fields, edited)

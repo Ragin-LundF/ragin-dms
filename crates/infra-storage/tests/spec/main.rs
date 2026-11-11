@@ -8,6 +8,7 @@ mod fs;
 mod index;
 mod plan;
 mod scan;
+mod sidecar;
 mod state;
 mod support;
 mod text;

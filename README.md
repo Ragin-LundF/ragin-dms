@@ -79,7 +79,7 @@ written with the bundled [PDFium](https://pdfium.googlesource.com/pdfium/) libra
   or categorize them, and categories onto each other to restructure the category tree.
 * Inspector with preview, metadata editor, tag editor with autocomplete, and "show in Finder/Explorer".
 * Full-text search over the text of every document, including scans the AI has transcribed. The text
-  is kept in the hidden `.dms-text/` folder of the library.
+  is kept in the hidden `.dms-text/` folder of the library, together with the saved thumbnails.
 
 ### Local AI
 
