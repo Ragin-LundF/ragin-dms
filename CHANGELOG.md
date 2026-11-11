@@ -2,6 +2,46 @@
 
 All notable changes to ragin-dms are listed here.
 
+## 2.0.0
+
+### Rewritten in Rust and Tauri
+
+- The whole app is rewritten in Rust with Tauri. It looks and works as before.
+- Much smaller download: the app is about 39 MB instead of about 150 MB.
+- It needs less memory and starts faster.
+- Same catalog and settings files, and version 1.3 can still open a library that 2.0 has used. Only the hidden
+  search texts and the Ask index move into subfolders (see below), so 1.3 no longer finds them there: its text
+  search finds less, and it builds its Ask index again.
+- A new Edit menu with undo, cut, copy, paste and select all.
+
+### Hidden files in subfolders
+
+- The search texts in `.dms-text/` and the Ask index in `.dms-index/` are now kept in small subfolders, named
+  after the first two characters of each document's id, so no folder holds thousands of files.
+- When a library is opened, its existing files are moved there once, before the scan ("Moving search texts into
+  subfolders"). Nothing is overwritten or deleted: a file whose subfolder already holds one stays where it is and
+  is listed in the log. A sync folder that is offline is moved when it is next reachable.
+- Thumbnails are saved beside the search text of a document, so they no longer have to be drawn again after every
+  start. A thumbnail is saved only while it is smaller than a tenth of its document; others are kept in memory
+  only. Thumbnails are saved in every library folder that is reachable at that moment.
+- A thumbnail now changes when its document changes. Before, it showed the old content until the app was restarted.
+
+### PDF engine
+
+- PDFs are now read, rendered and written with PDFium, the PDF engine of Chrome. It is faster and opens more
+  damaged PDFs.
+- Text layers from "Make searchable" now keep umlauts, the euro sign, Greek, Cyrillic and other characters
+  searchable. For this, the PDF embeds the full font once, which makes it about 200 KB larger.
+- "Convert to real PDF" files are about 200 KB larger per font style used, because the full font is embedded.
+- Text read from PDFs can have slightly different spaces and line breaks, so the AI and search may see the
+  text a little differently.
+- Page pictures and thumbnails can look slightly different, and small thumbnails are sharper.
+
+### Office files
+
+- Word files are read without headers, footers and footnotes, and PowerPoint files without speaker notes.
+- Numbers in Excel files are read as plain numbers, without their cell formatting.
+
 ## 1.3.0
 
 ### Turn scans into real PDFs

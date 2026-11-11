@@ -1,0 +1,10 @@
+/* The restructure assistant (Kotlin: restructure/RestructureScreen, TemplateCard, PlanCard). */
+
+.restructure-screen { display: flex; flex-direction: column; gap: var(--space-xl); }
+.restructure-card { gap: var(--space-s); }
+.restructure-card > .card-title { padding-bottom: var(--space-s); }
+.restructure-scope { max-width: 100%; padding-right: 12px; }
+.restructure-groups { max-height: 480px; }
+.restructure-group { align-items: flex-start; }
+.restructure-group .checkbox { margin: 11px 11px 11px 0; }
+.restructure-group .column { padding-top: 10px; padding-bottom: var(--space-xs); }

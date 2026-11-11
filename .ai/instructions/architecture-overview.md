@@ -1,6 +1,6 @@
 # Architecture Overview
 
-Read this file for repository-level architecture decisions, cross-module changes, changes that affect module boundaries, and changes to the Gradle build.
+Read this file for repository-level architecture decisions, cross-crate changes, changes that affect crate boundaries, and changes to the build.
 
 ## What the application is
 
@@ -10,67 +10,70 @@ The library exists in **one primary folder and any number of sync folders** conf
 
 The app runs on macOS, Windows and Linux. Never assume one platform's file system behavior (case sensitivity, Unicode normalization, path separators, allowed characters).
 
-## Clean Architecture modules
+## Clean Architecture crates
 
-| Module | Layer | Holds | May depend on |
+The repository is one Cargo workspace (`Cargo.toml`: members `crates/*` and `src-tauri`) plus the React webview in `ui/`.
+
+| Crate | Layer | Holds | May depend on |
 |---|---|---|---|
-| `dms-domain` | Entities | Entities, value objects, domain rules: `DocumentModel`, `CatalogModel`, `CategoryModel`, `Tag`, `LibraryFolderModel`, `DetectedChange`, `OpenTask`, typed ids and paths. | nothing |
-| `dms-application` | Use cases | Use cases (`AddDocuments`, `CreateFolder`, `SuggestClassification`, …), the `Replicator` that applies every write to all library folders (primary first, journal for failed sync folders), and the **ports** they need (`DocumentStorage`, `CatalogRepository`, `DocumentClassifier`, `DocumentContentReader`, …). | `dms-domain`, kotlinx-coroutines |
-| `dms-storage` | Adapter | File system access in one folder per call, the catalog file (de)serialization, scanning, the `.dms-text/` store, the journal file. Implements storage ports. | `dms-application` |
-| `dms-ai` | Adapter | LLM client for key-less OpenAI-compatible APIs (LM Studio, Ollama), prompts, reading documents as text or page images (PDFBox, Apache POI). Implements `DocumentClassifier` and `DocumentContentReader`. | `dms-application` |
-| `dms-pdf` | Adapter | Writing PDF files with PDFBox: page tools (rotate, delete, reorder, extract, merge), invisible text layers, embedded metadata (document info and XMP), and the installed OCR program (`ocrmypdf`). Implements `PdfEditor` and `OcrTool`. | `dms-application` |
-| `dms-ui` | Frameworks & drivers | Compose Multiplatform desktop UI (single `jvm()` target), view models, theme, and the **composition root** that wires adapters into use cases. | `commonMain`: `dms-domain`, `dms-application`. `jvmMain`: also `dms-storage`, `dms-ai`, `dms-pdf`. |
+| `crates/domain` (`dms-domain`) | Entities | Entities, value objects, domain rules: `Document`, `Catalog`, `Category`, `TagName`, `LibraryFolder`, `DetectedChange`, `OpenTask`, typed ids and paths. | small pure crates only (`thiserror`, `chrono`, `chrono-tz`, `indexmap`, `unicode-normalization`, `num-bigint`) |
+| `crates/application` (`dms-application`) | Use cases | Use cases (`AddDocuments`, `CreateFolder`, `SuggestClassification`, …), the `Replicator` that applies every write to all library folders (primary first, journal for failed sync folders), the **ports** they need (`DocumentStorage`, `CatalogRepository`, `DocumentClassifier`, `DocumentContentReader`, …) in `port::*`, and `services::AppServices`, the bundle of all use cases built from `AppPorts`. | `dms-domain` |
+| `crates/infra-storage` (`dms-infra-storage`) | Adapter | File system access in one folder per call, the catalog file (own YAML reader and emitter), scanning, the `.dms-text/` store with the saved previews, the sidecar layout migration, local state (journal, tasks, activity, settings), export, vector index, plans, folder watcher, system trash. Implements the storage, state, export, index, plan and sidecar ports. | `dms-application` |
+| `crates/infra-ai` (`dms-infra-ai`) | Adapter | `ureq` client for key-less OpenAI-compatible APIs (LM Studio, Ollama) and Anthropic, prompts (`prompts/*.md`), structured output, embeddings, the page layout reader for the rebuild. Implements `DocumentClassifier`, `AiServer`, `DocumentAssistant`, `LibraryAssistant`, `EmbeddingClient`, `PageLayoutReader`. | `dms-application` |
+| `crates/infra-pdf` (`dms-infra-pdf`) | Adapter | PDFium (`pdfium-render`) and `lopdf`: reading documents as text or page images (PDF, images, Office via `zip`/`quick-xml`/`calamine`), thumbnails and page pictures, page tools (rotate, delete, reorder, extract, merge), invisible text layers, embedded metadata (document info and XMP), the rebuild of scans, and the installed OCR program (`ocrmypdf`). Implements `DocumentContentReader`, `DocumentPreviewer`, `PdfEditor`, `PdfRebuilder`, `OcrTool`. | `dms-application` |
+| `src-tauri` (`ragin-dms-desktop`) | Frameworks & drivers | The Tauri shell: commands, DTOs and presenters per screen area, the session (lanes, progress, log), outcome messages, menu, the `dms://` preview protocol, and the **composition root** (`context/composition.rs`) that wires the adapters into `AppServices`. | all crates above |
+| `ui` | Frameworks & drivers | React 19 + TypeScript (Vite, TanStack Query). Renders what Rust computes and keeps only presentation state. Talks to Rust only through the generated bindings in `ui/src/ipc/bindings.ts`. | `src-tauri` commands and events |
 
 ## Dependency rule
 
 Dependencies point inwards only:
 
 ```text
-dms-ui  ──►  dms-application  ──►  dms-domain
-dms-storage ─┘        ▲
-dms-ai ───────────────┤
-dms-pdf ──────────────┘
+ui ──(IPC)──► src-tauri  ──►  dms-application  ──►  dms-domain
+infra-storage ──────────────────┘   ▲
+infra-ai ───────────────────────────┤
+infra-pdf ──────────────────────────┘
 ```
 
-- `dms-domain` has **no dependencies** and must keep none: no I/O, no serialization annotations, no coroutines, no logging.
-- `dms-application` knows ports (interfaces), never their implementations. It never imports `java.nio.file`, Jackson, Ktor, or any AI library.
-- Adapters (`dms-storage`, `dms-ai`, `dms-pdf`) never depend on each other and never on `dms-ui`.
-- Only the composition root in `dms-ui` `jvmMain` knows concrete adapter classes.
-- A new external library goes into the outermost module that needs it. If a use case seems to need it, add a port instead.
+- `dms-domain` does **no I/O** and must stay that way: no file system, no serde, no threads, no logging.
+- `dms-application` knows ports (traits), never their implementations. It never uses `std::fs`, serde, `ureq`, PDFium or any AI library.
+- Adapters (`infra-storage`, `infra-ai`, `infra-pdf`) never depend on each other and never on `src-tauri`.
+- Only the composition root in `src-tauri` knows concrete adapter types (`StorageAdapters`, `AiAdapters`, `PdfAdapters`).
+- A new external crate goes into the outermost crate that needs it. If a use case seems to need it, add a port instead. The crate graph enforces this: an import that points outwards does not compile, so never "fix" it by adding a dependency inwards.
 
 ## Ports and adapters
 
-- A port is an interface in `dms.application.port`, named after the capability (`DocumentStorage`, `DocumentClassifier`), not after a technology.
-- Port signatures use domain types only. No `java.nio.file.Path`, `File`, HTTP or JSON types cross a port.
-- Port functions doing I/O are `suspend`. Adapters switch to `Dispatchers.IO` themselves; use cases do not pick dispatchers.
-- Expected failures cross a port as a typed result (`sealed interface` of outcomes), not as an exception. Exceptions are for programming errors and truly unrecoverable state.
+- A port is a trait in `dms_application::port::<area>` (`storage`, `state`, `ai`, `assistant`, `pdf`, `export`, `index`, `plan`, `sidecar`, `system`), named after the capability (`DocumentStorage`, `DocumentClassifier`), not after a technology. Every port is `Send + Sync`.
+- Port signatures use domain and port types only. No `std::path::Path`, `File`, HTTP or JSON types cross a port.
+- Port functions are blocking `fn(&self, …)`. The desktop app calls use cases on a worker thread (`tauri::async_runtime::spawn_blocking` or a session operation); use cases never spawn threads themselves.
+- Expected failures cross a port as a value (`StorageResult<T>` = `Result<T, StorageError>`, or an outcome enum), never as a panic. Panics are for broken invariants only (`expect("invariant: …")`).
+- Long runs take `&dyn common::Progress<P>` and check `is_cancelled()` between items; a cancelled run stops before the next item and returns what it did so far.
 
 ## Data flow: from a new file to a categorized document
 
 ```text
 ScanLibrary (all folders)            or   UI drop / file picker -> AddDocuments
-  -> DetectedChange.NewFile                     -> DocumentStorage.import (all folders)
-  -> BuildDashboard -> OpenTask.ClassifyNewFile
+  -> DetectedChange::NewFile                    -> DocumentStorage::import_file (all folders)
+  -> BuildDashboard -> OpenTask::AdoptNewFile
 User: "Adopt & suggest"
   -> SuggestClassification
-     -> DocumentContentReader.read     (text layer, page images, or Office text)
-     -> TextStore.write                (.dms-text/<documentId>.txt)
-     -> DocumentClassifier.suggest     (suggestion only)
-  -> OpenTask.ReviewSuggestion on the dashboard
+     -> DocumentContentReader::read    (text layer, page images, or Office text)
+     -> TextStore::write               (.dms-text/<xx>/<documentId>.txt)
+     -> DocumentClassifier::suggest    (suggestion only)
+  -> OpenTask::ReviewSuggestion on the dashboard
 User: approve (all or selected fields, edited)
   -> ApproveSuggestion
-     -> DocumentStorage.rename         (all folders, if a new name was approved)
-     -> CatalogRepository.save         (all folders, revision + 1)
+     -> DocumentStorage::move_entry    (all folders, if a new name was approved)
+     -> CatalogRepository::save        (all folders, revision + 1)
 ```
 
 AI output is always a **suggestion**. Nothing the AI produces reaches the catalog or a file name without the user's approval.
 
-## Gradle build
+## Build
 
-The build follows the structure of the `rule-engine` project:
-
-- `settings.gradle` declares the modules and repositories; the root `build.gradle` declares plugins with `apply false` and applies shared scripts to all subprojects.
-- Shared build logic lives in `config/gradle/*.gradle` (`java.gradle`, `testing.gradle`, `static_analysis.gradle`, `version_updates.gradle`, `wrapper.gradle`, `packaging-ui.gradle`). Put new cross-module configuration there, not in module build files.
-- All versions live in `gradle/libs.versions.toml`, including plugin versions. Never hard-code a version in a module build file or in `settings.gradle`. The one exception is the foojay toolchain resolver plugin in `settings.gradle`: settings plugins are resolved before the version catalog exists, so its version stays there.
-- `gradle.properties` holds `group`, `version` and `java_version`.
-- Detekt is configured in `config/detekt.yml`.
+- `Cargo.toml` in the root declares the workspace, the shared version (`workspace.package`), shared dependency versions (`workspace.dependencies`) and the lints (`workspace.lints`). Crates take shared dependencies with `x.workspace = true` and declare `[lints] workspace = true`. Never weaken the workspace lints in a crate.
+- The root `package.json` holds the Tauri CLI (`npm run dev`, `npm run build`); `ui/package.json` the webview (`dev`, `dev:mock`, `build`, `typecheck`, `test`).
+- Tauri configuration: `src-tauri/tauri.conf.json` plus one file per platform (`tauri.macos.conf.json`, `tauri.macos-x64.conf.json`, `tauri.windows.conf.json`, `tauri.linux.conf.json`), which bundle PDFium from `vendor/pdfium/<platform>/`.
+- PDFium is not built: `scripts/fetch-pdfium.sh` downloads a pinned release with checksums into the git-ignored `vendor/pdfium/`. The release must match the `pdfium-render` feature (`pdfium_8125`); change both together.
+- `rustfmt.toml` sets the line width (120). CI (`.github/workflows/ci.yml`) runs formatting, clippy, tests and the UI checks; `release.yml` builds the installers. Shared IntelliJ run configurations are in `.run/`.
+- The app data directory can be redirected with `RAGIN_DMS_DATA_DIR` for development; the default paths are the 1.x paths and must not change.

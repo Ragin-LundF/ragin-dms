@@ -1,0 +1,9 @@
+/* Inbox (Kotlin ui/inbox): screen padding 24, 24 between blocks, rows 8 apart. */
+
+.inbox-screen { height: 100%; padding: var(--screen-padding); display: flex; flex-direction: column; gap: var(--space-xl); box-sizing: border-box; }
+.inbox-rows { display: flex; flex-direction: column; gap: var(--space-s); }
+.inbox-dialog-head { display: flex; flex-direction: column; align-items: center; gap: var(--space-l); text-align: center; }
+.inbox-dialog-head .icon { width: 24px; height: 24px; color: var(--secondary); }
+.inbox-folder-list { max-height: 240px; display: flex; flex-direction: column; }
+.inbox-folder-option { flex: none; text-align: left; padding: var(--space-s); border: none; background: transparent; color: var(--on-surface); cursor: pointer; border-radius: var(--shape-xs); font: inherit; }
+.inbox-folder-option:hover { background: color-mix(in srgb, var(--on-surface) 8%, transparent); }

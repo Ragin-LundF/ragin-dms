@@ -1,0 +1,14 @@
+{
+  "bundle": {
+    "macOS": {
+      "frameworks": [
+        "../vendor/pdfium/mac-arm64/lib/libpdfium.dylib"
+      ],
+      "entitlements": "Entitlements.plist"
+    },
+    "resources": {
+      "../vendor/pdfium/mac-arm64/LICENSE": "pdfium/LICENSE",
+      "../vendor/pdfium/mac-arm64/licenses/": "pdfium/licenses/"
+    }
+  }
+}

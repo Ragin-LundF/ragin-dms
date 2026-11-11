@@ -1,0 +1,44 @@
+[package]
+name = "ragin-dms-desktop"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+description = "Ragin-DMS desktop app: composition root and Tauri commands"
+
+[[bin]]
+name = "ragin-dms"
+path = "src/main.rs"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+dms-domain.workspace = true
+dms-application.workspace = true
+dms-infra-pdf.workspace = true
+dms-infra-storage.workspace = true
+dms-infra-ai.workspace = true
+indexmap.workspace = true
+uuid.workspace = true
+chrono-tz.workspace = true
+iana-time-zone = "0.1"
+sys-locale = "0.3"
+serde.workspace = true
+serde_json.workspace = true
+chrono.workspace = true
+tauri = { version = "2", features = [] }
+tauri-plugin-dialog = "2"
+tauri-plugin-opener = "2"
+rfd = { version = "0.17", default-features = false, features = ["common-controls-v6"] }
+percent-encoding = "2"
+tauri-specta = { version = "=2.0.0-rc.26", features = ["derive", "typescript"] }
+specta = { version = "=2.0.0-rc.26", features = ["derive"] }
+specta-typescript = "=0.0.13"
+
+[dev-dependencies]
+tempfile.workspace = true
+image = { version = "0.25", default-features = false, features = ["png"] }
+zip = { version = "4", default-features = false, features = ["deflate"] }
+
+[lints]
+workspace = true

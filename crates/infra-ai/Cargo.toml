@@ -1,0 +1,23 @@
+[package]
+name = "dms-infra-ai"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+dms-domain.workspace = true
+dms-application.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+chrono.workspace = true
+indexmap.workspace = true
+base64 = "0.22"
+ureq = "3"
+image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
+
+[dev-dependencies]
+# Only the opt-in LM Studio test draws a synthetic invoice with it.
+ab_glyph = "0.2"
+
+[lints]
+workspace = true

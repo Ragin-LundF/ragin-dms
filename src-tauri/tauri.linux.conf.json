@@ -1,0 +1,7 @@
+{
+  "bundle": {
+    "resources": {
+      "../vendor/pdfium/linux-x64/": "pdfium/linux-x64/"
+    }
+  }
+}

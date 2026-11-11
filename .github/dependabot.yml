@@ -5,8 +5,13 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 1
-  - package-ecosystem: "gradle"
+  - package-ecosystem: "cargo"
     directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 1
+  - package-ecosystem: "npm"
+    directories: ["/", "/ui"]
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 1

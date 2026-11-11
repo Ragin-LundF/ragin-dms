@@ -1,0 +1,32 @@
+/* Settings (Kotlin ui/settings): screen padding 24, 24 between blocks, section list as wide as the navigation, every
+   card at most 920 wide. */
+
+.settings-screen { height: 100%; padding: var(--screen-padding); display: flex; flex-direction: column; gap: var(--space-xl); box-sizing: border-box; }
+.settings-sectioned { flex: 1; min-height: 0; display: flex; align-items: flex-start; gap: var(--space-xl); }
+.settings-column { display: flex; flex-direction: column; gap: var(--space-xl); align-self: stretch; }
+.settings-column[hidden] { display: none; }
+.settings-card { max-width: 920px; }
+
+.settings-sections { width: var(--navigation-width); flex: none; display: flex; flex-direction: column; gap: var(--space-xs); }
+.settings-section {
+  display: flex; align-items: center; gap: var(--space-m); width: 100%; padding: var(--space-s) var(--space-m);
+  border: var(--hairline) solid transparent; border-radius: var(--shape-s); background: transparent; cursor: pointer;
+  color: var(--on-surface-variant); text-align: left; font: inherit;
+}
+.settings-section .icon { width: var(--icon); height: var(--icon); flex: none; }
+.settings-section:hover:not(.selected) { background: color-mix(in srgb, var(--on-surface) 6%, transparent); }
+.settings-section.selected { background: var(--surface); border-color: var(--outline-variant); color: var(--on-surface); }
+.settings-section.selected .icon { color: var(--primary); }
+
+.settings-folder-row { display: flex; align-items: center; gap: var(--space-m); padding: var(--space-m); border-radius: var(--shape-m); background: var(--surface-low); }
+.settings-hint { padding: var(--space-m) 0; }
+.settings-date-text { padding: var(--space-l) 0 var(--space-m); }
+.settings-two-lines { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.settings-top { align-items: flex-start; }
+/* Lines up with the fields' own supporting text. */
+.settings-note { padding-left: var(--space-l); }
+.settings-choice { flex: none; padding-right: 8px; }
+.settings-field-error .field { border-color: var(--error); }
+.settings-field-error .field > label { color: var(--error); }
+/* The field line keeps the two spaces before its brackets, as Compose shows them. */
+.settings-keep-spaces { white-space: pre-wrap; }

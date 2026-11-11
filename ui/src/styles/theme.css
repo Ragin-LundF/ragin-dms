@@ -1,0 +1,186 @@
+/* The app's colours, type and shapes (Kotlin: theme/AppColors, AppTypography, AppShapes, Spacing, LibrarySizes,
+   ChartColors). Light or dark follows the system setting, as in the Compose app. */
+
+@font-face { font-family: "Geist"; font-weight: 400; src: url("../assets/fonts/geist_regular.ttf") format("truetype"); }
+@font-face { font-family: "Geist"; font-weight: 500; src: url("../assets/fonts/geist_medium.ttf") format("truetype"); }
+@font-face { font-family: "Geist"; font-weight: 600; src: url("../assets/fonts/geist_semibold.ttf") format("truetype"); }
+@font-face { font-family: "Geist"; font-weight: 700; src: url("../assets/fonts/geist_bold.ttf") format("truetype"); }
+
+:root {
+  color-scheme: light;
+  --primary: #4f46e5;
+  --on-primary: #ffffff;
+  --primary-container: #eeedfd;
+  --on-primary-container: #3730a3;
+  --secondary: #0d9488;
+  --on-secondary: #ffffff;
+  --secondary-container: #ccfbf1;
+  --on-secondary-container: #042f2e;
+  --tertiary: #db2777;
+  --on-tertiary: #ffffff;
+  --tertiary-container: #fce7f3;
+  --on-tertiary-container: #500724;
+  --background: #f4f4f7;
+  --on-background: #17171e;
+  --surface: #ffffff;
+  --on-surface: #17171e;
+  --surface-variant: #f1f1f5;
+  --on-surface-variant: #696977;
+  --surface-lowest: #ffffff;
+  --surface-low: #fbfbfc;
+  --surface-container: #f1f1f5;
+  --surface-high: #e8e8ee;
+  --surface-highest: #e1e1e8;
+  --outline: #c9c9d3;
+  --outline-variant: #e3e3ea;
+  --error: #dc2626;
+  --on-error: #ffffff;
+  --error-container: #fee2e2;
+  --on-error-container: #7f1d1d;
+  /* Material 3 baseline values; the Kotlin scheme does not set them. Tooltips and the snackbar use them. */
+  --inverse-surface: #322f35;
+  --inverse-on-surface: #f5eff7;
+  --inverse-primary: #d0bcff;
+  --scrim: rgba(0, 0, 0, 0.32);
+
+  /* Status colours, never used for data series; always shown with an icon or a label. */
+  --status-good: #0ca30c;
+  --status-warning: #fab219;
+  /* Everything the AI does, and the logo; nothing else uses it, so it reads as "AI". */
+  --ai-gradient: linear-gradient(135deg, #4338ca, #7c3aed, #db2777);
+  --on-ai-gradient: #ffffff;
+
+  /* Chart series: a colour-blind-safe order, used in this order, never cycled. */
+  --chart-1: #2a78d6;
+  --chart-2: #eb6834;
+  --chart-3: #1baf7a;
+  --chart-4: #eda100;
+  --chart-neutral: #898781;
+
+  /* Shapes */
+  --shape-xs: 4px;
+  --shape-s: 6px;
+  --shape-m: 8px;
+  --shape-l: 12px;
+  --shape-xl: 16px;
+
+  /* Spacing */
+  --hairline: 1px;
+  --space-xs: 4px;
+  --space-s: 8px;
+  --space-m: 12px;
+  --space-l: 16px;
+  --space-xl: 24px;
+  --space-xxl: 32px;
+  --icon: 18px;
+  --screen-padding: 24px;
+  --navigation-width: 220px;
+  --navigation-collapsed-width: 64px;
+  --sidebar-width: 264px;
+  --dialog-width: 480px;
+  --content-max-width: 1480px;
+  --log-height: 220px;
+  --status-bar-height: 30px;
+  --toolbar-height: 52px;
+  --palette-width: 640px;
+  --palette-field-width: 440px;
+  --palette-max-height: 440px;
+  --status-progress-width: 120px;
+  --status-text-max-width: 320px;
+  /* The room the macOS traffic lights take at the top of the navigation; set to 0 elsewhere by the shell. */
+  --title-bar-inset: 28px;
+
+  /* Library sizes */
+  --library-rail: 60px;
+  --search-input-min-width: 180px;
+  --popover-width: 260px;
+  --card-min-width: 132px;
+  --tile-width: 148px;
+  --selection-circle: 20px;
+  --quick-look-width: 380px;
+  --quick-look-preview-width: 195px;
+  --quick-look-preview-height: 260px;
+  --folder-tile-min-width: 150px;
+  --folder-tiles-max-height: 220px;
+  --folder-tree-indent: 14px;
+
+  --font: "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --elevation-2: 0 1px 2px rgba(0, 0, 0, 0.3), 0 2px 6px 2px rgba(0, 0, 0, 0.15);
+  --elevation-3: 0 1px 3px rgba(0, 0, 0, 0.3), 0 4px 8px 3px rgba(0, 0, 0, 0.15);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --primary: #8b85ff;
+    --on-primary: #14123a;
+    --primary-container: #25234a;
+    --on-primary-container: #c9c6ff;
+    --secondary: #5eead4;
+    --on-secondary: #042f2e;
+    --secondary-container: #115e59;
+    --on-secondary-container: #ccfbf1;
+    --tertiary: #f9a8d4;
+    --on-tertiary: #500724;
+    --tertiary-container: #9d174d;
+    --on-tertiary-container: #fce7f3;
+    --background: #0e0e11;
+    --on-background: #ececf2;
+    --surface: #1a1a1f;
+    --on-surface: #ececf2;
+    --surface-variant: #212127;
+    --on-surface-variant: #a0a0ae;
+    --surface-lowest: #1a1a1f;
+    --surface-low: #141417;
+    --surface-container: #212127;
+    --surface-high: #2a2a31;
+    --surface-highest: #33333b;
+    --outline: #45454f;
+    --outline-variant: #2b2b33;
+    --error: #f87171;
+    --on-error: #450a0a;
+    --error-container: #7f1d1d;
+    --on-error-container: #fee2e2;
+    --inverse-surface: #e6e0e9;
+    --inverse-on-surface: #322f35;
+    --inverse-primary: #6750a4;
+    --chart-1: #3987e5;
+    --chart-2: #d95926;
+    --chart-3: #199e70;
+    --chart-4: #c98500;
+  }
+}
+
+/* Material 3 type scale in Geist with bolder, slightly tighter headings; styles that show numbers use tabular
+   figures, so digits line up in columns. */
+.display-small { font-size: 36px; line-height: 44px; font-weight: 700; letter-spacing: -0.4px; }
+.headline-large { font-size: 32px; line-height: 40px; font-weight: 700; letter-spacing: -0.4px; }
+.headline-medium { font-size: 28px; line-height: 36px; font-weight: 700; letter-spacing: -0.4px; font-feature-settings: "tnum"; }
+.headline-small { font-size: 24px; line-height: 32px; font-weight: 600; letter-spacing: -0.4px; }
+.title-large { font-size: 22px; line-height: 28px; font-weight: 600; }
+.title-medium { font-size: 16px; line-height: 24px; font-weight: 600; letter-spacing: 0.15px; }
+.title-small { font-size: 14px; line-height: 20px; font-weight: 600; letter-spacing: 0.1px; }
+.body-large { font-size: 16px; line-height: 24px; font-weight: 400; letter-spacing: 0.5px; }
+.body-medium { font-size: 14px; line-height: 20px; font-weight: 400; letter-spacing: 0.25px; }
+.body-small { font-size: 12px; line-height: 16px; font-weight: 400; letter-spacing: 0.4px; font-feature-settings: "tnum"; }
+.label-large { font-size: 14px; line-height: 20px; font-weight: 600; letter-spacing: 0.1px; }
+.label-medium { font-size: 12px; line-height: 16px; font-weight: 500; letter-spacing: 0.5px; font-feature-settings: "tnum"; }
+.label-small { font-size: 11px; line-height: 16px; font-weight: 500; letter-spacing: 0.5px; }
+
+.muted { color: var(--on-surface-variant); }
+.error-text { color: var(--error); }
+.primary-text { color: var(--primary); }
+.mono { font-family: var(--mono); }
+.ellipsis { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.nowrap { white-space: nowrap; }
+.row { display: flex; align-items: center; }
+.column { display: flex; flex-direction: column; }
+.grow { flex: 1 1 0; min-width: 0; }
+.gap-xs { gap: var(--space-xs); }
+.gap-s { gap: var(--space-s); }
+.gap-m { gap: var(--space-m); }
+.gap-l { gap: var(--space-l); }
+.gap-xl { gap: var(--space-xl); }
+.wrap { flex-wrap: wrap; }
+.scroll { overflow: auto; min-height: 0; }
