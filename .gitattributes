@@ -1,4 +1,4 @@
 * text=auto eol=lf
 
-gradlew eol=lf
-*.bat eol=crlf
+# Golden files hold the exact bytes the Kotlin 1.3 version wrote (index.csv uses CRLF); git must not convert them.
+crates/infra-storage/tests/fixtures/** -text

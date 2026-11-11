@@ -139,7 +139,8 @@ fn a_zip_export_holds_the_files_and_the_index_and_an_existing_name_is_never_repl
     assert_eq!(location, export.outside().join("Tax (2).zip").to_string_lossy());
     assert_eq!(read(&export.outside().join("Tax.zip")), "older export");
     let mut archive = zip::ZipArchive::new(File::open(&location).expect("zip")).expect("archive");
-    let names: std::collections::BTreeSet<String> = archive.file_names().map(str::to_owned).collect();
+    let names: std::collections::BTreeSet<String> =
+        archive.file_names().map(|name| name.expect("name").into_owned()).collect();
     assert_eq!(names, ["index.csv", "index.html", "letters/Grüße.pdf"].map(str::to_owned).into());
     let mut content = String::new();
     archive.by_name("letters/Grüße.pdf").expect("entry").read_to_string(&mut content).expect("content");

@@ -124,7 +124,7 @@ files as in version 1.x.
 
 Requires:
 
-* Rust stable (1.90 or newer) via [rustup](https://rustup.rs).
+* Rust stable (1.91 or newer) via [rustup](https://rustup.rs).
 * Node.js LTS with npm.
 * The platform build tools for Tauri (Xcode command line tools, WebView2 and MSVC, or `webkit2gtk-4.1`); see
   the [Tauri prerequisites](https://tauri.app/start/prerequisites/).

@@ -8,7 +8,7 @@ use crate::error::PdfError;
 use crate::files::{self, FileFacts};
 
 const PROGRAM: &str = "ocrmypdf";
-const DEFAULT_TIMEOUT: Duration = Duration::from_secs(10 * 60);
+const DEFAULT_TIMEOUT: Duration = Duration::from_mins(10);
 const POLL: Duration = Duration::from_millis(100);
 
 /// Runs an external program; tests replace it, so they never need the program installed.

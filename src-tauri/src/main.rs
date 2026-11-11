@@ -18,7 +18,7 @@ mod session;
 use std::sync::Arc;
 
 use tauri::Manager;
-use tauri_specta::{Builder, collect_commands, collect_events};
+use tauri_specta::{Builder, ErrorHandlingMode, collect_commands, collect_events};
 
 use crate::session::Session;
 
@@ -72,6 +72,7 @@ fn compose(app: &tauri::App, session: Arc<Session>) -> context::AppContext {
 #[allow(clippy::too_many_lines)] // the list of commands and events, one per line
 fn specta_builder() -> Builder<tauri::Wry> {
     Builder::<tauri::Wry>::new()
+        .error_handling(ErrorHandlingMode::Result)
         .commands(collect_commands![
             // shell
             commands::session::session_state,
@@ -231,8 +232,10 @@ mod tests {
             return;
         }
         let current = std::fs::read_to_string(BINDINGS).unwrap_or_default();
+        // Whitespace is ignored: an IDE that reformats the file on commit (import spacing) does not make it stale.
+        let without_whitespace = |text: &str| text.split_whitespace().collect::<String>();
         assert!(
-            current == generated,
+            without_whitespace(&current) == without_whitespace(&generated),
             "{BINDINGS} is stale: run `UPDATE_BINDINGS=1 cargo test -p ragin-dms-desktop export_bindings`"
         );
     }
