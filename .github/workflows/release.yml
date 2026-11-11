@@ -1,4 +1,4 @@
-# Builds Ragin-DMS for macOS (Apple Silicon and Intel), Windows and Linux and attaches the installers to a draft
+# Builds Ragin-DMS for macOS (Apple Silicon), Windows and Linux and attaches the installers to a draft
 # GitHub release. Start it by pushing a tag like v0.2.0 that matches "version" in src-tauri/tauri.conf.json, or by
 # hand under Actions › Release › Run workflow (then the tag is created from that version).
 #
@@ -49,7 +49,7 @@ jobs:
             changes=$(awk -v v="## $version" 'index($0, v) == 1 { on = 1; next } /^## / { on = 0 } on' CHANGELOG.md)
             { printf '%s\n\n' "$changes"; cat; } <<'NOTES' | gh release create "$tag" --draft --target "$GITHUB_SHA" --title "Ragin-DMS $tag" --notes-file -
           ---
-          Installers for macOS (Apple Silicon and Intel), Windows and Linux are attached below.
+          Installers for macOS (Apple Silicon), Windows and Linux are attached below.
 
           The builds are not signed with a developer certificate yet, so the system asks once before the first start:
           - **macOS:** open the app; when macOS refuses, go to System Settings › Privacy & Security and choose
@@ -73,11 +73,6 @@ jobs:
             runner: macos-latest
             target: aarch64-apple-darwin
             pdfium: mac-arm64
-          - name: macOS (Intel)
-            runner: macos-latest
-            target: x86_64-apple-darwin
-            pdfium: mac-x64
-            config: --config src-tauri/tauri.macos-x64.conf.json
           - name: Linux
             runner: ubuntu-22.04
             target: x86_64-unknown-linux-gnu
@@ -127,11 +122,10 @@ jobs:
         run: scripts/fetch-pdfium.sh ${{ matrix.pdfium }}
 
       # macOS builds are signed ad hoc ("signingIdentity": "-" in tauri.conf.json), so Apple Silicon does not
-      # report them as damaged. PDFium goes into Contents/Frameworks (tauri.macos.conf.json; the Intel build overrides
-      # the path with tauri.macos-x64.conf.json).
+      # report them as damaged. PDFium goes into Contents/Frameworks (tauri.macos.conf.json).
       - uses: tauri-apps/tauri-action@1deb371b0cd8bd54025b384f1cd735e725c4060f # action-v1.0.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           releaseId: ${{ needs.create-release.outputs.id }}
-          args: --target ${{ matrix.target }} ${{ matrix.config }}
+          args: --target ${{ matrix.target }}

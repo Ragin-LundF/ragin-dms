@@ -73,7 +73,7 @@ AI output is always a **suggestion**. Nothing the AI produces reaches the catalo
 
 - `Cargo.toml` in the root declares the workspace, the shared version (`workspace.package`), shared dependency versions (`workspace.dependencies`) and the lints (`workspace.lints`). Crates take shared dependencies with `x.workspace = true` and declare `[lints] workspace = true`. Never weaken the workspace lints in a crate.
 - The root `package.json` holds the Tauri CLI (`npm run dev`, `npm run build`); `ui/package.json` the webview (`dev`, `dev:mock`, `build`, `typecheck`, `test`).
-- Tauri configuration: `src-tauri/tauri.conf.json` plus one file per platform (`tauri.macos.conf.json`, `tauri.macos-x64.conf.json`, `tauri.windows.conf.json`, `tauri.linux.conf.json`), which bundle PDFium from `vendor/pdfium/<platform>/`.
+- Tauri configuration: `src-tauri/tauri.conf.json` plus one file per platform (`tauri.macos.conf.json` (Apple Silicon only), `tauri.windows.conf.json`, `tauri.linux.conf.json`), which bundle PDFium from `vendor/pdfium/<platform>/`.
 - PDFium is not built: `scripts/fetch-pdfium.sh` downloads a pinned release with checksums into the git-ignored `vendor/pdfium/`. The release must match the `pdfium-render` feature (`pdfium_8125`); change both together.
 - `rustfmt.toml` sets the line width (120). CI (`.github/workflows/ci.yml`) runs formatting, clippy, tests and the UI checks; `release.yml` builds the installers. Shared IntelliJ run configurations are in `.run/`.
 - The app data directory can be redirected with `RAGIN_DMS_DATA_DIR` for development; the default paths are the 1.x paths and must not change.

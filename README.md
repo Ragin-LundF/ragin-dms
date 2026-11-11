@@ -18,7 +18,7 @@ To save you the typing, ragin-dms can suggest titles, categories, tags, dates an
 **your own local AI**, such as LM Studio or Ollama. Your documents are read on your machine and are
 never sent to a cloud service. Every suggestion waits for your approval before anything changes.
 
-Runs on macOS, Windows and Linux. Built with Rust and [Tauri](https://tauri.app); PDFs are read, rendered and
+Runs on macOS (Apple Silicon), Windows and Linux. Built with Rust and [Tauri](https://tauri.app); PDFs are read, rendered and
 written with the bundled [PDFium](https://pdfium.googlesource.com/pdfium/) library. Optional: install
 [OCRmyPDF](https://ocrmypdf.readthedocs.io) for precise OCR of scans.
 
