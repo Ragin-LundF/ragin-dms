@@ -38,6 +38,7 @@ Linked into the app; each crate's license text is in its source package (`cargo 
 | tauri, tauri-build, tauri-plugin-dialog, tauri-plugin-opener | desktop shell | Apache-2.0 OR MIT |
 | tauri-specta, specta, specta-typescript | typed commands | MIT |
 | percent-encoding, iana-time-zone | desktop shell | MIT OR Apache-2.0 |
+| rfd | crash dialog | MIT |
 | ureq, base64 | AI adapters (HTTP, images) | MIT OR Apache-2.0 |
 | calamine | XLSX text for search and AI | MIT |
 | zip | Office files, exports | MIT |

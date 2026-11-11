@@ -18,7 +18,7 @@ mod session;
 use std::sync::Arc;
 
 use tauri::Manager;
-use tauri_specta::{Builder, collect_commands, collect_events};
+use tauri_specta::{Builder, ErrorHandlingMode, collect_commands, collect_events};
 
 use crate::session::Session;
 
@@ -72,6 +72,7 @@ fn compose(app: &tauri::App, session: Arc<Session>) -> context::AppContext {
 #[allow(clippy::too_many_lines)] // the list of commands and events, one per line
 fn specta_builder() -> Builder<tauri::Wry> {
     Builder::<tauri::Wry>::new()
+        .error_handling(ErrorHandlingMode::Result)
         .commands(collect_commands![
             // shell
             commands::session::session_state,

@@ -11,7 +11,7 @@ serde.workspace = true
 serde_json.workspace = true
 chrono.workspace = true
 indexmap.workspace = true
-base64 = "0.22"
+base64 = "0.23"
 ureq = "3"
 image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
 

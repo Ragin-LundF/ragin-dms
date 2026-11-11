@@ -34,8 +34,9 @@ fn slides_text<R: Read + Seek>(archive: &mut ZipArchive<R>) -> Result<String, St
     let mut slides: Vec<(u32, String)> = archive
         .file_names()
         .filter_map(|name| {
+            let name = name.ok()?;
             let number = name.strip_prefix(SLIDE_PREFIX)?.strip_suffix(XML_SUFFIX)?.parse().ok()?;
-            Some((number, name.to_owned()))
+            Some((number, name.into_owned()))
         })
         .collect();
     slides.sort_unstable();
@@ -56,21 +57,20 @@ fn xml_text<R: Read + Seek>(archive: &mut ZipArchive<R>, name: &str) -> Result<S
     loop {
         let event = reader.read_event_into(&mut buffer).map_err(|error| error.to_string())?;
         match event {
-            Event::Start(element) if element.local_name().as_ref() == b"t" => in_run = true,
+            Event::Start(element) if element.local_name().as_ref() == "t" => in_run = true,
             Event::End(element) => match element.local_name().as_ref() {
-                b"t" => in_run = false,
-                b"p" => text.push('\n'),
+                "t" => in_run = false,
+                "p" => text.push('\n'),
                 _ => {}
             },
             Event::Empty(element) => match element.local_name().as_ref() {
-                b"tab" => text.push('\t'),
-                b"br" | b"cr" => text.push('\n'),
+                "tab" => text.push('\t'),
+                "br" | "cr" => text.push('\n'),
                 _ => {}
             },
-            Event::Text(run) if in_run => text.push_str(&run.decode().map_err(|error| error.to_string())?),
+            Event::Text(run) if in_run => text.push_str(&run.into_inner()),
             Event::GeneralRef(reference) if in_run => {
-                let name = reference.decode().map_err(|error| error.to_string())?;
-                let reference = format!("&{name};");
+                let reference = format!("&{};", reference.into_inner());
                 text.push_str(&quick_xml::escape::unescape(&reference).map_err(|error| error.to_string())?);
             }
             Event::Eof => break,

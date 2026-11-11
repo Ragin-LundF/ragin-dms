@@ -13,6 +13,7 @@ use crate::support::{RecordingTrash, failure_of, folder, hash_of, names_in, path
 fn an_imported_file_is_copied_with_its_hash_and_modification_time() {
     let folders = Folders::new();
     let source = write(&folders.temp.path().join("outside/scan.pdf"), "alpha");
+    #[allow(clippy::duration_suboptimal_units)] // a Unix timestamp reads best in seconds
     let modified = UNIX_EPOCH + Duration::from_secs(1_685_620_800);
     fs::File::options()
         .write(true)
