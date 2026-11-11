@@ -1,0 +1,59 @@
+/* The window: navigation, toolbar, screen, log and activity bar (Kotlin: AppContent, shell/*). */
+
+.app { display: flex; height: 100%; background: var(--background); }
+.app-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.app-screen { flex: 1; min-height: 0; position: relative; }
+.screen-body { flex: 1; min-height: 0; position: relative; overflow: hidden; }
+.center-fill { height: 100%; display: flex; align-items: center; justify-content: center; }
+
+/* Navigation */
+.navigation { width: var(--navigation-width); flex: none; height: 100%; background: var(--surface-low); transition: width 150ms ease; overflow: hidden; }
+.navigation.collapsed { width: var(--navigation-collapsed-width); }
+.navigation-inner { height: 100%; display: flex; flex-direction: column; gap: 1px; padding: calc(var(--title-bar-inset) + var(--space-m)) var(--space-m) var(--space-m); }
+.navigation.collapsed .navigation-inner > .row { justify-content: center; }
+.nav-group { padding: var(--space-l) 0 var(--space-xs) var(--space-m); }
+.nav-item {
+  display: flex; align-items: center; justify-content: center; gap: var(--space-m); width: 100%;
+  padding: var(--space-s) var(--space-m); border-radius: var(--shape-s); border: 1px solid transparent;
+  background: transparent; cursor: pointer; color: var(--on-surface-variant); text-align: left;
+}
+.nav-item:hover { background: color-mix(in srgb, var(--on-surface) 6%, transparent); }
+.nav-item.selected { background: var(--surface); border-color: var(--outline-variant); }
+.nav-item.selected .nav-icon { color: var(--primary); }
+.nav-item.selected .nav-label { color: var(--on-surface); }
+.nav-icon { position: relative; display: inline-flex; color: var(--on-surface-variant); }
+.nav-dot { position: absolute; top: -2px; right: -2px; width: 8px; height: 8px; border-radius: 50%; }
+.nav-badge { border-radius: 999px; padding: 1px var(--space-s); }
+.nav-collapse { padding: var(--space-m); }
+.navigation .tooltip-anchor { width: 100%; }
+
+/* Toolbar */
+.window-toolbar { height: var(--toolbar-height); flex: none; display: flex; align-items: center; gap: var(--space-l); padding: 0 var(--screen-padding); background: var(--surface-low); }
+.toolbar-title { flex: 1 1 0; }
+.toolbar-center { flex: 1.4 1 0; display: flex; justify-content: center; min-width: 0; }
+.toolbar-center .tooltip-anchor { width: 100%; max-width: var(--palette-field-width); }
+.toolbar-actions { flex: 1 1 0; display: flex; align-items: center; justify-content: flex-end; gap: var(--space-s); min-width: 0; }
+.palette-field {
+  width: 100%; display: flex; align-items: center; gap: var(--space-s); padding: var(--space-s) var(--space-m);
+  border-radius: var(--shape-s); border: 1px solid var(--outline-variant); background: var(--surface-container); cursor: pointer;
+}
+.palette-field:hover { background: color-mix(in srgb, var(--on-surface) 4%, var(--surface-container)); }
+
+/* Activity bar and log */
+.activity-bar { height: var(--status-bar-height); flex: none; display: flex; align-items: center; gap: var(--space-l); padding: 0 var(--space-l); background: var(--surface-low); border-top: 1px solid var(--outline-variant); }
+.status-dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.status-button { display: inline-flex; align-items: center; gap: var(--space-xs); height: 24px; padding: 0 var(--space-s); border: none; border-radius: 12px; background: transparent; cursor: pointer; }
+.status-button:hover { background: color-mix(in srgb, var(--on-surface) 8%, transparent); }
+.log-panel { height: var(--log-height); flex: none; display: flex; flex-direction: column; background: var(--surface-lowest); }
+
+/* Screens share this padding and width. */
+.screen { height: 100%; overflow: auto; padding: var(--screen-padding); }
+.screen-content { max-width: var(--content-max-width); margin: 0 auto; display: flex; flex-direction: column; gap: var(--space-xl); }
+
+/* Command palette */
+.palette { width: var(--palette-width); max-width: calc(100vw - 48px); background: var(--surface); border-radius: var(--shape-xl); padding: var(--space-m); box-shadow: var(--elevation-3); display: flex; flex-direction: column; }
+.palette-list { max-height: var(--palette-max-height); padding-top: var(--space-s); display: flex; flex-direction: column; }
+.palette-row { display: flex; align-items: center; gap: var(--space-m); width: 100%; padding: var(--space-s) var(--space-m); border: none; border-radius: var(--shape-s); background: transparent; cursor: pointer; text-align: left; }
+.palette-row.selected { background: var(--primary-container); }
+.palette-row.selected .palette-label { color: var(--on-primary-container); }
+.palette-row:disabled { opacity: 0.5; cursor: default; }

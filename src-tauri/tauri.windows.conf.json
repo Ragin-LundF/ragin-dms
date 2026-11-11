@@ -1,0 +1,12 @@
+{
+  "bundle": {
+    "resources": {
+      "../vendor/pdfium/win-x64/": "pdfium/win-x64/"
+    },
+    "windows": {
+      "wix": {
+        "upgradeCode": "3825cb0f-fb4b-3a67-973d-44cbb4620a18"
+      }
+    }
+  }
+}

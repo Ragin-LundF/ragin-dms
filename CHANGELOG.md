@@ -2,6 +2,33 @@
 
 All notable changes to ragin-dms are listed here.
 
+## 2.0.0
+
+### Rewritten in Rust and Tauri
+
+- The whole app is rewritten in Rust with Tauri. It looks and works as before.
+- Much smaller download: the app is about 39 MB instead of about 150 MB.
+- It needs less memory and starts faster.
+- Same library and settings files: there is nothing to migrate, and version 1.3 can still open a library
+  that 2.0 has used.
+- A new Edit menu with undo, cut, copy, paste and select all.
+
+### PDF engine
+
+- PDFs are now read, rendered and written with PDFium, the PDF engine of Chrome. It is faster and opens more
+  damaged PDFs.
+- Text layers from "Make searchable" now keep umlauts, the euro sign, Greek, Cyrillic and other characters
+  searchable. For this, the PDF embeds the full font once, which makes it about 200 KB larger.
+- "Convert to real PDF" files are about 200 KB larger per font style used, because the full font is embedded.
+- Text read from PDFs can have slightly different spaces and line breaks, so the AI and search may see the
+  text a little differently.
+- Page pictures and thumbnails can look slightly different, and small thumbnails are sharper.
+
+### Office files
+
+- Word files are read without headers, footers and footnotes, and PowerPoint files without speaker notes.
+- Numbers in Excel files are read as plain numbers, without their cell formatting.
+
 ## 1.3.0
 
 ### Turn scans into real PDFs

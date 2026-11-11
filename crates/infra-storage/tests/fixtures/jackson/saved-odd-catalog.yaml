@@ -1,0 +1,220 @@
+formatVersion: 1
+libraryId: library-odd
+revision: 12
+layout:
+  pathTemplate: "{category}/{year}/{title}"
+  defaultCurrency: EUR
+  embedMetadata: true
+  futureQuoted: "5"
+fieldDefinitions:
+- key: amount
+  label: "Betrag: brutto"
+  type: MONEY
+  futureNull: null
+- key: count
+  label: "2024"
+  type: NUMBER
+- key: flag
+  label: "yes"
+  type: BOOLEAN
+  futureDefinition: "~"
+savedSearches:
+- id: search-odd
+  name: "#steuer [2024], alles"
+  query:
+    text: "a: b"
+    uncategorized: true
+    tagsAny:
+    - "no"
+    - "on"
+    untagged: true
+    from: 2024-01-01
+    correspondent: O'Brien
+    fields:
+    - key: amount
+      comparison: LESS_THAN
+      value:
+        amount: "0.10"
+        currency: EUR
+    - key: flag
+      comparison: EQUALS
+      value:
+        flag: false
+    futureMap:
+      nested: "yes"
+      deeper:
+      - a: 1
+        b:
+        - x
+        - "y"
+      empty: []
+      emptyMap: {}
+correspondents:
+- name: zeta GmbH
+  futureText: plain text
+- name: Älter & Söhne
+  aliases:
+  - ÄS
+  - "yes"
+  futureEmptyList: []
+rules:
+- id: rule-b
+  name: "Rule: second"
+  origin: MANUAL
+  enabled: true
+  conditions:
+  - type: textAny
+    words:
+    - "1e3"
+    - Straße
+  actions:
+    targetFolder: "2024"
+    futureAction:
+    - a
+- id: rule-a
+  name: first
+  origin: LEARNED
+  enabled: true
+  conditions:
+  - type: correspondent
+    name: zeta GmbH
+  actions:
+    fields:
+      count:
+        number: "1000"
+  futureList:
+  - one
+  - 2
+  - "3"
+categories:
+- id: cat-a
+  name: "#1 Rechnungen, alt"
+  parentId: cat-b
+  retentionYears: 10
+  futureFloat: 1.5
+- id: cat-c
+  name: zäh
+  futureEmpty: ""
+- id: cat-b
+  name: "Zäh: Verträge"
+  futureBool: true
+tags:
+- "-5"
+- "0123"
+- "1e3"
+- "2024"
+- '@home'
+- "[x]"
+- "a,b"
+- Ende
+- "Null"
+- "yes"
+- "~"
+- äöü
+documents:
+- id: doc-dash
+  path: '- dash.pdf'
+  contentHash: f44e64e75f3948e9f73f8dfa94721c4ce8cbb4f265c4790c702b2d41cfbf2753
+  size: 4
+  addedAt: 2024-02-01T09:30:00Z
+  title: '- dash'
+  correspondent: "#hash"
+- id: doc-number
+  path: 2024/01/scan.pdf
+  contentHash: f44e64e75f3948e9f73f8dfa94721c4ce8cbb4f265c4790c702b2d41cfbf2753
+  size: 4
+  addedAt: 2024-02-01T09:30:00Z
+  title: "2024"
+  note: "trailing space \nnext line"
+  futureTrue: "True"
+- id: doc-long
+  path: Ordner mit Leerzeichen/Grüße an Müller & Söhne – 2024.pdf
+  contentHash: 8ed3f6ad685b959ead7022518e1af76cd816f8e8ec7ccdda1ed4018e8f2223f8
+  size: 5
+  addedAt: 2024-01-01T10:00:00.120Z
+  title: A very long title that goes well beyond the eighty columns limit of the YAML
+    emitter so that it wraps around
+  documentDate: 2023-12-24
+  correspondent: "O'Brien: Ltd"
+  categoryId: cat-a
+  tags:
+  - "2024"
+  - "yes"
+  - "~"
+  fields:
+    amount:
+      amount: "0.10"
+      currency: EUR
+    count:
+      number: "1000"
+    flag:
+      flag: true
+  note: |
+    Erste Zeile
+    Zweite Zeile mit Ümlauten
+  futureDoc:
+  - 1
+  - 2
+- id: doc-tab
+  path: "Tab\there.pdf"
+  contentHash: f44e64e75f3948e9f73f8dfa94721c4ce8cbb4f265c4790c702b2d41cfbf2753
+  size: 4
+  addedAt: 2024-02-01T09:30:00Z
+  title: "Tab\there"
+  note: |2-
+      indented first line
+    second
+- id: doc-nospace
+  path: Zebra.pdf
+  contentHash: f44e64e75f3948e9f73f8dfa94721c4ce8cbb4f265c4790c702b2d41cfbf2753
+  size: 4
+  addedAt: 2024-02-01T09:30:00Z
+  title: AveryveryverylongtitlewithoutanyspacesthatcannotbewrappedanywhereatallbytheYAMLemitter
+  categoryId: cat-c
+- id: doc-apple
+  path: apple.pdf
+  contentHash: f44e64e75f3948e9f73f8dfa94721c4ce8cbb4f265c4790c702b2d41cfbf2753
+  size: 4
+  addedAt: 2024-02-01T09:30:00Z
+  title: "Quote \"double\" and 'single' and back\\slash, a long one that also needs\
+    \ to wrap somewhere"
+- id: doc-yes
+  path: yes.pdf
+  contentHash: f44e64e75f3948e9f73f8dfa94721c4ce8cbb4f265c4790c702b2d41cfbf2753
+  size: 4
+  addedAt: 2024-02-01T09:30:00Z
+  title: "yes"
+  correspondent: "null"
+  note: |+
+    keep
+
+- id: doc-umlaut
+  path: Äpfel.pdf
+  contentHash: f44e64e75f3948e9f73f8dfa94721c4ce8cbb4f265c4790c702b2d41cfbf2753
+  size: 4
+  addedAt: 2024-02-01T09:30:00Z
+  title: "Grüße: äöüÄÖÜß und ein langer Titel mit Doppelpunkt: der über achtzig Spalten\
+    \ hinausgeht"
+- id: doc-emoji
+  path: 😀.pdf
+  contentHash: f44e64e75f3948e9f73f8dfa94721c4ce8cbb4f265c4790c702b2d41cfbf2753
+  size: 4
+  addedAt: 2024-02-01T09:30:00Z
+  title: Emoji 😀 in a title
+- id: doc-fullwidth
+  path: Ａ.pdf
+  contentHash: f44e64e75f3948e9f73f8dfa94721c4ce8cbb4f265c4790c702b2d41cfbf2753
+  size: 4
+  addedAt: 2024-02-01T09:30:00Z
+  documentDate: 2024-03-05
+  retention:
+    keepUntil: 2034-12-31
+    futureRetention: 3
+links:
+- first: doc-apple
+  second: doc-tab
+  futureLink: "Null"
+- first: doc-long
+  second: doc-yes
+  label: "yes"
+futureTop: 5

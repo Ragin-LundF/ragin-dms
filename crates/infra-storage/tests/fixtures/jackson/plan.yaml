@@ -1,0 +1,9 @@
+appliedAt: 2026-10-22T08:00:00Z
+template: "{category}/{year}"
+moves:
+- documentId: doc-1
+  from: loose/Grüße.pdf
+  to: Letters/2024/Grüße.pdf
+- documentId: doc-2
+  from: 2024.pdf
+  to: yes/2024.pdf

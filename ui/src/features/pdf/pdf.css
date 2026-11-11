@@ -1,0 +1,28 @@
+/* The PDF tools (Kotlin: pdf/PageEditorDialog, MergeDialog, rebuild/RebuildCompareDialog). */
+
+/* Kotlin set these dialogs' widths itself (usePlatformDefaultWidth = false), past the 560 dp default. */
+.dialog.pdf-wide-dialog { max-width: calc(100vw - 48px); }
+.pdf-dialog-heading { align-items: center; gap: var(--space-l); text-align: center; width: 100%; }
+
+.pdf-page-strip { align-items: flex-start; overflow-x: auto; overflow-y: hidden; padding-bottom: var(--space-s); }
+.pdf-page-card { align-items: center; flex: none; }
+.pdf-page-picture {
+  width: 150px; height: 200px; display: flex; align-items: center; justify-content: center; flex: none;
+  border: 1px solid var(--outline-variant); overflow: hidden;
+}
+.pdf-page-picture img { width: 140px; height: 190px; object-fit: contain; }
+.pdf-split-on { color: var(--primary); }
+
+.pdf-merge-row { min-height: 40px; }
+.pdf-merge-matches { max-height: 200px; display: flex; flex-direction: column; }
+.pdf-merge-match {
+  flex: none; text-align: left; padding: var(--space-s); border: none; background: transparent; cursor: pointer; border-radius: var(--shape-xs);
+}
+.pdf-merge-match:hover { background: color-mix(in srgb, var(--on-surface) 8%, transparent); }
+
+.pdf-compare-panes { height: min(620px, calc(100vh - 340px)); align-items: stretch; }
+.pdf-compare-pane { flex: 1 1 0; min-width: 0; align-items: center; }
+.pdf-compare-picture { flex: 1; min-height: 0; width: 100%; display: flex; align-items: center; justify-content: center; }
+.pdf-compare-frame { position: relative; max-width: 100%; max-height: 100%; display: flex; }
+.pdf-compare-frame img { max-width: 100%; max-height: min(590px, calc(100vh - 370px)); object-fit: contain; display: block; }
+.pdf-compare-frame svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }

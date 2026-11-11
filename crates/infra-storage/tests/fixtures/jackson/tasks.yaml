@@ -1,0 +1,28 @@
+suggestions:
+- documentId: doc-1
+  model: test-model
+  title: "Sample: invoice"
+  newCategoryName: Rechnungen
+  newCategoryParentId: cat-1
+  tags:
+  - name: Tax
+    isNew: false
+  - name: "2024"
+    isNew: true
+  documentDate: 2023-12-24
+  correspondent: Example Supplier
+  fileName: 2023-12-24 Sample invoice.pdf
+  transcription: |
+    Line one
+    Line two
+  confidence: 0.75
+- documentId: doc-2
+  model: rules
+  existingCategoryId: cat-1
+  confidence: 1.0E-4
+- documentId: doc-3
+  model: m
+  confidence: 1.0
+dismissed:
+- missing:doc-1
+- new:2024/a.pdf

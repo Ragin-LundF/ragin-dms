@@ -1,0 +1,39 @@
+[workspace]
+resolver = "3"
+members = ["crates/*", "src-tauri"]
+
+[workspace.package]
+version = "2.0.0"
+edition = "2024"
+rust-version = "1.90"
+
+[workspace.dependencies]
+dms-domain = { path = "crates/domain" }
+dms-application = { path = "crates/application" }
+dms-infra-storage = { path = "crates/infra-storage" }
+dms-infra-ai = { path = "crates/infra-ai" }
+dms-infra-pdf = { path = "crates/infra-pdf" }
+thiserror = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+uuid = { version = "1", features = ["v4"] }
+unicode-normalization = "0.1"
+tempfile = "3"
+chrono = { version = "0.4", default-features = false, features = ["std", "clock"] }
+chrono-tz = "0.10"
+indexmap = "2"
+num-bigint = "0.4"
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+pedantic = { level = "warn", priority = -1 }
+unwrap_used = "deny"
+module_name_repetitions = "allow"
+
+[profile.dev]
+opt-level = 1
+
+[profile.dev.package."*"]
+opt-level = 2

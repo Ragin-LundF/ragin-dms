@@ -1,0 +1,31 @@
+formatVersion: 1
+libraryId: library-1
+revision: 3
+categories:
+- id: cat-1
+  name: Invoices
+tags:
+- "2024"
+- Tax
+documents:
+- id: doc-a
+  path: a.pdf
+  contentHash: 8ed3f6ad685b959ead7022518e1af76cd816f8e8ec7ccdda1ed4018e8f2223f8
+  size: 5
+  addedAt: 2024-01-01T10:00:00Z
+  title: Sample invoice
+  documentDate: 2023-12-24
+  correspondent: Example Supplier
+  categoryId: cat-1
+  classification:
+    source: AI
+    model: test-model
+    confirmedAt: 2024-01-02T08:00:00Z
+- id: doc-b
+  path: letters/b.pdf
+  contentHash: f44e64e75f3948e9f73f8dfa94721c4ce8cbb4f265c4790c702b2d41cfbf2753
+  size: 4
+  addedAt: 2024-02-01T09:30:00Z
+  tags:
+  - "2024"
+  - Tax

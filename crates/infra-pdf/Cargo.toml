@@ -1,0 +1,28 @@
+[package]
+name = "dms-infra-pdf"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+dms-domain.workspace = true
+dms-application.workspace = true
+chrono.workspace = true
+indexmap.workspace = true
+zip = { version = "4", default-features = false, features = ["deflate"] }
+quick-xml = "0.38"
+calamine = { version = "0.31", default-features = false }
+pdfium-render = { version = "0.9.5", default-features = false, features = ["pdfium_8125", "image_025", "thread_safe"] }
+lopdf = { version = "0.47", default-features = false }
+image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
+ttf-parser = "0.25"
+sha2 = "0.10"
+unicode-normalization.workspace = true
+uuid.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[lints]
+workspace = true

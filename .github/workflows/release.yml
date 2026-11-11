@@ -1,0 +1,137 @@
+# Builds Ragin-DMS for macOS (Apple Silicon and Intel), Windows and Linux and attaches the installers to a draft
+# GitHub release. Start it by pushing a tag like v0.2.0 that matches "version" in src-tauri/tauri.conf.json, or by
+# hand under Actions › Release › Run workflow (then the tag is created from that version).
+#
+# Actions are pinned to commit SHAs (Dependabot keeps them current); only the jobs that need it may write.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  checks:
+    uses: ./.github/workflows/ci.yml
+    permissions:
+      contents: read
+
+  # One job creates the draft, so the four builds never race to create it twice.
+  create-release:
+    needs: checks
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      id: ${{ steps.release.outputs.id }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Create or reuse the draft release
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version=$(node -p "require('./src-tauri/tauri.conf.json').version")
+          tag="v$version"
+          if [ "$GITHUB_REF_TYPE" = "tag" ] && [ "$tag" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match version $version in src-tauri/tauri.conf.json"
+            exit 1
+          fi
+          if ! gh release view "$tag" >/dev/null 2>&1; then
+            # What's new comes from this version's CHANGELOG section; the app's update hint shows it too.
+            changes=$(awk -v v="## $version" 'index($0, v) == 1 { on = 1; next } /^## / { on = 0 } on' CHANGELOG.md)
+            { printf '%s\n\n' "$changes"; cat; } <<'NOTES' | gh release create "$tag" --draft --target "$GITHUB_SHA" --title "Ragin-DMS $tag" --notes-file -
+          ---
+          Installers for macOS (Apple Silicon and Intel), Windows and Linux are attached below.
+
+          The builds are not signed with a developer certificate yet, so the system asks once before the first start:
+          - **macOS:** open the app; when macOS refuses, go to System Settings › Privacy & Security and choose
+            **Open Anyway**.
+          - **Windows:** in the SmartScreen window choose **More info** › **Run anyway**.
+          NOTES
+          elif [ "$(gh release view "$tag" --json isDraft --jq .isDraft)" = "true" ]; then
+            # A rerun of the same version builds the current commit, so the draft points there too.
+            gh release edit "$tag" --target "$GITHUB_SHA"
+          fi
+          echo "id=$(gh release view "$tag" --json databaseId --jq .databaseId)" >> "$GITHUB_OUTPUT"
+
+  build:
+    name: Build ${{ matrix.name }}
+    needs: create-release
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: macOS (Apple Silicon)
+            runner: macos-latest
+            target: aarch64-apple-darwin
+            pdfium: mac-arm64
+          - name: macOS (Intel)
+            runner: macos-latest
+            target: x86_64-apple-darwin
+            pdfium: mac-x64
+            config: --config src-tauri/tauri.macos-x64.conf.json
+          - name: Linux
+            runner: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+            pdfium: linux-x64
+          - name: Windows
+            runner: windows-latest
+            target: x86_64-pc-windows-msvc
+            pdfium: win-x64
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Linux build dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libxdo-dev libssl-dev patchelf
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: lts/*
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            ui/package-lock.json
+
+      # rustup is preinstalled on GitHub's runners; no third-party action needed.
+      - name: Rust toolchain
+        shell: bash
+        run: |
+          rustup toolchain install stable --profile minimal --target ${{ matrix.target }}
+          rustup default stable
+
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          key: ${{ matrix.target }}
+
+      - name: Install JavaScript dependencies
+        run: |
+          npm ci
+          npm ci --prefix ui
+
+      - name: PDFium
+        shell: bash
+        run: scripts/fetch-pdfium.sh ${{ matrix.pdfium }}
+
+      # macOS builds are signed ad hoc ("signingIdentity": "-" in tauri.conf.json), so Apple Silicon does not
+      # report them as damaged. PDFium goes into Contents/Frameworks (tauri.macos.conf.json; the Intel build overrides
+      # the path with tauri.macos-x64.conf.json).
+      - uses: tauri-apps/tauri-action@1deb371b0cd8bd54025b384f1cd735e725c4060f # action-v1.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          releaseId: ${{ needs.create-release.outputs.id }}
+          args: --target ${{ matrix.target }} ${{ matrix.config }}

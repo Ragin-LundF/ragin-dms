@@ -1,0 +1,307 @@
+v000: plain
+v001: ""
+v002: ' '
+v003: "yes"
+v004: "Yes"
+v005: "YES"
+v006: "no"
+v007: "No"
+v008: "on"
+v009: "Off"
+v010: "y"
+v011: "n"
+v012: "true"
+v013: "False"
+v014: "null"
+v015: "Null"
+v016: "~"
+v017: "2024"
+v018: "0123"
+v019: "-5"
+v020: "+5"
+v021: "1.5"
+v022: ".5"
+v023: "5."
+v024: "1e3"
+v025: "1E+3"
+v026: ".inf"
+v027: "-.inf"
+v028: ".nan"
+v029: 0x1F
+v030: 12_34
+v031: 1:30
+v032: 2024-01-01
+v033: 2024-01-01T10:00:00Z
+v034: "-"
+v035: '- a'
+v036: -a
+v037: a - b
+v038: "a: b"
+v039: a:b
+v040: "a:"
+v041: :a
+v042: '? a'
+v043: ?a
+v044: a?
+v045: "#tag"
+v046: "a #b"
+v047: a#b
+v048: "[x]"
+v049: "a[x]"
+v050: "{x}"
+v051: "a,b"
+v052: '&anchor'
+v053: '*star'
+v054: '!bang'
+v055: '|pipe'
+v056: '>gt'
+v057: '''q'''
+v058: '"dq"'
+v059: '%pct'
+v060: '@at'
+v061: '`tick'
+v062: '---x'
+v063: '...x'
+v064: a---
+v065: äöü ß
+v066: emoji 😀
+v067: line sep
+v068: café
+v069: "nul\0x"
+v070: nelx
+v071: nbsp x
+v072: €
+v073: back\slash
+v074: "bell\ax"
+v075: "tab\tin"
+v076: "cr\rx"
+v077: bom﻿x
+v078: privatex
+v079: "noncharacter\uffffx"
+v080: ' leading'
+v081: 'trailing '
+v082: a  b
+v083: |-
+  multi
+  line
+v084: |
+  trailing
+v085: |2-
+
+  leading
+v086: |+
+  keep
+
+v087: |-
+  a
+
+  b
+v088: |-
+  a
+   b
+v089: "a \nb"
+v090: |2-
+   indented
+  second
+v091: "tab\tand\nline"
+v092: "cr\r\nline"
+v093: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+v094: This is a long sentence that should be wrapped by the emitter because it is
+  longer than eighty columns.
+v095: "#This is a long sentence that has to be quoted and should be wrapped because\
+  \ it is longer than eighty."
+v096: "This is a long sentence: it has to be single quoted and it should wrap since\
+  \ it is longer than eighty."
+v097: "This is a long sentence with a tab\there and it is double quoted and it should\
+  \ wrap after eighty columns"
+v098: Thisisalongwordwithoutspaces Thatisfollowedbyanotherlongwordwithoutspaces Andonemorelongwordafterthat
+v099: two  spaces  between  words  in  a  long  sentence  that  goes  beyond  the  eighty  columns  limit  yes
+v100: ümlaut äöü ümlaut äöü ümlaut äöü ümlaut äöü ümlaut äöü ümlaut äöü ümlaut äöü
+  ümlaut äöü ümlaut äöü end
+v101: 😀😀😀😀😀😀😀😀😀😀 😀😀😀😀😀😀😀😀😀😀 😀😀😀😀😀😀😀😀😀😀 😀😀😀😀😀😀😀😀😀😀
+  😀😀😀😀😀😀😀😀😀😀 end
+v102: |-
+  A long line that is followed by
+  a second line that is also very long and goes beyond eighty columns here
+list:
+- plain
+- ""
+- ' '
+- "yes"
+- "Yes"
+- "YES"
+- "no"
+- "No"
+- "on"
+- "Off"
+- "y"
+- "n"
+- "true"
+- "False"
+- "null"
+- "Null"
+- "~"
+- "2024"
+- "0123"
+- "-5"
+- "+5"
+- "1.5"
+- ".5"
+- "5."
+- "1e3"
+- "1E+3"
+- ".inf"
+- "-.inf"
+- ".nan"
+- 0x1F
+- 12_34
+- 1:30
+- 2024-01-01
+- 2024-01-01T10:00:00Z
+- "-"
+- '- a'
+- -a
+- a - b
+- "a: b"
+- a:b
+- "a:"
+- :a
+- '? a'
+- ?a
+- a?
+- "#tag"
+- "a #b"
+- a#b
+- "[x]"
+- "a[x]"
+- "{x}"
+- "a,b"
+- '&anchor'
+- '*star'
+- '!bang'
+- '|pipe'
+- '>gt'
+- '''q'''
+- '"dq"'
+- '%pct'
+- '@at'
+- '`tick'
+- '---x'
+- '...x'
+- a---
+- äöü ß
+- emoji 😀
+- line sep
+- café
+- "nul\0x"
+- nelx
+- nbsp x
+- €
+- back\slash
+- "bell\ax"
+- "tab\tin"
+- "cr\rx"
+- bom﻿x
+- privatex
+- "noncharacter\uffffx"
+- ' leading'
+- 'trailing '
+- a  b
+- |-
+  multi
+  line
+- |
+  trailing
+- |2-
+
+  leading
+- |+
+  keep
+
+- |-
+  a
+
+  b
+- |-
+  a
+   b
+- "a \nb"
+- |2-
+   indented
+  second
+- "tab\tand\nline"
+- "cr\r\nline"
+- xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+- This is a long sentence that should be wrapped by the emitter because it is longer
+  than eighty columns.
+- "#This is a long sentence that has to be quoted and should be wrapped because it\
+  \ is longer than eighty."
+- "This is a long sentence: it has to be single quoted and it should wrap since it\
+  \ is longer than eighty."
+- "This is a long sentence with a tab\there and it is double quoted and it should\
+  \ wrap after eighty columns"
+- Thisisalongwordwithoutspaces Thatisfollowedbyanotherlongwordwithoutspaces Andonemorelongwordafterthat
+- two  spaces  between  words  in  a  long  sentence  that  goes  beyond  the  eighty  columns  limit  yes
+- ümlaut äöü ümlaut äöü ümlaut äöü ümlaut äöü ümlaut äöü ümlaut äöü ümlaut äöü ümlaut
+  äöü ümlaut äöü end
+- 😀😀😀😀😀😀😀😀😀😀 😀😀😀😀😀😀😀😀😀😀 😀😀😀😀😀😀😀😀😀😀 😀😀😀😀😀😀😀😀😀😀
+  😀😀😀😀😀😀😀😀😀😀 end
+- |-
+  A long line that is followed by
+  a second line that is also very long and goes beyond eighty columns here
+nested:
+  deeper:
+    value: |-
+      A long line that is followed by
+      a second line that is also very long and goes beyond eighty columns here
+    list:
+    - |-
+      A long line that is followed by
+      a second line that is also very long and goes beyond eighty columns here
+"2024/a.pdf": value
+'a: b.pdf': value
+"yes": value
+no.pdf: value
+'#x': value
+"-a": value
+"- a": value
+"tab\tkey": value
+ä.pdf: value
+a,b: value
+'[x]': value
+? ""
+: value
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk: value
+? kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+: value
+? "line\nkey"
+: value
+"~": value
+"null": value
+".hidden": value
+"+x": value
+a'b: value
+😀.pdf: value
+' lead': value
+emptyList: []
+emptyMap: {}
+nullValue: null
+int: 5
+long: 5000000000
+negative: -3
+bool: true
+double: 0.75
+doubleSmall: 1.0E-4
+doubleBig: 1.0E7
+doubleMid: 123456.789
+doubleOne: 1.0
+listOfLists:
+- - a
+  - b
+- []
+- - k: v
+listOfMaps:
+- a: "1"
+  b:
+  - x
+- {}

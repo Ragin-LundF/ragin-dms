@@ -1,0 +1,28 @@
+[package]
+name = "dms-infra-storage"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+dms-domain.workspace = true
+dms-application.workspace = true
+chrono.workspace = true
+chrono-tz.workspace = true
+indexmap.workspace = true
+uuid.workspace = true
+unicode-normalization.workspace = true
+saphyr-parser = "0.3"
+sha2 = "0.10"
+zip = { version = "4", default-features = false, features = ["deflate"] }
+notify = "8.2"
+trash = "5.3"
+
+[target.'cfg(any(target_os = "macos", target_os = "linux"))'.dependencies]
+rustix = { version = "1.1", features = ["fs"] }
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[lints]
+workspace = true

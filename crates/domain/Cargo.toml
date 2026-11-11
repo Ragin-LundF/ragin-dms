@@ -1,0 +1,16 @@
+[package]
+name = "dms-domain"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+thiserror.workspace = true
+unicode-normalization.workspace = true
+chrono.workspace = true
+chrono-tz.workspace = true
+indexmap.workspace = true
+num-bigint.workspace = true
+
+[lints]
+workspace = true
