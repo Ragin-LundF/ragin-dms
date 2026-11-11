@@ -232,8 +232,10 @@ mod tests {
             return;
         }
         let current = std::fs::read_to_string(BINDINGS).unwrap_or_default();
+        // Whitespace is ignored: an IDE that reformats the file on commit (import spacing) does not make it stale.
+        let without_whitespace = |text: &str| text.split_whitespace().collect::<String>();
         assert!(
-            current == generated,
+            without_whitespace(&current) == without_whitespace(&generated),
             "{BINDINGS} is stale: run `UPDATE_BINDINGS=1 cargo test -p ragin-dms-desktop export_bindings`"
         );
     }
