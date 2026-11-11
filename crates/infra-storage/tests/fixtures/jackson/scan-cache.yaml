@@ -1,0 +1,21 @@
+entries:
+  "2024/b.pdf":
+    size: 21
+    modified: 1714550400000
+    contentHash: 3346c3d8d1bae6976e6ba3795a5fa315a4832dd9340a4e62b6189584102124d9
+  Grüße.pdf:
+    size: 22
+    modified: 1714550400000
+    contentHash: 8d3f200d5036fba65dd52aae1d9480f78da186cf548a468ac7edb210fb1ed623
+  'Re: b.pdf':
+    size: 20
+    modified: 1714550400000
+    contentHash: fd70a00711a63040d8df6eab594c90f27781cf821157be51fed47b8574005a89
+  a.pdf:
+    size: 16
+    modified: 1714550400000
+    contentHash: c36eec0408a7d475b83482b9b9e19f41acac5041e753eb6d3c14ee51cd2210fb
+  yes.pdf:
+    size: 18
+    modified: 1714550400000
+    contentHash: 775c9381b1f25bbdca2b8d5a58f1f7a1e896b847a74be49b2925df9c414af146

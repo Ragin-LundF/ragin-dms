@@ -1,0 +1,116 @@
+formatVersion: 1
+libraryId: library-1
+revision: 8
+layout:
+  inbox:
+    enabled: true
+    path: Inbox/New
+    aiAnalysis: true
+    aiTargetFolder: true
+    autoAnalyze: true
+  pathTemplate: "{category}/{year}"
+  defaultCurrency: EUR
+fieldDefinitions:
+- key: amount
+  label: Amount
+  type: MONEY
+- key: due
+  label: Due date
+  type: DATE
+  role: DUE_DATE
+- key: cancel-by
+  label: Cancel by
+  type: DATE
+  role: CANCEL_BY
+- key: contract-end
+  label: Contract end
+  type: DATE
+  role: CONTRACT_END
+- key: warranty-until
+  label: Warranty until
+  type: DATE
+  role: WARRANTY_END
+- key: project
+  label: Project
+  type: TEXT
+savedSearches:
+- id: search-1
+  name: Tax 2026
+  query:
+    text: invoice
+    category: cat-1
+    tagsAll:
+    - Tax
+    tagsNone:
+    - Draft
+    from: 2026-01-01
+    to: 2026-12-31
+    folder: letters
+    fields:
+    - key: amount
+      comparison: GREATER_THAN
+      value:
+        number: "100"
+    - key: due
+      comparison: PRESENT
+    addedSince: 2026-01-01T00:00:00Z
+    contentText: total
+correspondents:
+- name: Example Energy
+  aliases:
+  - EE Ltd
+rules:
+- id: rule-1
+  name: Example Energy
+  origin: LEARNED
+  enabled: false
+  conditions:
+  - type: correspondent
+    name: Example Energy
+  - type: textAll
+    words:
+    - meter
+    - kWh
+  - type: fileName
+    glob: bill-*.pdf
+  actions:
+    categoryId: cat-1
+    tags:
+    - Tax
+    fields:
+      project:
+        text: Home
+    targetFolder: letters
+categories:
+- id: cat-1
+  name: Contracts
+  retentionYears: 10
+documents:
+- id: doc-a
+  path: a.pdf
+  contentHash: 8ed3f6ad685b959ead7022518e1af76cd816f8e8ec7ccdda1ed4018e8f2223f8
+  size: 5
+  addedAt: 2024-01-01T10:00:00Z
+  fields:
+    amount:
+      amount: "1234.50"
+      currency: EUR
+    cancel-by:
+      date: 2026-09-30
+    project:
+      text: Home
+  note: |-
+    Paid on time.
+    Second line
+- id: doc-b
+  path: letters/b.pdf
+  contentHash: f44e64e75f3948e9f73f8dfa94721c4ce8cbb4f265c4790c702b2d41cfbf2753
+  size: 4
+  addedAt: 2024-01-01T10:00:00Z
+  retention:
+    keepUntil: 2030-12-31
+    settledAt: 2026-02-01T08:00:00Z
+links:
+- first: doc-a
+  second: doc-b
+  label: reminder

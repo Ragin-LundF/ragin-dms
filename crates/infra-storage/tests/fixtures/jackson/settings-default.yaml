@@ -1,0 +1,27 @@
+folders:
+- id: primary
+  displayName: "Bibliothek: Haupt"
+  location: /data/Bibliothek 2024
+  role: PRIMARY
+- id: sync
+  displayName: "yes"
+  location: C:\Users\Example\Library
+  role: SYNC
+addNewFilesWhileScanning: true
+ai:
+  enabled: null
+  baseUrl: http://localhost:1234/v1
+  model: null
+  preferVisionForPdfs: false
+  timeoutSeconds: 300
+  acceptSuggestedFileNames: false
+  embeddingModel: null
+  inputCharacters: 12000
+  provider: LOCAL
+  anthropicModel: claude-opus-5-5
+  isEnabled: false
+layout:
+  sidebarWidth: 200
+  sidebarFolded: false
+  folderTreeWidth: 240
+  folderTreeHidden: false

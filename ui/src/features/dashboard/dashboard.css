@@ -1,0 +1,94 @@
+/* Dashboard and open tasks: Kotlin dms.ui.dashboard metrics (Spacing: xs 4, s 8, m 12, l 16, xl 24, xxl 32). */
+
+.dashboard-screen, .tasks-screen { position: relative; height: 100%; }
+.tasks-screen { padding: var(--screen-padding); display: flex; flex-direction: column; }
+.dashboard-overview { height: 100%; overflow-y: auto; padding: var(--screen-padding); display: flex; flex-direction: column; gap: var(--space-l); }
+.dashboard-overview > * { flex: none; }
+.dashboard-section { display: flex; gap: var(--space-l); }
+.focus-section { align-items: flex-start; }
+.focus-section > .attention-panel { flex: 1.35 1 0; min-width: 0; }
+.focus-section > .recent-card { flex: 1 1 0; min-width: 0; }
+.quick-access > *, .status-section > * { flex: 1 1 0; min-width: 0; height: 340px; }
+.insights > * { height: 340px; min-width: 0; }
+.insights > :first-child { flex: 1.3 1 0; }
+.insights > :last-child { flex: 1 1 0; }
+.dashboard-chart-card, .status-card { overflow: hidden; }
+.clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+/* Header */
+.dashboard-header { display: flex; align-items: baseline; gap: var(--space-m); min-width: 0; }
+
+/* Stat strip */
+.stat-row { flex-direction: row; overflow: hidden; }
+.stat-cell { flex: 1 1 0; min-width: 0; display: flex; }
+.stat-column { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; padding: var(--space-m) var(--space-l); text-align: left; font: inherit; color: inherit; background: none; border: none; }
+.stat-column.clickable { cursor: pointer; }
+.stat-column.clickable:hover { background: color-mix(in srgb, var(--on-surface) 4%, transparent); }
+.stat-column .row { min-height: 36px; }
+.stat-meter { display: block; height: var(--space-xs); margin: var(--space-xs) 0; border-radius: 2px; background: var(--surface-high); overflow: hidden; }
+.stat-meter > span { display: block; height: 100%; border-radius: 2px; background: var(--primary); transition: width 700ms ease; }
+
+/* AI band */
+.ai-band { display: flex; align-items: center; gap: var(--space-m); padding: var(--space-m) var(--space-l); border-radius: var(--shape-l); border: 1px solid transparent; background: linear-gradient(var(--surface), var(--surface)) padding-box, var(--ai-gradient) border-box; }
+.ai-sparkle { width: var(--space-xxl); height: var(--space-xxl); flex: none; display: inline-flex; align-items: center; justify-content: center; border-radius: var(--shape-m); background: var(--ai-gradient); color: var(--on-ai-gradient); }
+.ai-gradient-button { background: var(--ai-gradient); color: var(--on-ai-gradient); border: none; }
+.ai-gradient-button:disabled { opacity: 0.5; color: var(--on-ai-gradient); background: var(--ai-gradient); }
+
+/* Needs your attention */
+.attention-panel { overflow: hidden; }
+.attention-header { display: flex; align-items: center; gap: var(--space-s); padding: var(--space-s) var(--space-l); }
+.attention-header-buttons { padding-left: var(--space-s); }
+.attention-empty { display: block; padding: var(--space-l); }
+.attention-row { position: relative; display: flex; align-items: center; gap: var(--space-m); padding: var(--space-s) var(--space-l) var(--space-s) calc(var(--space-xs) + var(--space-m)); }
+.attention-row::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: var(--space-xs); border-radius: 2px; background: var(--stripe); }
+.attention-text { flex: 1.4 1 0; min-width: 0; }
+.attention-buttons { flex: 1 1 0; min-width: 0; }
+.row-thumbnail { width: var(--space-xxl); height: calc(var(--space-xxl) + var(--space-s)); flex: none; display: flex; align-items: center; justify-content: center; }
+.row-thumbnail .file-thumbnail { width: 100%; height: 100%; }
+.duplicate-copies { padding-top: var(--space-s); }
+
+/* Recently added */
+.recent-row { display: flex; align-items: center; gap: var(--space-m); padding: var(--space-xs); border-radius: var(--shape-s); cursor: pointer; }
+.recent-row:hover { background: color-mix(in srgb, var(--on-surface) 6%, transparent); }
+
+/* Charts */
+.bar-list { display: flex; flex-direction: column; gap: var(--space-xs); }
+.bar-entry { display: flex; flex-direction: column; padding: var(--space-xs) var(--space-s); border: none; background: none; font: inherit; color: inherit; text-align: left; border-radius: var(--shape-s); cursor: pointer; flex: none; }
+.bar-entry:hover { background: color-mix(in srgb, var(--on-surface) 6%, transparent); }
+.bar-track { display: block; margin-top: var(--space-xs); height: 6px; border-radius: 3px; background: var(--surface-container); }
+.bar-fill { display: block; height: 100%; border-radius: 3px; background: color-mix(in srgb, var(--primary) 75%, transparent); transition: width 700ms ease; }
+.column-chart { display: flex; flex-direction: column; }
+.column-bars { display: flex; align-items: flex-end; gap: var(--space-s); height: 180px; }
+.column-bar { flex: 1 1 0; min-width: 0; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; border: none; background: none; padding: 0; font: inherit; color: var(--on-surface); cursor: pointer; }
+.column-value { visibility: hidden; white-space: nowrap; }
+.column-bar.labelled .column-value, .column-bar:hover .column-value { visibility: visible; }
+.column-fill { width: 100%; border-radius: 4px 4px 0 0; opacity: 0.82; transition: height 700ms ease; }
+.column-bar:hover .column-fill { opacity: 1; }
+.column-baseline { height: 1px; background: var(--outline); }
+.column-labels { display: flex; gap: var(--space-s); }
+.column-labels > span { flex: 1 1 0; min-width: 0; text-align: center; }
+.donut { display: flex; align-items: center; gap: var(--space-xl); }
+.donut-ring { position: relative; flex: none; }
+.donut-slice { transition: stroke-dasharray 700ms ease, stroke-dashoffset 700ms ease; }
+.donut-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.legend-row { gap: 0; }
+.legend-dot { width: 10px; height: 10px; border-radius: 50%; flex: none; margin-right: var(--space-s); }
+.legend-label { width: 72px; overflow: hidden; }
+.legend-row .label-large { margin-right: var(--space-s); }
+.sparkline { flex: none; }
+.tag-cloud { display: flex; flex-wrap: wrap; gap: var(--space-s); align-content: flex-start; }
+.tag-cloud-chip { display: inline-flex; align-items: center; gap: var(--space-s); padding: var(--space-xs) var(--space-m); border-radius: 999px; border: 1px solid var(--outline-variant); background: var(--surface-container); color: var(--on-surface); font: inherit; cursor: pointer; }
+.tag-cloud-chip:hover { background: color-mix(in srgb, var(--on-surface) 8%, var(--surface-container)); }
+
+/* Folders and activity */
+.status-dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.activity-row { display: flex; align-items: flex-start; gap: var(--space-m); }
+.activity-dot { width: 8px; height: 8px; margin-top: var(--space-s); border-radius: 50%; background: var(--tertiary); flex: none; }
+
+/* Open tasks */
+.task-list { flex: 1; min-height: 0; }
+.task-chips { overflow-x: auto; padding-bottom: var(--space-s); flex: none; }
+.task-groups { min-height: 0; }
+.task-row { display: flex; align-items: flex-start; gap: var(--space-m); padding: var(--space-m); border-radius: var(--shape-m); background: var(--surface-low); }
+.task-actions { padding-top: var(--space-s); }
+.contents { display: contents; }

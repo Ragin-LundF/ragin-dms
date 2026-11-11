@@ -1,0 +1,15 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="3 Ragin-DMS (dev, test library)" type="js.build_tools.npm">
+    <package-json value="$PROJECT_DIR$/package.json" />
+    <command value="run" />
+    <scripts>
+      <script value="dev" />
+    </scripts>
+    <node-interpreter value="project" />
+    <envs>
+      <env name="PATH" value="/opt/homebrew/opt/rustup/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin" />
+      <env name="RAGIN_DMS_DATA_DIR" value="/Users/ragin/ragin-dms-test/app-data" />
+    </envs>
+    <method v="2" />
+  </configuration>
+</component>
