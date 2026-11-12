@@ -12,12 +12,13 @@ use crate::events::MenuEvent;
 use crate::session::{LibraryStatus, Session, SessionState};
 
 /// The entries of the "Library" menu: the palette's library actions, by id, label and shortcut.
-const LIBRARY_ACTIONS: [(&str, &str, Option<&str>); 5] = [
+const LIBRARY_ACTIONS: [(&str, &str, Option<&str>); 6] = [
     ("scan", "Scan now", Some("CmdOrCtrl+R")),
     ("syncAll", "Sync to all destinations", Some("CmdOrCtrl+Shift+S")),
     ("mergeAll", "Merge all folders", Some("CmdOrCtrl+Shift+M")),
     ("retryFailed", "Retry failed operations", None),
     ("detectDates", "Detect missing document dates", None),
+    ("checkArchive", "Check archive now", None),
 ];
 
 /// The library's keys as menu entries. Only ⌘\ is a real shortcut: one for "/", Space, ⌘A, Esc, ↵ or ⌫ would
@@ -37,10 +38,15 @@ const DOCUMENT_ACTIONS: [(&str, &str, Option<&str>); 8] = [
     ("deleteFolder", "Delete the open folder… (⌫)", None),
 ];
 
-const SCREENS: [(&str, &str, &str); 4] = [
+const SCREENS: [(&str, &str, &str); 9] = [
     ("openDashboard", "Dashboard", "CmdOrCtrl+1"),
     ("openTasks", "Open tasks", "CmdOrCtrl+2"),
     ("openLibrary", "Library", "CmdOrCtrl+3"),
+    ("openBills", "To pay", "CmdOrCtrl+4"),
+    ("openContracts", "Contracts", "CmdOrCtrl+5"),
+    ("openTax", "Tax years", "CmdOrCtrl+6"),
+    ("openCases", "Cases", "CmdOrCtrl+7"),
+    ("openEmergency", "Emergency folder", "CmdOrCtrl+8"),
     ("openSettings", "Settings", "CmdOrCtrl+,"),
 ];
 

@@ -4,9 +4,10 @@ import MOVE_TO_INBOX from "@material-design-icons/svg/round/move_to_inbox.svg?ra
 import TEXT_FIELDS from "@material-design-icons/svg/round/text_fields.svg?raw";
 import RULE from "@material-design-icons/svg/round/rule.svg?raw";
 import AUTO_AWESOME from "@material-design-icons/svg/round/auto_awesome.svg?raw";
-import { Icon } from "../../shared/components";
+import HEALTH from "@material-design-icons/svg/round/health_and_safety.svg?raw";
+import {Icon} from "../../shared/components";
 
-export type SettingsSection = "folders" | "scanning" | "inbox" | "fields" | "rules" | "ai";
+export type SettingsSection = "folders" | "scanning" | "inbox" | "fields" | "rules" | "health" | "ai";
 
 /** The sections of a configured library, in order; those that edit the catalog need its settings loaded. */
 export const SECTIONS: { id: SettingsSection; label: string; icon: string; needsLibrarySettings: boolean }[] = [
@@ -15,6 +16,7 @@ export const SECTIONS: { id: SettingsSection; label: string; icon: string; needs
   { id: "inbox", label: "Inbox", icon: MOVE_TO_INBOX, needsLibrarySettings: true },
   { id: "fields", label: "Custom fields", icon: TEXT_FIELDS, needsLibrarySettings: true },
   { id: "rules", label: "Matching rules", icon: RULE, needsLibrarySettings: true },
+  { id: "health", label: "Archive health", icon: HEALTH, needsLibrarySettings: false },
   { id: "ai", label: "AI", icon: AUTO_AWESOME, needsLibrarySettings: false },
 ];
 

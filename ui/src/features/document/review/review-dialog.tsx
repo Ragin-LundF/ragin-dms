@@ -1,13 +1,14 @@
 import AUTO_AWESOME from "@material-design-icons/svg/round/auto_awesome.svg?raw";
 import OPEN_IN_NEW from "@material-design-icons/svg/round/open_in_new.svg?raw";
-import { commands, unwrap, type ReviewRow_Serialize } from "../../../ipc";
-import { reportError } from "../../../session/session";
-import { Button, Dialog, TextField } from "../../../shared/components";
-import { useStore } from "../../../shared/store";
-import { closeReview as close, reviewStore, type OpenReview } from "../state";
-import { DialogHeading } from "./dialog-heading";
-import { categoryHint } from "./review-hints";
-import { SuggestingTextField } from "./suggesting-text-field";
+import {commands, type ReviewRow_Serialize, unwrap} from "../../../ipc";
+import {reportError} from "../../../session/session";
+import {Button, Dialog, TextField} from "../../../shared/components";
+import {useStore} from "../../../shared/store";
+import {reviewCaseChoice, ReviewCases} from "../../cases";
+import {closeReview as close, type OpenReview, reviewStore} from "../state";
+import {DialogHeading} from "./dialog-heading";
+import {categoryHint} from "./review-hints";
+import {SuggestingTextField} from "./suggesting-text-field";
 
 /**
  * The review of an AI suggestion (Kotlin `ReviewDialog` + `ReviewFields`): every suggested value, editable, approved
@@ -19,7 +20,7 @@ export function ReviewDialog() {
   const { review, problem } = open;
   const id = review.documentId;
   const approve = () =>
-    unwrap(commands.approveReview(id, open.rows)).then((refused) => (refused === null ? close() : reviewStore.set({ ...open, problem: refused })), reportError);
+    unwrap(commands.approveReview(id, open.rows, reviewCaseChoice.get())).then((refused) => (refused === null ? close() : reviewStore.set({ ...open, problem: refused })), reportError);
   const reject = () => unwrap(commands.rejectReview(id)).then((started) => started && close(), reportError);
   return (
     <Dialog
@@ -40,6 +41,7 @@ export function ReviewDialog() {
         {review.rows.map((row, index) => (
           <ReviewFieldRow key={row.key} row={row} open={open} index={index} />
         ))}
+        <ReviewCases documentId={id} />
         {problem && <span className="body-medium error-text">{problem}</span>}
       </div>
     </Dialog>

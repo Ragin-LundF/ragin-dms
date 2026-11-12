@@ -4,7 +4,9 @@ use crate::library::{FileNamePolicy, FileNameViolation, RelativePath};
 /// The optional inbox: a folder inside the library, at the same relative [`Self::path`] in every library folder,
 /// where new documents are dropped and then filed. [`Self::ai_analysis`] lets the AI suggest metadata for inbox
 /// documents, [`Self::ai_target_folder`] lets it also suggest where to file them, and [`Self::auto_analyze`] runs
-/// the analysis as soon as a file arrives.
+/// the analysis as soon as a file arrives. [`Self::propose_splits`] offers to split scans of 3 or more pages,
+/// [`Self::convert_emails`] turns `.eml` files into PDFs as they arrive, keeping the mail file only with
+/// [`Self::keep_email_originals`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[allow(clippy::struct_excessive_bools)] // independent switches of the catalog format
 pub struct InboxSettings {
@@ -13,6 +15,9 @@ pub struct InboxSettings {
     pub ai_analysis: bool,
     pub ai_target_folder: bool,
     pub auto_analyze: bool,
+    pub propose_splits: bool,
+    pub convert_emails: bool,
+    pub keep_email_originals: bool,
 }
 
 impl Default for InboxSettings {
@@ -23,6 +28,9 @@ impl Default for InboxSettings {
             ai_analysis: true,
             ai_target_folder: true,
             auto_analyze: false,
+            propose_splits: false,
+            convert_emails: false,
+            keep_email_originals: false,
         }
     }
 }

@@ -1,0 +1,196 @@
+formatVersion: 1
+libraryId: library-1
+revision: 12
+layout:
+  inbox:
+    enabled: true
+    path: Inbox
+    aiAnalysis: true
+    aiTargetFolder: true
+    autoAnalyze: false
+    proposeSplits: true
+    convertEmails: true
+    keepEmailOriginals: true
+fieldDefinitions:
+- key: amount
+  label: Amount
+  type: MONEY
+- key: due
+  label: Due date
+  type: DATE
+  role: DUE_DATE
+- key: paid-on
+  label: Paid on
+  type: DATE
+- key: iban
+  label: IBAN
+  type: TEXT
+- key: payment-reference
+  label: Payment reference
+  type: TEXT
+categories:
+- id: cat-1
+  name: Salary
+documents:
+- id: doc-a
+  path: bills/water.pdf
+  contentHash: 8ed3f6ad685b959ead7022518e1af76cd816f8e8ec7ccdda1ed4018e8f2223f8
+  size: 5
+  addedAt: 2024-01-01T10:00:00Z
+  correspondent: Example Water Works
+  fields:
+    amount:
+      amount: "86.40"
+      currency: EUR
+    due:
+      date: 2026-11-14
+    iban:
+      text: DE89370400440532013000
+    paid-on:
+      date: 2026-11-10
+    payment-reference:
+      text: KD 448812
+  tax:
+    year: 2025
+    area: householdServices
+    deductible:
+      amount: "68.50"
+      currency: EUR
+    futureTax: kept in the tax assignment
+- id: doc-b
+  path: letters/objection.pdf
+  contentHash: f44e64e75f3948e9f73f8dfa94721c4ce8cbb4f265c4790c702b2d41cfbf2753
+  size: 4
+  addedAt: 2024-01-01T10:00:00Z
+  categoryId: cat-1
+owner:
+  name: Alex Example
+  addressLines:
+  - 1 Example Road
+  - 12345 Exampletown
+  email: alex@example.org
+  phone: +49 123 456
+  futureOwner: kept in the owner
+billsTrackedSince: 2026-11-01
+dismissedContractProposals:
+- Example Gym
+expectations:
+- correspondent: Example Employer
+  categoryId: cat-1
+  mode: keep
+  futureExpectation: kept in the expectation
+- correspondent: Example Shop
+  mode: "off"
+emergencyFolder:
+  items:
+  - id: item-1
+    group: contacts
+    contact:
+      name: Sam Example
+      role: Neighbour
+      phone: 0123 456
+    included: true
+  - id: item-2
+    group: insurance
+    contractId: contract-1
+    included: true
+    futureItem: kept in the emergency item
+  - id: item-3
+    group: personal
+    documentId: doc-b
+    included: false
+    recordedHash: f44e64e75f3948e9f73f8dfa94721c4ce8cbb4f265c4790c702b2d41cfbf2753
+  - id: item-4
+    group: other
+    note: The spare key is with the neighbour.
+    included: true
+  lastRefreshed: 2025-11-14
+  refreshMonths: 12
+  introText: Everything you need in one place.
+  futureFolder: kept in the emergency folder
+contracts:
+- id: contract-1
+  name: Water
+  correspondent: Example Water Works
+  kind: utility
+  price:
+    amount: "28.80"
+    currency: EUR
+    period: monthly
+  priceHistory:
+  - validFrom: 2025-01-01
+    price:
+      amount: "26.00"
+      currency: EUR
+      period: monthly
+  - validFrom: 2026-01-01
+    price:
+      amount: "28.80"
+      currency: EUR
+      period: monthly
+    documentId: doc-a
+  terms:
+    termEnd: 2026-12-31
+    renewsByMonths: 12
+    noticeCount: 3
+    noticeUnit: months
+    futureTerms: kept in the terms
+  documentIds:
+  - doc-a
+  note: Meter in the basement
+  futureContract: kept in the contract
+- id: contract-2
+  name: Streaming
+  kind: subscription
+  terms:
+    cancellableAnyTime: true
+  endedOn: 2026-06-30
+cases:
+- id: case-1
+  title: Objection to the water bill
+  correspondent: Example Water Works
+  status: waiting
+  openedOn: 2026-10-01
+  waitingSince: 2026-10-05
+  remindAfterDays: 21
+  entries:
+  - documentId: doc-a
+    direction: received
+    date: 2026-09-28
+  - documentId: doc-b
+    direction: sent
+    date: 2026-10-05
+  notes:
+  - date: 2026-10-05
+    text: Sent by registered mail.
+  followUps:
+  - id: follow-1
+    date: 2026-11-30
+    text: Send the meter photo
+    source: ai
+    sourceDocumentId: doc-a
+    futureFollowUp: kept in the follow-up
+  - id: follow-2
+    date: 2026-10-20
+    text: Call the hotline
+    done: true
+    source: manual
+  futureCase: kept in the case
+taxYears:
+- year: 2025
+  items:
+  - id: tax-1
+    area: householdServices
+    label: Chimney sweep
+    correspondent: Example Sweep
+    documentId: doc-a
+    state: found
+    futureItem: kept in the tax item
+  - id: tax-2
+    area: income
+    label: Lohnsteuerbescheinigung
+    state: missing
+    note: Ask the employer
+    addedByUser: true
+  sentOn: 2026-05-31
+  futureYear: kept in the tax year

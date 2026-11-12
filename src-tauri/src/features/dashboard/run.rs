@@ -86,6 +86,17 @@ pub fn outcome_of(services: &AppServices, call: &Call) -> OperationOutcome {
         Call::DismissTask(key) => stored(services, sync.dismiss_task.run(key)),
         Call::SettleRetention(ids) => documents.settle_retention.run(ids),
         Call::AcceptRuleProposal(proposal) => services.organize.accept_rule_proposal.run(proposal),
+        Call::DismissContractProposal(correspondent) => services.organize.dismiss_contract_proposal.run(correspondent),
+        Call::CompleteFollowUp { case_id, follow_up_id } => {
+            services.cases.complete_follow_up.run(case_id, follow_up_id)
+        }
+        Call::SnoozeFollowUp { case_id, follow_up_id, days } => {
+            services.cases.snooze_follow_up.run(case_id, follow_up_id, *days)
+        }
+        Call::SetCaseStatus { case_id, status } => services.cases.set_case_status.run(case_id, *status),
+        Call::RepairCopy { document_id, folder_id, source_folder_id } => {
+            sync.repair_copy.run(document_id, folder_id, source_folder_id, true)
+        }
     }
 }
 

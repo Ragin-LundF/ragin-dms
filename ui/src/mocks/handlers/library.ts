@@ -1,28 +1,30 @@
 import {emit} from "@tauri-apps/api/event";
 import {mockConvertFileSrc} from "@tauri-apps/api/mocks";
 import type {
-    LibraryFacetDto,
-    LibraryFacetOptionDto_Serialize as Option,
-    LibraryFilterDto_Serialize as Filter,
-    LibraryFolderEntryDto,
-    LibraryFolderViewDto_Serialize,
-    LibraryLayoutDto,
-    LibraryParamsDto_Serialize as Params,
-    LibraryRowDto_Serialize as Row,
-    LibraryStateDto_Serialize,
-    LibraryTokenDto_Serialize as Token,
-    LibraryViewDto,
+  LibraryFacetDto,
+  LibraryFacetOptionDto_Serialize as Option,
+  LibraryFilterDto_Serialize as Filter,
+  LibraryFolderEntryDto,
+  LibraryFolderViewDto_Serialize,
+  LibraryLayoutDto,
+  LibraryParamsDto_Serialize as Params,
+  LibraryRowDto_Serialize as Row,
+  LibraryStateDto_Serialize,
+  LibraryTokenDto_Serialize as Token,
+  LibraryViewDto,
 } from "../../ipc";
 import {
-    fileName,
-    FIXTURE_CATEGORIES,
-    FIXTURE_DIRECTORIES,
-    FIXTURE_DOCUMENTS,
-    FIXTURE_TAGS,
-    type FixtureDocument
+  fileName,
+  FIXTURE_CATEGORIES,
+  FIXTURE_DIRECTORIES,
+  FIXTURE_DOCUMENTS,
+  FIXTURE_FIELD_VALUES,
+  FIXTURE_TAGS,
+  type FixtureDocument
 } from "../fixture";
 import type {Handler} from "./index";
 import {mockOperation, mockSession} from "./shell";
+import {MOCK_TAX, TAX_AREA_LABELS} from "./tax";
 
 /**
  * Mocked commands of features::library: a small presenter over the fixture (the real rules live in Rust and are
@@ -116,9 +118,31 @@ function filterMatches(filter: Filter, document: FixtureDocument): boolean {
       return lower(document.correspondent?.trim() ?? "") === lower(filter.name.trim());
     case "type":
       return document.kind === filter.documentKind;
+    case "payment":
+      return false; // shortcut: the mock fixture has no bills; the bills mocks answer the "To pay" screen.
     case "folder":
       return inside(document.path, filter.path);
+    case "tax": {
+      const tax = MOCK_TAX[document.id];
+      return tax !== undefined && tax.year === filter.year && (filter.area === null || tax.area === filter.area);
+    }
+    case "dates": {
+      const day = (document.documentDate ?? document.addedAt).slice(0, 10);
+      return (filter.from === null || day >= filter.from) && (filter.to === null || day <= filter.to);
+    }
+    case "field":
+      return fieldMatches(filter, document);
   }
+}
+
+function fieldMatches(filter: Extract<Filter, { kind: "field" }>, document: FixtureDocument): boolean {
+  const raw = FIXTURE_FIELD_VALUES[document.id]?.[filter.key];
+  if (filter.comparison === "present") return raw !== undefined;
+  if (filter.comparison === "absent") return raw === undefined;
+  const amount = Number.parseFloat(raw ?? "");
+  const wanted = Number.parseFloat(filter.value ?? "");
+  if (Number.isNaN(amount) || Number.isNaN(wanted)) return false;
+  return filter.comparison === "greaterThan" ? amount > wanted : filter.comparison === "lessThan" ? amount < wanted : amount === wanted;
 }
 
 function textMatches(query: string, document: FixtureDocument): boolean {
@@ -196,16 +220,38 @@ function groups(rows: Row[], params: Params): LibraryStateDto_Serialize["groups"
   return ordered;
 }
 
+const COMPARISONS = { present: "set", absent: "not set", equals: "=", contains: "contains", lessThan: "<", greaterThan: ">", withinDays: "within" } as const;
+
 function tokenOf(filter: Filter): Token {
-  const keys: Record<Filter["kind"], string> = { category: "category", tag: "tag", year: "year", correspondent: "from", type: "type", folder: "folder" };
+  const keys: Record<Filter["kind"], string> = { category: "category", tag: "tag", year: "year", correspondent: "from", type: "type", payment: "payment", folder: "folder", tax: "tax", dates: "date", field: "field" };
   let value: string;
   if (filter.kind === "category") value = filter.categoryId === null ? "Without a category" : categoryPath(filter.categoryId);
   else if (filter.kind === "tag") value = filter.tag;
   else if (filter.kind === "year") value = filter.andEarlier ? `Until ${filter.year}` : String(filter.year);
   else if (filter.kind === "correspondent") value = filter.name;
   else if (filter.kind === "type") value = KIND_LABELS[filter.documentKind];
-  else value = filter.path;
+  else if (filter.kind === "tax") value = filter.area === null ? String(filter.year) : `${filter.year} · ${TAX_AREA_LABELS[filter.area]}`;
+  else if (filter.kind === "payment") value = filter.status;
+  else if (filter.kind === "folder") value = filter.path;
+  else if (filter.kind === "dates") value = `${filter.from ?? "…"} – ${filter.to ?? "…"}`;
+  else return { key: filter.key === "amount" ? "Amount" : filter.key, value: `${COMPARISONS[filter.comparison]} ${filter.value ?? ""}`.trim(), filter };
   return { key: keys[filter.kind], value, filter };
+}
+
+function taxOptions(documents: FixtureDocument[]): Option[] {
+  const assigned = documents.flatMap((document) => {
+    const tax = MOCK_TAX[document.id];
+    return tax ? [tax] : [];
+  });
+  const years = [...new Set(assigned.map((tax) => tax.year))].sort((a, b) => b - a);
+  return years.flatMap((year) => {
+    const ofYear = assigned.filter((tax) => tax.year === year);
+    const areas = [...new Set(ofYear.map((tax) => tax.area))];
+    return [
+      option({ kind: "tax", year, area: null }, String(year), ofYear.length),
+      ...areas.map((area) => option({ kind: "tax", year, area }, TAX_AREA_LABELS[area], ofYear.filter((tax) => tax.area === area).length, 1)),
+    ];
+  });
 }
 
 function counted<T>(values: T[]): Map<T, number> {
@@ -278,7 +324,9 @@ function facets(documents: FixtureDocument[]): LibraryStateDto_Serialize["facets
     type: (["pdf", "image", "office", "other"] as const)
       .filter((kind) => kinds.has(kind))
       .map((kind) => option({ kind: "type", documentKind: kind }, KIND_LABELS[kind], kinds.get(kind) ?? 0)),
+    payment: [],
     folder: folderTree(documents, [], null).map((entry) => option({ kind: "folder", path: entry.path }, entry.name, entry.documentCount, entry.depth - 1)),
+    tax: taxOptions(documents),
   };
   return (Object.keys(all) as LibraryFacetDto[]).map((facet) => ({ facet, options: all[facet] }));
 }

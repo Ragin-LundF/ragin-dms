@@ -36,6 +36,7 @@
 .lib-search input::placeholder { color: var(--on-surface-variant); opacity: 1; }
 .lib-token { display: inline-flex; align-items: center; gap: var(--space-xs); padding: 0 var(--space-xs) 0 var(--space-s); border-radius: var(--shape-s); background: var(--primary-container); color: var(--on-primary-container); white-space: nowrap; }
 .lib-token.fixed { padding-right: var(--space-s); }
+.lib-token.ai { background: var(--ai-chip); color: var(--on-surface); box-shadow: inset 0 0 0 1px var(--ai-chip-border); }
 .lib-token-key { color: color-mix(in srgb, var(--on-primary-container) 70%, transparent); }
 .lib-token-value { padding: var(--space-xs) 0; }
 .lib-token-remove { display: inline-flex; border: none; background: none; padding: 2px; border-radius: var(--shape-xs); color: inherit; cursor: pointer; }

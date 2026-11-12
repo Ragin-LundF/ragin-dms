@@ -5,6 +5,7 @@
 mod catalog;
 mod export;
 mod fs;
+mod health;
 mod index;
 mod plan;
 mod scan;

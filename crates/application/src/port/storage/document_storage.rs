@@ -70,6 +70,15 @@ pub trait DocumentStorage: Send + Sync {
     /// See the trait documentation.
     fn read_facts(&self, folder: &LibraryFolder, path: &RelativePath) -> StorageResult<FileFacts>;
 
+    /// Like [`Self::read_facts`], but `None` for a file a sync client keeps only in the cloud: reading it would
+    /// download it, which the archive check must never cause. Storages without such files read every file.
+    ///
+    /// # Errors
+    /// See the trait documentation.
+    fn read_local_facts(&self, folder: &LibraryFolder, path: &RelativePath) -> StorageResult<Option<FileFacts>> {
+        self.read_facts(folder, path).map(Some)
+    }
+
     /// Whether `first` and `second` in `folder` are two files with exactly the same bytes, compared byte by byte.
     /// Two names of one file, as on a file system that ignores case, are not two files.
     ///

@@ -234,3 +234,13 @@ fn a_thumbnail_is_a_small_jpeg_of_the_first_page() {
     assert_eq!(decoded.height(), 200);
     assert!(matches!(engine().thumbnail(&root.path().join("gone.pdf"), 200), Err(PdfError::NotFound)));
 }
+
+#[test]
+fn an_empty_page_looks_blank_and_a_written_one_does_not() {
+    let root = tempfile::tempdir().expect("temp dir");
+    let stack = root.path().join("stack.pdf");
+    let line = "Invoice no. 2026-0815 for the maintenance of the heating system in March";
+    write_text_pdf(&stack, &[Some(line), None, Some(line)]);
+
+    assert_eq!(engine().blank_pages(&stack).expect("checked"), vec![false, true, false]);
+}

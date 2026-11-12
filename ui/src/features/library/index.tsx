@@ -14,3 +14,6 @@ export async function addFilesToTopLevel(): Promise<void> {
 export async function addFilesToOpenFolder(): Promise<void> {
   await chooseAndAdd(filteredFolder(viewStore.get()));
 }
+
+export { ExportDialog } from "./export/export-dialog";
+export { openTaxAdviserExport } from "./export/export-state";

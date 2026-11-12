@@ -44,7 +44,12 @@ export function ExportDialog() {
           <Button variant="text" disabled={!draft.correspondent.trim()} onClick={exporting.presetCorrespondent}>Use</Button>
         </div>
         <TextField label="Name of the export folder or ZIP file" value={draft.name} onChange={exporting.setName} labelBackground="var(--surface-high)" />
-        <OptionRow text="Keep the folder structure" checked={!options.flatten} onChange={(on) => exporting.setOptions({ ...options, flatten: !on })} />
+        {draft.scope.kind === "taxYear" && (
+          <OptionRow text="Group by tax area, with a page of missing items first" checked={options.taxGrouping} onChange={(on) => exporting.setOptions({ ...options, taxGrouping: on })} />
+        )}
+        {!(draft.scope.kind === "taxYear" && options.taxGrouping) && (
+          <OptionRow text="Keep the folder structure" checked={!options.flatten} onChange={(on) => exporting.setOptions({ ...options, flatten: !on })} />
+        )}
         <OptionRow text="Name files after their title" checked={options.renameToTitle} onChange={(on) => exporting.setOptions({ ...options, renameToTitle: on })} />
         <OptionRow text="Add an index (index.csv and index.html)" checked={options.index} onChange={(on) => exporting.setOptions({ ...options, index: on })} />
         <OptionRow text="One ZIP file instead of a folder" checked={options.zip} onChange={(on) => exporting.setOptions({ ...options, zip: on })} />

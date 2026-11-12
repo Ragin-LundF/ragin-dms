@@ -33,6 +33,30 @@ pub(crate) struct SuggestionDto {
     pub fields: Vec<FieldAnswerDto>,
     #[serde(default, deserialize_with = "null_as_default")]
     pub pages: Vec<String>,
+    #[serde(default, deserialize_with = "lenient_text")]
+    pub tax_year: Option<String>,
+    #[serde(default, deserialize_with = "lenient_text")]
+    pub tax_area: Option<String>,
+    #[serde(default, deserialize_with = "lenient_text")]
+    pub deductible: Option<String>,
+    #[serde(default, deserialize_with = "lenient_text")]
+    pub iban: Option<String>,
+    #[serde(default, deserialize_with = "lenient_text")]
+    pub payment_reference: Option<String>,
+    #[serde(default, deserialize_with = "null_as_default")]
+    pub requested_actions: Vec<RequestedActionDto>,
+}
+
+/// Something the letter asks the person to do, by `due_date` if it names one, with the documents it mentions.
+#[derive(Debug, Default, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct RequestedActionDto {
+    #[serde(default, deserialize_with = "lenient_text")]
+    pub text: Option<String>,
+    #[serde(default, deserialize_with = "lenient_text")]
+    pub due_date: Option<String>,
+    #[serde(default, deserialize_with = "null_as_default")]
+    pub references: Vec<String>,
 }
 
 /// One custom field value the model read from the document, as plain text.
@@ -65,7 +89,7 @@ pub(crate) fn null_as_default<'de, D: Deserializer<'de>, T: Default + Deserializ
     Ok(Option::<T>::deserialize(deserializer)?.unwrap_or_default())
 }
 
-fn lenient_text<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Option<String>, D::Error> {
+pub(crate) fn lenient_text<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Option<String>, D::Error> {
     match Value::deserialize(deserializer)? {
         Value::Null => Ok(None),
         Value::String(text) => Ok(Some(text)),

@@ -3,9 +3,13 @@ use std::sync::Arc;
 use crate::port::ai::{
     AiServer, DocumentClassifier, DocumentContentReader, DocumentPreviewer, EmbeddingClient, PageLayoutReader,
 };
-use crate::port::assistant::{DocumentAssistant, LibraryAssistant};
+use crate::port::assistant::{
+    ContractTermsReader, DocumentAssistant, LetterWriter, LibraryAssistant, QueryTranslator, SplitProposer,
+};
 use crate::port::export::ExportWriter;
+use crate::port::health::{CatalogSnapshots, HealthStore};
 use crate::port::index::VectorIndex;
+use crate::port::mail::MailConverter;
 use crate::port::pdf::{OcrTool, PdfEditor, PdfRebuilder};
 use crate::port::plan::PlanStore;
 use crate::port::sidecar::{PreviewStore, SidecarLayout};
@@ -46,4 +50,11 @@ pub struct AppPorts {
     pub pdf_editor: Arc<dyn PdfEditor>,
     pub ocr: Arc<dyn OcrTool>,
     pub rebuilder: Arc<dyn PdfRebuilder>,
+    pub letter_writer: Arc<dyn LetterWriter>,
+    pub contract_terms_reader: Arc<dyn ContractTermsReader>,
+    pub health: Arc<dyn HealthStore>,
+    pub snapshots: Arc<dyn CatalogSnapshots>,
+    pub mail: Arc<dyn MailConverter>,
+    pub split_proposer: Arc<dyn SplitProposer>,
+    pub query_translator: Arc<dyn QueryTranslator>,
 }

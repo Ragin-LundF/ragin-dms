@@ -93,3 +93,35 @@ fn upcoming_lists_the_next_dates_in_order() {
     assert_eq!(upcoming.iter().map(|it| it.date).collect::<Vec<_>>(), vec![in_days(2), in_days(90)]);
     assert_eq!(DeadlinePlanner::upcoming(&catalog, today(), 1).len(), 1);
 }
+
+fn bill_due(due: NaiveDate, paid: bool) -> Catalog {
+    let mut fields = indexmap! {
+        FieldPresets::amount().key => FieldValue::Money { amount: test_data::decimal("12.30"), currency: test_data::euro() },
+        FieldPresets::due_date().key => FieldValue::Date(due),
+    };
+    if paid {
+        fields.insert(FieldPresets::paid_on().key, FieldValue::Date(today()));
+    }
+    let settings = CatalogSettings {
+        field_definitions: FieldPresets::all().into_iter().chain([FieldPresets::paid_on()]).collect(),
+        ..CatalogSettings::default()
+    };
+    base().change_settings(settings).applied().set_fields(&bill().id, fields).applied()
+}
+
+#[test]
+fn the_due_date_of_a_paid_bill_is_no_deadline_and_not_upcoming() {
+    let catalog = bill_due(in_days(2), true);
+
+    assert_eq!(DeadlinePlanner::due_tasks(&catalog, today(), FieldRole::default_lead_days), vec![]);
+    assert_eq!(DeadlinePlanner::upcoming(&catalog, today(), 10), vec![]);
+}
+
+#[test]
+fn an_unpaid_bill_keeps_its_deadline_task_until_it_is_overdue() {
+    let due_soon = bill_due(in_days(2), false);
+    let overdue = bill_due(today() - Days::new(1), false);
+
+    assert_eq!(DeadlinePlanner::due_tasks(&due_soon, today(), FieldRole::default_lead_days).len(), 1);
+    assert_eq!(DeadlinePlanner::due_tasks(&overdue, today(), FieldRole::default_lead_days), vec![]);
+}

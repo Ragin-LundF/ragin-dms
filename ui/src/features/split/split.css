@@ -1,0 +1,26 @@
+/* The "Split a stack" dialog (prototype "Split a scanned stack"). */
+
+.dialog.split-dialog { max-width: calc(100vw - 48px); }
+.split-waiting { padding: var(--space-xl) 0; justify-content: center; }
+.split-problem { color: var(--error); margin: 0; }
+.split-note { margin: 0; color: var(--on-surface-variant); }
+.split-strip { align-items: flex-start; overflow-x: auto; overflow-y: hidden; padding-bottom: var(--space-s); }
+.split-step { align-items: flex-start; flex: none; }
+.split-page { align-items: center; gap: var(--space-xs); }
+.split-page-picture {
+  width: 64px; height: 88px; display: flex; align-items: center; justify-content: center;
+  border: 1px solid var(--outline-variant); border-radius: var(--shape-xs); overflow: hidden; background: var(--surface);
+}
+.split-page-picture img { width: 62px; height: 86px; object-fit: contain; }
+.split-cut {
+  width: 18px; height: 88px; flex: none; border: none; background: transparent; cursor: pointer; padding: 0;
+  display: flex; align-items: flex-start; justify-content: center; position: relative; color: var(--tertiary);
+}
+.split-cut::before { content: ""; position: absolute; top: 12px; bottom: 0; left: 8px; border-left: 2px dotted transparent; }
+.split-cut:hover::before { border-left-color: var(--outline); }
+.split-cut.on::before { border-left: 3px solid var(--tertiary); }
+.split-cut svg { width: 12px; height: 12px; }
+.split-part { padding: var(--space-s) var(--space-m); border: 1px solid var(--outline-variant); border-radius: var(--shape-m); }
+.split-swatch { width: 8px; align-self: stretch; border-radius: var(--shape-xs); flex: none; }
+.split-pill { white-space: nowrap; padding: 2px var(--space-s); border-radius: var(--shape-xl); background: var(--surface-container); color: var(--on-surface-variant); }
+.split-pill.ai { background: var(--ai-chip); color: var(--on-surface); border: 1px solid var(--ai-chip-border); }

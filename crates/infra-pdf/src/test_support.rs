@@ -42,6 +42,18 @@ pub(crate) fn write_text_pdf(file: &Path, pages: &[Option<&str>]) {
     document.save_to_file(file).expect("save");
 }
 
+/// A one-page text PDF carrying `bytes` as the file attachment `name`, like an e-invoice.
+#[allow(clippy::expect_used)]
+pub(crate) fn write_pdf_with_attachment(file: &Path, name: &str, bytes: &[u8]) {
+    write_text_pdf(file, &[Some("Sample invoice")]);
+    let mut document = engine().open(file).expect("reopen");
+    document.attachments_mut().create_attachment_from_bytes(name, bytes).expect("attachment");
+    let target = file.with_extension("attached.pdf");
+    document.save_to_file(&target).expect("save");
+    drop(document);
+    std::fs::rename(&target, file).expect("replace");
+}
+
 /// A synthetic scan: a page image at 300 dpi with text in Liberation Sans 12 pt, and the PDF that holds
 /// it as one picture, as a scanner writes it. Lines come back with boxes in 0..1000, as the AI answers.
 pub(crate) struct TestScan {

@@ -4,4 +4,4 @@ mod export_writer;
 pub mod model;
 
 pub use export_writer::ExportWriter;
-pub use model::{ExportBundle, ExportEntry, ExportTarget, IndexRow};
+pub use model::{ExportBundle, ExportEntry, ExportFile, ExportTarget, IndexRow, MissingItem};

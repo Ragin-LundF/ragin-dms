@@ -2,7 +2,7 @@ use dms_domain::change::FileFacts;
 use dms_domain::library::{LibraryFolder, RelativePath};
 
 use crate::port::ai::PageImage;
-use crate::port::pdf::{PageChange, PdfMetadata};
+use crate::port::pdf::{PageChange, PdfMetadata, TextDocument};
 use crate::port::storage::StorageResult;
 
 /// Reads and writes PDF files in one library folder. Every write creates a new file at a target that must not
@@ -50,6 +50,19 @@ pub trait PdfEditor: Send + Sync {
     /// See the trait documentation.
     fn has_text_layer(&self, folder: &LibraryFolder, path: &RelativePath) -> StorageResult<bool>;
 
+    /// The text layer of every page, in order; empty texts for a scan without one.
+    ///
+    /// # Errors
+    /// See the trait documentation.
+    fn page_texts(&self, folder: &LibraryFolder, path: &RelativePath) -> StorageResult<Vec<String>>;
+
+    /// For every page, in order, whether it looks blank on a small picture, as a separator sheet or an empty back
+    /// side does.
+    ///
+    /// # Errors
+    /// See the trait documentation.
+    fn blank_pages(&self, folder: &LibraryFolder, path: &RelativePath) -> StorageResult<Vec<bool>>;
+
     /// A copy of `source` with `pages` as an invisible text layer, one text per page, so it can be searched.
     ///
     /// # Errors
@@ -77,4 +90,23 @@ pub trait PdfEditor: Send + Sync {
     /// # Errors
     /// See the trait documentation.
     fn read_metadata(&self, folder: &LibraryFolder, path: &RelativePath) -> StorageResult<PdfMetadata>;
+
+    /// A new PDF at `target` with `document` laid out on A4 pages, in fonts that are embedded, so umlauts and the
+    /// euro sign stay readable and searchable.
+    ///
+    /// # Errors
+    /// See the trait documentation.
+    fn write_text_document(
+        &self,
+        folder: &LibraryFolder,
+        target: &RelativePath,
+        document: &TextDocument,
+    ) -> StorageResult<FileFacts>;
+
+    /// The PDF [`Self::write_text_document`] writes, as bytes, for a file that goes outside the library, such as
+    /// the missing-items page of a tax export.
+    ///
+    /// # Errors
+    /// See the trait documentation.
+    fn text_document_bytes(&self, document: &TextDocument) -> StorageResult<Vec<u8>>;
 }

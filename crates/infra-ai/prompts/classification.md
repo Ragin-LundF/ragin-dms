@@ -25,6 +25,10 @@ Fields:
   [{"key": "<key>", "value": "<value>"}]: dates as YYYY-MM-DD, amounts as a number with the
   currency code (such as "1234.50 EUR"), yes/no as true or false. Leave out what the document does
   not say; never guess. An empty list if there are no custom fields.
+- iban: the IBAN to pay to, only if the document is a bill and prints one, exactly as printed;
+  otherwise null.
+- paymentReference: the payment reference (Verwendungszweck) the bill asks for, only if it is
+  printed; otherwise null.
 - targetFolder: only if a folder outline is given below, the folder this document belongs in:
   one of the listed folders written exactly as listed, or a new subfolder directly below a listed
   folder or at the top level. Otherwise null.
@@ -32,6 +36,19 @@ Fields:
   null.
 - targetReason: one short line why targetFolder fits, such as "Other bills of this sender are
   there", or null.
+- taxYear, taxArea, deductible: only if you include the tax tag, otherwise null. taxYear: the
+  year of the tax return the document counts for (the year of the income, service or payment, not
+  the year it was issued), as a number. taxArea: one of income, pensionInsurance,
+  householdServices (craftsmen and household services), donations, healthCosts, workExpenses,
+  capitalIncome, rental, other. deductible: only for householdServices, the labour share if the
+  document prints it ("Arbeitskosten", "Lohnanteil"), as a number with the currency code (such as
+  "684.50 EUR"); never the total and never a guess, otherwise null.
+- requestedActions: only if the document is a letter that asks the person to do something
+  (send documents, pay, reply, appeal, call), each request as {"text": "<what to do, one short
+  sentence in the language of the document>", "dueDate": "<YYYY-MM-DD the letter names, or null>",
+  "references": ["<numbers or names of documents the request mentions, such as invoice or
+  contract numbers>"]}. Not what the sender will do, not general information, not a bill's
+  normal due date. An empty list if the letter asks for nothing.
 
 Existing categories: {{categories}}
 Existing tags: {{tags}}

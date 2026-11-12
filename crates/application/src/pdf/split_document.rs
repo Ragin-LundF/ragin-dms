@@ -50,23 +50,34 @@ impl SplitDocument {
         ranges: &[RangeInclusive<usize>],
         trash_original: bool,
     ) -> OperationOutcome {
+        self.split(document_id, ranges, trash_original).0
+    }
+
+    /// Like [`Self::run`], with the ids of the new documents in the order of `ranges`; none unless they were
+    /// catalogued.
+    pub fn split(
+        &self,
+        document_id: &DocumentId,
+        ranges: &[RangeInclusive<usize>],
+        trash_original: bool,
+    ) -> (OperationOutcome, Vec<DocumentId>) {
         let Some(library) = self.store.current() else {
-            return OperationOutcome::LibraryNotOpen;
+            return (OperationOutcome::LibraryNotOpen, Vec::new());
         };
         let Some(original) = library.catalog.documents().get(document_id) else {
-            return OperationOutcome::NotFound;
+            return (OperationOutcome::NotFound, Vec::new());
         };
         // Negative starts, which Kotlin also refused, cannot be expressed with `usize`.
         let valid_ranges = !ranges.is_empty() && !ranges.iter().any(RangeInclusive::is_empty);
         if original.kind() != DocumentKind::Pdf || !valid_ranges {
-            return OperationOutcome::NotFound;
+            return (OperationOutcome::NotFound, Vec::new());
         }
         let mut created: Vec<Document> = Vec::new();
         let mut pending: IndexSet<LibraryFolderId> = IndexSet::new();
         for range in ranges {
             let taken: Vec<String> = created.iter().map(|document| document.path.file_name().to_owned()).collect();
             match self.write_part(&library, original, range, &taken) {
-                Err(outcome) => return outcome,
+                Err(outcome) => return (outcome, Vec::new()),
                 Ok((document, part_pending)) => {
                     created.push(document);
                     pending.extend(part_pending);
@@ -83,11 +94,12 @@ impl SplitDocument {
             })
             .with_pending_folders(&pending);
         if !matches!(outcome, OperationOutcome::Done { .. }) {
-            return outcome;
+            return (outcome, Vec::new());
         }
         self.activity
             .record(ActivityKind::PdfEdited, &format!("Split {} into {} documents", original.path, created.len()));
-        if trash_original { self.trash_document.run(&original.id, true) } else { outcome }
+        let ids = created.into_iter().map(|document| document.id).collect();
+        if trash_original { (self.trash_document.run(&original.id, true), ids) } else { (outcome, ids) }
     }
 
     #[allow(clippy::result_large_err)] // the refusal is the outcome of the whole action, built once

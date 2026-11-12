@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use dms_application::port::ai::PageImage;
-use dms_application::port::pdf::{PageChange, PdfEditor, PdfMetadata};
+use dms_application::port::pdf::{PageChange, PdfEditor, PdfMetadata, TextDocument};
 use dms_application::port::storage::StorageResult;
 use dms_domain::change::FileFacts;
 use dms_domain::library::{LibraryFolder, RelativePath};
@@ -83,6 +83,14 @@ impl PdfEditor for PdfiumEditor {
         self.engine.has_text_layer(&self.source(folder, path)?).map_err(storage_error)
     }
 
+    fn page_texts(&self, folder: &LibraryFolder, path: &RelativePath) -> StorageResult<Vec<String>> {
+        self.engine.page_texts(&self.source(folder, path)?).map_err(storage_error)
+    }
+
+    fn blank_pages(&self, folder: &LibraryFolder, path: &RelativePath) -> StorageResult<Vec<bool>> {
+        self.engine.blank_pages(&self.source(folder, path)?).map_err(storage_error)
+    }
+
     fn add_text_layer(
         &self,
         folder: &LibraryFolder,
@@ -108,5 +116,21 @@ impl PdfEditor for PdfiumEditor {
 
     fn read_metadata(&self, folder: &LibraryFolder, path: &RelativePath) -> StorageResult<PdfMetadata> {
         self.engine.read_metadata(&self.source(folder, path)?).map(convert::metadata_from_engine).map_err(storage_error)
+    }
+
+    fn write_text_document(
+        &self,
+        folder: &LibraryFolder,
+        target: &RelativePath,
+        document: &TextDocument,
+    ) -> StorageResult<FileFacts> {
+        let output = self.locations.target(folder, target).ok_or_else(unreachable)?;
+        let blocks: Vec<_> = document.blocks.iter().map(convert::text_block).collect();
+        self.engine.write_text_document(&blocks, &output).map(convert::file_facts).map_err(storage_error)
+    }
+
+    fn text_document_bytes(&self, document: &TextDocument) -> StorageResult<Vec<u8>> {
+        let blocks: Vec<_> = document.blocks.iter().map(convert::text_block).collect();
+        self.engine.text_document_bytes(&blocks).map_err(storage_error)
     }
 }

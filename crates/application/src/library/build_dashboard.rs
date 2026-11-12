@@ -1,9 +1,15 @@
 use std::sync::Arc;
 
+use dms_domain::bill::BillPlanner;
+use dms_domain::cases::CasePlanner;
 use dms_domain::change::DetectedChange;
+use dms_domain::contract::ContractPlanner;
 use dms_domain::deadline::DeadlinePlanner;
 use dms_domain::document::{ContentHash, DocumentId};
+use dms_domain::emergency::EmergencyPlanner;
+use dms_domain::expectation::ExpectationPlanner;
 use dms_domain::field::FieldRole;
+use dms_domain::health::HealthFinding;
 use dms_domain::library::LibraryFolderId;
 use dms_domain::restructure::FolderShape;
 use dms_domain::rule::RuleLearner;
@@ -12,6 +18,7 @@ use indexmap::IndexMap;
 
 use crate::common::LibrarySnapshot;
 use crate::library::{CatalogStore, Dashboard, DashboardOutcome, FolderState, ScanResult};
+use crate::port::health::HealthStore;
 use crate::port::state::{ActivityLog, TaskStore};
 use crate::port::storage::OperationJournal;
 use crate::port::system::Clock;
@@ -22,7 +29,9 @@ const UPCOMING: usize = 10;
 /// Collects everything that waits for the user: pending suggestions, the changes of the last scan, catalogued
 /// documents that are copies of each other, decisions of the last catalog merge, failed operations, flat folders
 /// the restructure assistant could sort, deadlines within their lead time and ended retentions, and rules learned
-/// from approved documents — minus the tasks the user dismissed, so a rejected rule proposal is not proposed
+/// from approved documents, the tasks of bills, expected documents, contracts, cases and the emergency folder, and
+/// the findings of the last archive check —
+/// minus the tasks the user dismissed, so a rejected rule proposal is not proposed
 /// again. New files in the inbox are no tasks: the inbox lists them.
 ///
 /// Local state that cannot be read (journal, task store, activity log) counts as empty, so the dashboard still
@@ -33,6 +42,7 @@ pub struct BuildDashboard {
     journal: Arc<dyn OperationJournal>,
     activity: Arc<dyn ActivityLog>,
     clock: Arc<dyn Clock>,
+    health: Arc<dyn HealthStore>,
 }
 
 impl BuildDashboard {
@@ -42,8 +52,9 @@ impl BuildDashboard {
         journal: Arc<dyn OperationJournal>,
         activity: Arc<dyn ActivityLog>,
         clock: Arc<dyn Clock>,
+        health: Arc<dyn HealthStore>,
     ) -> Self {
-        Self { store, tasks, journal, activity, clock }
+        Self { store, tasks, journal, activity, clock, health }
     }
 
     /// `scan` is the last scan, if there was one.
@@ -124,6 +135,41 @@ impl BuildDashboard {
         );
         tasks.extend(DeadlinePlanner::due_tasks(catalog, self.clock.today(), FieldRole::default_lead_days));
         tasks.extend(RuleLearner::proposals(catalog).into_iter().map(OpenTask::ReviewLearnedRule));
+        tasks.extend(self.feature_tasks(catalog));
+        tasks.extend(self.health_tasks(library));
+        tasks
+    }
+
+    /// The findings of this device's last archive check whose document and folders still exist.
+    fn health_tasks(&self, library: &LibrarySnapshot) -> Vec<OpenTask> {
+        let Ok(Some(report)) = self.health.load() else { return Vec::new() };
+        if &report.library_id != library.catalog.library_id() {
+            return Vec::new();
+        }
+        let documents = library.catalog.documents();
+        let folder_known = |id: &LibraryFolderId| library.folders.find(id).is_some();
+        report
+            .findings
+            .into_iter()
+            .filter(|finding| documents.contains_key(finding.document_id()))
+            .filter_map(|finding| match finding {
+                HealthFinding::Damaged { document_id, folder_id, source_folder_id } => (folder_known(&folder_id)
+                    && folder_known(&source_folder_id))
+                .then_some(OpenTask::DamagedCopy { document_id, folder_id, source_folder_id }),
+                HealthFinding::Unreadable { document_id } => Some(OpenTask::UnreadableDocument { document_id }),
+            })
+            .collect()
+    }
+
+    /// The tasks of bills, expected documents, contracts, cases and the emergency folder.
+    fn feature_tasks(&self, catalog: &dms_domain::catalog::Catalog) -> Vec<OpenTask> {
+        let today = self.clock.today();
+        let mut tasks = BillPlanner::due_tasks(catalog, today);
+        let snoozes = self.tasks.snoozes().unwrap_or_default();
+        tasks.extend(ExpectationPlanner::due_tasks(catalog, today, &snoozes));
+        tasks.extend(ContractPlanner::due_tasks(catalog, today));
+        tasks.extend(CasePlanner::due_tasks(catalog, today));
+        tasks.extend(EmergencyPlanner::due_tasks(catalog, today));
         tasks
     }
 }

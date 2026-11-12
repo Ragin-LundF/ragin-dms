@@ -1,14 +1,16 @@
+import CONTENT_CUT from "@material-design-icons/svg/round/content_cut.svg?raw";
 import AUTO_FIX_HIGH from "@material-design-icons/svg/round/auto_fix_high.svg?raw";
 import DOCUMENT_SCANNER from "@material-design-icons/svg/round/document_scanner.svg?raw";
 import LAYERS from "@material-design-icons/svg/round/layers.svg?raw";
 import MERGE_TYPE from "@material-design-icons/svg/round/merge_type.svg?raw";
 import TEXT_SNIPPET from "@material-design-icons/svg/round/text_snippet.svg?raw";
-import { useQuery } from "@tanstack/react-query";
-import { commands, unwrap } from "../../ipc";
-import { LIBRARY_QUERY, busyIn, reportError, useSession } from "../../session/session";
-import { ActionButtons, SectionHeader, waitFor, type ActionButton } from "../../shared/components";
-import { startMerge } from "./merge-dialog";
-import { openPageEditor } from "./page-editor";
+import {useQuery} from "@tanstack/react-query";
+import {commands, unwrap} from "../../ipc";
+import {busyIn, LIBRARY_QUERY, reportError, useSession} from "../../session/session";
+import {type ActionButton, ActionButtons, SectionHeader, waitFor} from "../../shared/components";
+import {openSplit} from "../split";
+import {startMerge} from "./merge-dialog";
+import {openPageEditor} from "./page-editor";
 
 /**
  * The PDF tools of quick look: edit the pages, merge with other PDFs, make a scan searchable, and convert a scan
@@ -28,6 +30,9 @@ export function PdfSection({ documentId }: { documentId: string }) {
     { label: "Make searchable", icon: TEXT_SNIPPET, onClick: searchable(false) },
     { label: "Precise OCR", icon: DOCUMENT_SCANNER, disabledReason: data.ocrAvailable ? null : "Install ocrmypdf to use it", onClick: searchable(true) },
   ];
+  if (session.aiEnabled) {
+    buttons.push({ label: "Split stack…", icon: CONTENT_CUT, disabledReason: aiBusy === null ? null : waitFor(aiBusy), onClick: () => void openSplit(documentId, data.name) });
+  }
   if (session.aiEnabled && data.rebuildable) {
     buttons.push({ label: "Convert to real PDF", icon: AUTO_FIX_HIGH, disabledReason: aiBusy === null ? null : waitFor(aiBusy), onClick: () => startRebuild(documentId) });
   }

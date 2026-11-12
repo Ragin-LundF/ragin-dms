@@ -1,14 +1,16 @@
 use std::sync::Arc;
 
+use dms_domain::bill::EInvoice;
 use dms_domain::catalog::Catalog;
 use dms_domain::classification::{ClassificationSuggestion, SuggestedCategory, SuggestedFolder, SuggestedTag};
-use dms_domain::document::{Document, DocumentId};
+use dms_domain::document::{Document, DocumentId, DocumentKind};
+use dms_domain::field::FieldPresets;
 use dms_domain::outline::FolderOutline;
 use dms_domain::rule::{RuleMatcher, RuleResult};
 use dms_domain::text;
 use indexmap::IndexSet;
 
-use crate::classification::{RuleSuggestions, SuggestOutcome};
+use crate::classification::{EInvoiceSuggestions, RuleSuggestions, SuggestOutcome};
 use crate::common::LibrarySnapshot;
 use crate::library::CatalogStore;
 use crate::port::ai::{
@@ -25,6 +27,9 @@ const FILE_NAME_EXAMPLES: usize = 20;
 /// category and correspondent, the suggestion is made without the AI; otherwise the AI gets their values as fixed
 /// and they override its answer. The suggestion is stored as a task for the user's review; nothing in the catalog
 /// or on disk changes, except the document's text in `.dms-text/`, which search uses.
+///
+/// The exact values of an e-invoice embedded in a PDF replace the guessed ones. When the AI cannot be reached or
+/// the document cannot be read, the e-invoice still makes a suggestion of its own.
 pub struct SuggestClassification {
     store: Arc<CatalogStore>,
     reader: Arc<dyn DocumentContentReader>,
@@ -56,13 +61,22 @@ impl SuggestClassification {
             return SuggestOutcome::NotFound;
         };
         let content = document.kind().readable_by_ai().then(|| self.reader.read(library.folders.primary(), document));
+        let e_invoice = (document.kind() == DocumentKind::Pdf)
+            .then(|| self.reader.read_e_invoice(library.folders.primary(), document))
+            .flatten();
+        let exact = |suggestion| with_e_invoice(suggestion, e_invoice.as_ref(), &library.catalog);
         let rules = self.rules_for(&library, document, content.as_ref());
         if rules.is_sufficient() {
             // The rules decided category and correspondent; the AI is not needed.
             let suggestion = RuleSuggestions::of(document, &rules, &library.catalog);
-            return self.suggested(&library, content.as_ref(), suggestion);
+            return self.suggested(&library, content.as_ref(), exact(suggestion));
         }
+        let without_ai = |content: Option<&DocumentContent>| {
+            let base = ClassificationSuggestion::empty(document.id.clone(), ClassificationSuggestion::E_INVOICE_MODEL);
+            self.suggested(&library, content, exact(RuleSuggestions::over(base, &rules, &library.catalog)))
+        };
         let content = match content {
+            None | Some(DocumentContent::NotReadable(_)) if e_invoice.is_some() => return without_ai(None),
             None => return SuggestOutcome::NotReadable { detail: None },
             Some(DocumentContent::NotReadable(reason)) => return SuggestOutcome::NotReadable { detail: Some(reason) },
             Some(content) => content,
@@ -70,11 +84,12 @@ impl SuggestClassification {
         let mut request = self.request(&library.catalog, document, content.clone());
         request.fixed_values = (!rules.is_empty()).then(|| rules.clone());
         match self.classifier.suggest(&request) {
+            ClassificationResult::Failed { .. } if e_invoice.is_some() => without_ai(Some(&content)),
             ClassificationResult::Failed { reason, detail } => SuggestOutcome::Failed { reason, detail },
             ClassificationResult::Suggested(suggestion) => {
                 let suggestion = normalized(suggestion, &request, &library.catalog, document);
                 let suggestion = RuleSuggestions::over(suggestion, &rules, &library.catalog);
-                self.suggested(&library, Some(&content), suggestion)
+                self.suggested(&library, Some(&content), exact(suggestion))
             }
         }
     }
@@ -174,7 +189,19 @@ impl SuggestClassification {
     }
 }
 
-/// Ties the suggestion to the document and checks it against the catalog as it is now. A target folder is only
+fn with_e_invoice(
+    suggestion: ClassificationSuggestion,
+    e_invoice: Option<&EInvoice>,
+    catalog: &Catalog,
+) -> ClassificationSuggestion {
+    match e_invoice {
+        Some(e_invoice) => EInvoiceSuggestions::over(suggestion, e_invoice, catalog),
+        None => suggestion,
+    }
+}
+
+/// Ties the suggestion to the document and checks it against the catalog as it is now; a value for a standard
+/// field the library does not have yet is kept, approving it defines the field. A target folder is only
 /// kept for inbox documents and only where the outline allows it.
 fn normalized(
     suggestion: ClassificationSuggestion,
@@ -205,7 +232,8 @@ fn normalized(
         .fields
         .iter()
         .filter(|(key, value)| {
-            catalog.settings().field(key).map(|definition| definition.field_type) == Some(value.field_type())
+            let definition = catalog.settings().field(key).cloned().or_else(|| FieldPresets::of(key));
+            definition.map(|definition| definition.field_type) == Some(value.field_type())
         })
         .map(|(key, value)| (key.clone(), value.clone()))
         .collect();

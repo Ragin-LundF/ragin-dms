@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use image::{DynamicImage, RgbImage};
+use image::{DynamicImage, Pixel, RgbImage};
 use pdfium_render::prelude::{PdfDocument, PdfPage, PdfPageRenderRotation, PdfRenderConfig};
 
 use crate::engine::PdfEngine;
@@ -11,6 +11,12 @@ use crate::images::{self, PageImage};
 const POINTS_PER_INCH: f32 = 72.0;
 /// Pictures for the page editor are never rendered sharper than this.
 const MAX_EDITOR_DPI: f32 = 150.0;
+/// A page this small is enough to tell an empty sheet from a written one.
+const BLANK_CHECK_DPI: f32 = 50.0;
+/// Pixels darker than this count as ink; thin text rendered small is grey, not black.
+const INK_LUMA: u8 = 200;
+/// Below this share of ink a page counts as blank; dust and scanner noise stay far below it, a line of text above.
+const BLANK_INK_RATIO: f64 = 0.001;
 
 /// One page of a rewritten PDF: page [`page`] of the source (counted from 0), turned clockwise by
 /// [`rotation`] degrees, a multiple of 90.
@@ -42,6 +48,20 @@ impl PdfEngine {
         let needed = max_side.max(1) as f32 * POINTS_PER_INCH / longest;
         let image = render_rgb(&page, needed.min(MAX_EDITOR_DPI))?;
         Ok(Some(images::png_of(&DynamicImage::ImageRgb8(images::scaled_down(&image, max_side.max(1))))?))
+    }
+
+    /// For every page, whether it looks blank: less than 0.1 % ink on a picture at 50 dpi, like a separator sheet or
+    /// an empty back side.
+    ///
+    /// # Errors
+    /// [`PdfError::NotFound`] or [`PdfError::UnsupportedFormat`] if the file cannot be opened or rendered.
+    pub fn blank_pages(self, path: &Path) -> Result<Vec<bool>, PdfError> {
+        let document = self.open(path)?;
+        document
+            .pages()
+            .iter()
+            .map(|page| Ok(ink_ratio(&render_rgb(&page, BLANK_CHECK_DPI)?) < BLANK_INK_RATIO))
+            .collect()
     }
 
     /// A new PDF of the [`pages`] of [`source`], in their order and turned as given; this rotates,
@@ -118,6 +138,12 @@ pub(crate) fn render_rgb(page: &PdfPage, dpi: f32) -> Result<RgbImage, PdfError>
     let config = PdfRenderConfig::new().scale_page_by_factor(dpi / POINTS_PER_INCH);
     let bitmap = page.render_with_config(&config)?;
     Ok(bitmap.as_image()?.to_rgb8())
+}
+
+#[allow(clippy::cast_precision_loss)] // pixel counts of a small picture
+fn ink_ratio(image: &RgbImage) -> f64 {
+    let ink = image.pixels().filter(|pixel| pixel.to_luma()[0] < INK_LUMA).count();
+    ink as f64 / (f64::from(image.width()) * f64::from(image.height())).max(1.0)
 }
 
 pub(crate) fn save_new(document: &PdfDocument, target: &Path) -> Result<FileFacts, PdfError> {

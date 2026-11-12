@@ -186,3 +186,21 @@ fn approved_field_values_join_the_values_the_document_has() {
         IndexMap::from([(amount_key, amount), (due_key, due)])
     );
 }
+
+#[test]
+fn an_approved_tax_assignment_is_set_on_the_document() {
+    use dms_domain::tax::{TaxArea, TaxAssignment};
+    let library = TestLibrary::new();
+    library.open();
+    let document = library.add("inbox/plumber.pdf", "bill");
+    suggest_for(&library, &document);
+    let tax = TaxAssignment { year: 2023, area: TaxArea::HouseholdServices, deductible: None };
+
+    let catalog = done(
+        library
+            .approve_suggestion()
+            .run(&document.id, &SuggestionApproval { tax: Some(tax.clone()), ..SuggestionApproval::default() }),
+    );
+
+    assert_eq!(catalog.documents()[&document.id].tax, Some(tax));
+}

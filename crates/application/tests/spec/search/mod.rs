@@ -2,3 +2,4 @@
 
 mod saved_search_presets;
 mod search_contents;
+mod translate_query;

@@ -8,6 +8,7 @@ import {busyIn, LIBRARY_QUERY, reportError, useSession} from "../../session/sess
 import {ActionButtons, EmptyState, ScreenHeader, waitFor} from "../../shared/components";
 import {goTo} from "../../shell/screens";
 import {openReview} from "../document";
+import {openSplit} from "../split";
 import {type FolderPick, FolderPickerDialog} from "./folder-picker-dialog";
 import {InboxRow} from "./inbox-row";
 import "./inbox.css";
@@ -19,6 +20,7 @@ import "./inbox.css";
 export function InboxScreen() {
   const session = useSession();
   const inbox = useQuery({ queryKey: [LIBRARY_QUERY, "inbox", session.aiEnabled], queryFn: () => commands.inboxState() });
+  const stacks = useQuery({ queryKey: [LIBRARY_QUERY, "split-candidates", session.aiEnabled], queryFn: () => unwrap(commands.splitInboxCandidates()) });
   const [pick, setPick] = useState<FolderPick | null>(null);
   const busy = busyIn(session, "library");
   const aiBusy = busyIn(session, "ai");
@@ -55,7 +57,7 @@ export function InboxScreen() {
           )
         }
       />
-      <InboxBody state={state} busyReason={busyReason} aiBusyReason={aiBusyReason} onMove={startMove} />
+      <InboxBody state={state} stacks={stacks.data ?? []} busyReason={busyReason} aiBusyReason={aiBusyReason} onMove={startMove} />
       {pick && (
         <FolderPickerDialog
           pick={pick}
@@ -70,7 +72,7 @@ export function InboxScreen() {
   );
 }
 
-function InboxBody({ state, busyReason, aiBusyReason, onMove }: { state: InboxStateDto_Serialize; busyReason: string | null; aiBusyReason: string | null; onMove: (documentId: string) => void }) {
+function InboxBody({ state, stacks, busyReason, aiBusyReason, onMove }: { state: InboxStateDto_Serialize; stacks: string[]; busyReason: string | null; aiBusyReason: string | null; onMove: (documentId: string) => void }) {
   if (!state.enabled) {
     return (
       <EmptyState
@@ -101,7 +103,9 @@ function InboxBody({ state, busyReason, aiBusyReason, onMove }: { state: InboxSt
           aiBusyReason={aiBusyReason}
           onAnalyze={() => void unwrap(commands.analyzeInboxDocument(row.documentId)).catch(reportError)}
           onReview={() => openReview(row.documentId)}
+          onSplit={stacks.includes(row.documentId) ? () => void openSplit(row.documentId, row.name) : null}
           onMove={() => onMove(row.documentId)}
+          onImportEmail={() => void unwrap(commands.inboxImportEmails([row.documentId])).catch(reportError)}
         />
       ))}
     </div>

@@ -8,7 +8,7 @@ pub mod reporting;
 
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Mutex, MutexGuard};
+use std::sync::{Arc, Condvar, Mutex, MutexGuard};
 use std::time::{Duration, Instant};
 
 pub use log::SessionLog;
@@ -18,6 +18,8 @@ pub use model::{
 
 /// Progress of a lane is pushed at most this often; a scan reports every file.
 const PROGRESS_INTERVAL: Duration = Duration::from_millis(80);
+/// How long an action waits for a yielding operation to stop between two of its items.
+const YIELD_WAIT: Duration = Duration::from_secs(10);
 
 /// What the session tells the window. Implemented by the Tauri event adapter, recorded in tests.
 pub trait SessionEvents: Send + Sync {
@@ -31,6 +33,9 @@ pub struct Session {
     state: Mutex<SessionState>,
     progress: Mutex<Progress>,
     running: Mutex<HashMap<Lane, Arc<AtomicBool>>>,
+    /// The `preempted` flags of the yielding operations; see [`Session::perform_yielding`].
+    yielding: Mutex<HashMap<Lane, Arc<AtomicBool>>>,
+    lane_freed: Condvar,
     log: SessionLog,
     events: Arc<dyn SessionEvents>,
 }
@@ -46,6 +51,7 @@ pub struct Operation {
     session: Arc<Session>,
     lane: Lane,
     cancelled: Arc<AtomicBool>,
+    preempted: Option<Arc<AtomicBool>>,
 }
 
 impl Session {
@@ -54,6 +60,8 @@ impl Session {
             state: Mutex::new(SessionState::default()),
             progress: Mutex::new(Progress::default()),
             running: Mutex::new(HashMap::new()),
+            yielding: Mutex::new(HashMap::new()),
+            lane_freed: Condvar::new(),
             log: SessionLog::default(),
             events,
         })
@@ -109,20 +117,64 @@ impl Session {
         F: FnOnce(&Operation) -> Result<(), String> + Send + 'static,
     {
         let operation = RunningOperation { label: label.to_owned(), lane, cancellable };
+        let claimed = self.claim(&operation) || (self.preempt(lane) && self.claim(&operation));
+        if !claimed {
+            return false;
+        }
+        self.start(operation, None, job);
+        true
+    }
+
+    /// Like [`Self::perform`] for a cancellable operation that started on its own, such as the scheduled archive
+    /// check: when another operation of its lane is asked for, it is cancelled to make room and its job sees
+    /// [`Operation::is_preempted`], so it can start again later and continue where it stopped.
+    pub fn perform_yielding<F>(self: &Arc<Self>, label: &str, lane: Lane, job: F) -> bool
+    where
+        F: FnOnce(&Operation) -> Result<(), String> + Send + 'static,
+    {
+        let operation = RunningOperation { label: label.to_owned(), lane, cancellable: true };
         if !self.claim(&operation) {
             return false;
         }
+        let preempted = Arc::new(AtomicBool::new(false));
+        lock(&self.yielding).insert(lane, Arc::clone(&preempted));
+        self.start(operation, Some(preempted), job);
+        true
+    }
+
+    fn start<F>(self: &Arc<Self>, operation: RunningOperation, preempted: Option<Arc<AtomicBool>>, job: F)
+    where
+        F: FnOnce(&Operation) -> Result<(), String> + Send + 'static,
+    {
+        let lane = operation.lane;
         let cancelled = Arc::new(AtomicBool::new(false));
         lock(&self.running).insert(lane, Arc::clone(&cancelled));
-        self.info(format!("{label}…"));
+        self.info(format!("{}…", operation.label));
         let session = Arc::clone(self);
         std::thread::spawn(move || {
             let started = Instant::now();
-            let handle = Operation { session: Arc::clone(&session), lane, cancelled };
+            let handle = Operation { session: Arc::clone(&session), lane, cancelled, preempted };
             let outcome = job(&handle);
-            session.finish(&operation, handle.is_cancelled(), outcome, started.elapsed());
+            session.finish(&operation, &handle, outcome, started.elapsed());
         });
-        true
+    }
+
+    /// Stops the yielding operation of `lane`, if one runs, and waits until the lane is free. `false` when no
+    /// yielding operation runs there or it did not stop in time.
+    fn preempt(&self, lane: Lane) -> bool {
+        let Some(preempted) = lock(&self.yielding).get(&lane).cloned() else {
+            return false;
+        };
+        preempted.store(true, Ordering::SeqCst);
+        if let Some(flag) = lock(&self.running).get(&lane) {
+            flag.store(true, Ordering::SeqCst);
+        }
+        let state = lock(&self.state);
+        let (state, _) = self
+            .lane_freed
+            .wait_timeout_while(state, YIELD_WAIT, |state| state.busy_in(lane).is_some())
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        state.busy_in(lane).is_none()
     }
 
     /// Stops the operation running in `lane` if it can be stopped safely; see [`Self::perform`].
@@ -153,9 +205,11 @@ impl Session {
         true
     }
 
-    fn finish(&self, operation: &RunningOperation, cancelled: bool, outcome: Result<(), String>, took: Duration) {
+    fn finish(&self, operation: &RunningOperation, handle: &Operation, outcome: Result<(), String>, took: Duration) {
         let label = &operation.label;
-        if cancelled {
+        if handle.is_preempted() {
+            self.info(format!("{label}: paused for another operation"));
+        } else if handle.is_cancelled() {
             self.info(format!("{label}: cancelled"));
             self.report(UiMessage::info(format!("{label}: cancelled")));
         } else {
@@ -168,6 +222,7 @@ impl Session {
             }
         }
         lock(&self.running).remove(&operation.lane);
+        lock(&self.yielding).remove(&operation.lane);
         let progress = {
             let mut progress = lock(&self.progress);
             progress.by_lane.remove(&operation.lane);
@@ -178,6 +233,7 @@ impl Session {
             state.operations.retain(|running| running != operation);
             state.revision = state.revision.wrapping_add(1);
         });
+        self.lane_freed.notify_all();
     }
 
     fn set_progress(&self, lane: Lane, value: OperationProgress) {
@@ -199,6 +255,11 @@ impl Session {
 impl Operation {
     pub fn is_cancelled(&self) -> bool {
         self.cancelled.load(Ordering::SeqCst)
+    }
+
+    /// `true` when a yielding operation was stopped to make room for another one (not by the user).
+    pub fn is_preempted(&self) -> bool {
+        self.preempted.as_ref().is_some_and(|flag| flag.load(Ordering::SeqCst))
     }
 
     /// Runs a blocking `call` that cannot check for cancellation itself, such as one request to the AI server, and

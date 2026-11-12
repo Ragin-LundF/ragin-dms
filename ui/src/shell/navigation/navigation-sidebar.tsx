@@ -1,13 +1,14 @@
 import COLLAPSE from "@material-design-icons/svg/round/keyboard_double_arrow_left.svg?raw";
 import EXPAND from "@material-design-icons/svg/round/keyboard_double_arrow_right.svg?raw";
 import logo from "../../assets/app-icon.png";
-import { Icon, ReasonTooltip } from "../../shared/components";
-import { NAV_GROUPS, SCREENS, type Screen } from "../screens";
+import {Icon, ReasonTooltip} from "../../shared/components";
+import {NAV_GROUPS, type Screen, SCREENS} from "../screens";
 
-export type NavigationCounts = { inbox: number; tasks: number };
+export type NavigationCounts = { inbox: number; tasks: number; toPay: number; cases: number };
 
 /**
- * The app's left column: the brand, the screens in their groups with the inbox and task counts, and Settings at
+ * The app's left column: the brand, the screens in their groups with the inbox, task, overdue bill and due follow-up
+ * counts, and Settings at
  * the bottom. While `collapsed` it is a rail of icons that name themselves on hover. `hidden` screens are left
  * out, such as Ask while no AI is set up.
  */
@@ -42,9 +43,16 @@ export function NavigationSidebar({ screen, hidden, counts, collapsed, onToggleC
 
 type Badge = { count: number; warning: boolean };
 
+const BADGES: Partial<Record<Screen, (counts: NavigationCounts) => Badge>> = {
+  inbox: (counts) => ({ count: counts.inbox, warning: false }),
+  tasks: (counts) => ({ count: counts.tasks, warning: true }),
+  bills: (counts) => ({ count: counts.toPay, warning: true }),
+  cases: (counts) => ({ count: counts.cases, warning: true }),
+};
+
 /** The badge of a screen; null for screens without one or a count of 0. */
 function badgeOf(screen: Screen, counts: NavigationCounts): Badge | null {
-  const badge = screen === "inbox" ? { count: counts.inbox, warning: false } : screen === "tasks" ? { count: counts.tasks, warning: true } : null;
+  const badge = BADGES[screen]?.(counts) ?? null;
   return badge && badge.count > 0 ? badge : null;
 }
 

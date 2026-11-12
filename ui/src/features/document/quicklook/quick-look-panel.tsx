@@ -28,6 +28,7 @@ import {
 import {fileManagerName} from "../../../shared/platform";
 import {useStore} from "../../../shared/store";
 import {MoreSection} from "../details/more-section";
+import {OrganizeBlock} from "./organize/organize-block";
 import {
     closeQuickLook,
     editFact,
@@ -83,6 +84,7 @@ function QuickLookSheet({ look, moreOpen, onToggleMore }: { look: QuickLook_Seri
           />
         )}
         <QuickFactList look={look} editing={fact} busyReason={busy.library} />
+        <OrganizeBlock documentId={look.documentId} busyReason={busy.library} />
         <MoreSection look={look} open={moreOpen} onToggle={onToggleMore} busyReason={busy.library} />
       </div>
     </aside>

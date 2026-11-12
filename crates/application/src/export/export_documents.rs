@@ -1,12 +1,16 @@
 use std::sync::Arc;
 
+use dms_domain::catalog::Catalog;
 use dms_domain::document::Document;
 
 use crate::common::ActivityRecorder;
+use crate::export::missing_items::{missing_items_file, missing_items_of, missing_items_page};
 use crate::export::{ExportOptions, ExportOutcome, ExportPlanner, ExportScope};
 use crate::library::CatalogStore;
-use crate::port::export::{ExportTarget, ExportWriter};
+use crate::port::export::{ExportBundle, ExportTarget, ExportWriter};
+use crate::port::pdf::PdfEditor;
 use crate::port::state::ActivityKind;
+use crate::port::storage::StorageResult;
 use crate::port::system::Clock;
 use crate::search::ContentMatcher;
 
@@ -16,6 +20,7 @@ pub struct ExportDocuments {
     store: Arc<CatalogStore>,
     search: Arc<ContentMatcher>,
     writer: Arc<dyn ExportWriter>,
+    pdf: Arc<dyn PdfEditor>,
     activity: Arc<ActivityRecorder>,
     clock: Arc<dyn Clock>,
 }
@@ -25,10 +30,11 @@ impl ExportDocuments {
         store: Arc<CatalogStore>,
         search: Arc<ContentMatcher>,
         writer: Arc<dyn ExportWriter>,
+        pdf: Arc<dyn PdfEditor>,
         activity: Arc<ActivityRecorder>,
         clock: Arc<dyn Clock>,
     ) -> Self {
-        Self { store, search, writer, activity, clock }
+        Self { store, search, writer, pdf, activity, clock }
     }
 
     pub fn run(&self, scope: &ExportScope, directory: &str, name: &str, options: ExportOptions) -> ExportOutcome {
@@ -47,7 +53,12 @@ impl ExportDocuments {
         if documents.is_empty() {
             return ExportOutcome::Empty;
         }
-        let bundle = ExportPlanner::plan(&library.catalog, &documents, options, self.clock.zone());
+        let mut bundle = ExportPlanner::plan(&library.catalog, &documents, options, self.clock.zone());
+        if let Some(year) = options.tax_year
+            && let Err(error) = self.add_missing_items(&mut bundle, &library.catalog, year)
+        {
+            return ExportOutcome::Failed(error);
+        }
         let target = match ExportTarget::new(directory, name, options.zip) {
             Ok(target) => target,
             Err(error) => return ExportOutcome::InvalidInput(error),
@@ -59,5 +70,14 @@ impl ExportDocuments {
                 ExportOutcome::Exported { count: documents.len(), location }
             }
         }
+    }
+
+    fn add_missing_items(&self, bundle: &mut ExportBundle, catalog: &Catalog, year: i32) -> StorageResult<()> {
+        let today = self.clock.today();
+        let items = missing_items_of(catalog, year, today);
+        let page = self.pdf.text_document_bytes(&missing_items_page(year, today, &items))?;
+        bundle.files.insert(0, missing_items_file(page));
+        bundle.missing_items = Some(items);
+        Ok(())
     }
 }

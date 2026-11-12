@@ -94,6 +94,9 @@ pub fn query_problem(params: &ViewParams) -> Option<&'static str> {
     if params.filters.iter().any(|filter| matches!(filter, FacetFilter::Type(_))) {
         return Some("A saved view or an export cannot keep the type filter yet");
     }
+    if params.filters.iter().any(|filter| matches!(filter, FacetFilter::Payment(_))) {
+        return Some("A saved view or an export cannot keep the payment filter yet");
+    }
     (params.view == View::NeedsReview).then_some("Needs review cannot be saved or exported as a view")
 }
 
@@ -192,7 +195,9 @@ fn facet_dto(facet: Facet) -> LibraryFacetDto {
         Facet::Year => LibraryFacetDto::Year,
         Facet::Correspondent => LibraryFacetDto::Correspondent,
         Facet::Type => LibraryFacetDto::Type,
+        Facet::Payment => LibraryFacetDto::Payment,
         Facet::Folder => LibraryFacetDto::Folder,
+        Facet::Tax => LibraryFacetDto::Tax,
     }
 }
 

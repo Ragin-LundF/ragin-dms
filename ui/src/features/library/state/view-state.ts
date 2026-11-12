@@ -1,10 +1,10 @@
 import type {
-    LibraryFilterDto_Serialize,
-    LibraryGroupKeyDto,
-    LibraryParamsDto_Serialize,
-    LibrarySortColumnDto,
-    LibrarySortDto,
-    LibraryViewDto,
+  LibraryFilterDto_Serialize,
+  LibraryGroupKeyDto,
+  LibraryParamsDto_Serialize,
+  LibrarySortColumnDto,
+  LibrarySortDto,
+  LibraryViewDto,
 } from "../../../ipc";
 import {createStore} from "../../../shared/store";
 import type {LibrarySelection} from "../navigation";
@@ -73,8 +73,18 @@ export function sameFilter(first: FacetFilter, second: FacetFilter): boolean {
       return first.name === (second as typeof first).name;
     case "type":
       return first.documentKind === (second as typeof first).documentKind;
+    case "payment":
+      return first.status === (second as typeof first).status;
     case "folder":
       return first.path === (second as typeof first).path;
+    case "tax":
+      return first.year === (second as typeof first).year && first.area === (second as typeof first).area;
+    case "dates":
+      return first.from === (second as typeof first).from && first.to === (second as typeof first).to;
+    case "field": {
+      const other = second as typeof first;
+      return first.key === other.key && first.comparison === other.comparison && first.value === other.value;
+    }
   }
 }
 

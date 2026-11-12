@@ -84,6 +84,7 @@ fn detailed_settings() -> CatalogSettings {
             default_currency: Some(euro()),
             embed_metadata: false,
         },
+        ..CatalogSettings::default()
     }
 }
 

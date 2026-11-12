@@ -16,7 +16,8 @@ pub enum LibraryExportScopeDto {
     SmartFolder {
         id: String,
     },
-    /// Tagged "Tax" (the library's own spelling) and dated in `year`.
+    /// Assigned to the tax year `year`, or without a tax assignment, tagged "Tax" (the library's own spelling) and
+    /// dated in `year`.
     TaxYear {
         year: i32,
     },
@@ -27,10 +28,12 @@ pub enum LibraryExportScopeDto {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
-#[allow(clippy::struct_excessive_bools)] // four independent switches, as in Kotlin
+#[allow(clippy::struct_excessive_bools)] // independent switches, as in Kotlin
 pub struct LibraryExportOptionsDto {
     pub flatten: bool,
     pub rename_to_title: bool,
     pub index: bool,
     pub zip: bool,
+    /// For a tax year: one folder per tax area and a "Missing items" page and sheet.
+    pub tax_grouping: bool,
 }

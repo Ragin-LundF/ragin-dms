@@ -13,6 +13,10 @@ use indexmap::IndexSet;
 
 use crate::support::TestLibrary;
 use crate::support::fake::ai::{FakeAiServer, FakePreviewer};
+use crate::support::fake::assistant::{
+    FakeContractTermsReader, FakeLetterWriter, FakeQueryTranslator, FakeSplitProposer,
+};
+use crate::support::fake::mail::FakeMailConverter;
 use crate::support::fake::pdf::{FakeLayoutReader, FakeOcr, FakePdfEditor, FakePdfRebuilder};
 
 struct NoWatcher;
@@ -52,6 +56,13 @@ fn services_of(library: &TestLibrary) -> AppServices {
         pdf_editor: Arc::new(FakePdfEditor::new(library.folders.clone())),
         ocr: Arc::new(FakeOcr::new(library.folders.clone())),
         rebuilder: Arc::new(FakePdfRebuilder::new(library.folders.clone())),
+        letter_writer: Arc::new(FakeLetterWriter::default()),
+        contract_terms_reader: Arc::new(FakeContractTermsReader::default()),
+        health: library.health.clone(),
+        snapshots: library.snapshots.clone(),
+        mail: Arc::new(FakeMailConverter::new(library.folders.clone())),
+        split_proposer: Arc::new(FakeSplitProposer::default()),
+        query_translator: Arc::new(FakeQueryTranslator::default()),
     })
 }
 

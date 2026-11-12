@@ -67,6 +67,13 @@ pub fn ports(data_dir: &Path, pdfium: &Path, trash: Arc<dyn SystemTrash>) -> Res
         pdf_editor: Arc::new(pdf.editor),
         ocr: Arc::new(pdf.ocr),
         rebuilder: Arc::new(pdf.rebuilder),
+        letter_writer: Arc::new(ai.letter_writer),
+        contract_terms_reader: Arc::new(ai.contract_terms_reader),
+        health: storage.health,
+        snapshots: storage.snapshots,
+        mail: Arc::new(pdf.mail),
+        split_proposer: Arc::new(ai.split_proposer),
+        query_translator: Arc::new(ai.query_translator),
     };
     Ok(ports)
 }

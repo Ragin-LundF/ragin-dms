@@ -118,6 +118,18 @@ pub struct LibrarySettingsDto {
     pub default_currency: String,
     pub embed_metadata: bool,
     pub rules: Vec<RuleRowDto>,
+    pub owner: SettingsOwnerDto,
+}
+
+/// The owner's details for letters as the card edits them: `address` holds one line per address line; all fields
+/// empty means no details.
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct SettingsOwnerDto {
+    pub name: String,
+    pub address: String,
+    pub email: String,
+    pub phone: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
@@ -129,6 +141,9 @@ pub struct InboxSettingsDto {
     pub ai_analysis: bool,
     pub ai_target_folder: bool,
     pub auto_analyze: bool,
+    pub convert_emails: bool,
+    pub keep_email_originals: bool,
+    pub propose_splits: bool,
 }
 
 /// One custom field; `text` is the whole line, such as "Amount  (amount, Amount)".
@@ -212,5 +227,8 @@ pub enum LibrarySettingsChangeDto {
     #[serde(rename_all = "camelCase")]
     RemoveRule {
         rule_id: String,
+    },
+    SaveOwner {
+        owner: SettingsOwnerDto,
     },
 }

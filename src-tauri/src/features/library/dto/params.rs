@@ -1,14 +1,23 @@
 //! What the library screen sends: its view parameters, and their parsing into checked domain values.
 
+use chrono::NaiveDate;
+use dms_domain::bill::BillStatus;
 use dms_domain::document::{DocumentId, DocumentKind};
+use dms_domain::field::{FieldKey, FieldType, FieldValue, FieldValues};
 use dms_domain::library::RelativePath;
-use dms_domain::query::{DateRange, SavedSearchId};
+use dms_domain::query::{DateRange, FieldComparison, FieldCondition, SavedSearchId};
 use dms_domain::taxonomy::{CategoryId, TagName};
+use dms_domain::{iso_date, parse_iso_date};
 use serde::{Deserialize, Serialize};
 use specta::Type;
 
 use crate::dto::IpcError;
-use crate::features::library::model::{FacetFilter, GroupKey, Sort, SortColumn, View, ViewParams, YearFilter};
+use crate::features::library::model::{
+    FacetFilter, GroupKey, Sort, SortColumn, TaxFacet, View, ViewParams, YearFilter,
+};
+use crate::features::settings::dto::FieldTypeDto;
+use crate::features::tax::dto::TaxAreaDto;
+use crate::features::tax::view::amounts::{area_dto, area_of};
 
 /// A view of the sidebar: `folder` with the root path is "All documents".
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
@@ -45,9 +54,51 @@ pub enum LibraryFilterDto {
     Type {
         document_kind: LibraryKindDto,
     },
+    Payment {
+        status: LibraryPaymentDto,
+    },
     Folder {
         path: String,
     },
+    /// A tax year, or with `area` one of its areas.
+    Tax {
+        year: i32,
+        area: Option<TaxAreaDto>,
+    },
+    /// Document dates from `from` to `to` (`YYYY-MM-DD`, both included); a missing end has no limit.
+    Dates {
+        from: Option<String>,
+        to: Option<String>,
+    },
+    /// A condition on the custom field `key`; `value` as the field shows it, of `value_type`, empty for
+    /// `present` and `absent`.
+    #[serde(rename_all = "camelCase")]
+    Field {
+        key: String,
+        comparison: LibraryComparisonDto,
+        value: Option<String>,
+        value_type: Option<FieldTypeDto>,
+    },
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub enum LibraryPaymentDto {
+    Open,
+    Overdue,
+    Paid,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub enum LibraryComparisonDto {
+    Present,
+    Absent,
+    Equals,
+    Contains,
+    LessThan,
+    GreaterThan,
+    WithinDays,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Type)]
@@ -126,7 +177,7 @@ impl LibraryViewDto {
 }
 
 impl LibraryFilterDto {
-    fn parse(&self) -> Result<FacetFilter, IpcError> {
+    pub(crate) fn parse(&self) -> Result<FacetFilter, IpcError> {
         Ok(match self {
             Self::Category { category_id } => {
                 FacetFilter::Category(category_id.as_deref().map(parse_category_id).transpose()?)
@@ -138,7 +189,22 @@ impl LibraryFilterDto {
             }
             Self::Correspondent { name } => FacetFilter::Correspondent(name.clone()),
             Self::Type { document_kind } => FacetFilter::Type((*document_kind).into()),
+            Self::Payment { status } => FacetFilter::Payment(match status {
+                LibraryPaymentDto::Open => BillStatus::Open,
+                LibraryPaymentDto::Overdue => BillStatus::Overdue,
+                LibraryPaymentDto::Paid => BillStatus::Paid,
+            }),
             Self::Folder { path } => FacetFilter::Folder(parse_path(path)?),
+            Self::Tax { year, area } => {
+                DateRange::year(*year).map_err(invalid)?;
+                FacetFilter::Tax(TaxFacet { year: *year, area: area.map(area_of) })
+            }
+            Self::Dates { from, to } => FacetFilter::Dates(
+                DateRange::new(parse_date(from.as_deref())?, parse_date(to.as_deref())?).map_err(invalid)?,
+            ),
+            Self::Field { key, comparison, value, value_type } => {
+                FacetFilter::Field(field_condition(key, *comparison, value.as_deref(), *value_type)?)
+            }
         })
     }
 
@@ -149,8 +215,87 @@ impl LibraryFilterDto {
             FacetFilter::Year(year) => Self::Year { year: year.year, and_earlier: year.and_earlier },
             FacetFilter::Correspondent(name) => Self::Correspondent { name: name.clone() },
             FacetFilter::Type(kind) => Self::Type { document_kind: (*kind).into() },
+            FacetFilter::Payment(status) => Self::Payment {
+                status: match status {
+                    BillStatus::Open => LibraryPaymentDto::Open,
+                    BillStatus::Overdue => LibraryPaymentDto::Overdue,
+                    BillStatus::Paid => LibraryPaymentDto::Paid,
+                },
+            },
             FacetFilter::Folder(path) => Self::Folder { path: path.value().to_owned() },
+            FacetFilter::Tax(tax) => Self::Tax { year: tax.year, area: tax.area.map(area_dto) },
+            FacetFilter::Dates(range) => Self::Dates { from: range.from.map(iso_date), to: range.to.map(iso_date) },
+            FacetFilter::Field(condition) => Self::Field {
+                key: condition.key.value().to_owned(),
+                comparison: comparison_dto(condition.comparison),
+                value: condition.value.as_ref().map(FieldValues::format),
+                value_type: condition.value.as_ref().map(value_type_of),
+            },
         }
+    }
+}
+
+fn parse_date(raw: Option<&str>) -> Result<Option<NaiveDate>, IpcError> {
+    raw.map(|raw| parse_iso_date(raw).ok_or_else(|| IpcError::invalid(format!("Not a date: {raw}")))).transpose()
+}
+
+fn field_condition(
+    key: &str,
+    comparison: LibraryComparisonDto,
+    value: Option<&str>,
+    value_type: Option<FieldTypeDto>,
+) -> Result<FieldCondition, IpcError> {
+    let value = match (value, value_type) {
+        (Some(raw), Some(value_type)) => Some(
+            FieldValues::parse(field_type_of(value_type), raw, None)
+                .ok_or_else(|| IpcError::invalid(format!("Not a value of this field: {raw}")))?,
+        ),
+        _ => None,
+    };
+    FieldCondition::new(FieldKey::new(key).map_err(invalid)?, comparison_of(comparison), value).map_err(invalid)
+}
+
+const fn comparison_of(dto: LibraryComparisonDto) -> FieldComparison {
+    match dto {
+        LibraryComparisonDto::Present => FieldComparison::Present,
+        LibraryComparisonDto::Absent => FieldComparison::Absent,
+        LibraryComparisonDto::Equals => FieldComparison::Equals,
+        LibraryComparisonDto::Contains => FieldComparison::Contains,
+        LibraryComparisonDto::LessThan => FieldComparison::LessThan,
+        LibraryComparisonDto::GreaterThan => FieldComparison::GreaterThan,
+        LibraryComparisonDto::WithinDays => FieldComparison::WithinDays,
+    }
+}
+
+const fn comparison_dto(comparison: FieldComparison) -> LibraryComparisonDto {
+    match comparison {
+        FieldComparison::Present => LibraryComparisonDto::Present,
+        FieldComparison::Absent => LibraryComparisonDto::Absent,
+        FieldComparison::Equals => LibraryComparisonDto::Equals,
+        FieldComparison::Contains => LibraryComparisonDto::Contains,
+        FieldComparison::LessThan => LibraryComparisonDto::LessThan,
+        FieldComparison::GreaterThan => LibraryComparisonDto::GreaterThan,
+        FieldComparison::WithinDays => LibraryComparisonDto::WithinDays,
+    }
+}
+
+const fn field_type_of(dto: FieldTypeDto) -> FieldType {
+    match dto {
+        FieldTypeDto::Text => FieldType::Text,
+        FieldTypeDto::Number => FieldType::Number,
+        FieldTypeDto::Money => FieldType::Money,
+        FieldTypeDto::Date => FieldType::Date,
+        FieldTypeDto::Boolean => FieldType::Boolean,
+    }
+}
+
+const fn value_type_of(value: &FieldValue) -> FieldTypeDto {
+    match value {
+        FieldValue::Text(_) => FieldTypeDto::Text,
+        FieldValue::Number(_) => FieldTypeDto::Number,
+        FieldValue::Money { .. } => FieldTypeDto::Money,
+        FieldValue::Date(_) => FieldTypeDto::Date,
+        FieldValue::Flag(_) => FieldTypeDto::Boolean,
     }
 }
 

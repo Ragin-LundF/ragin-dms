@@ -8,10 +8,12 @@ use std::time::Duration;
 use dms_application::common::OperationOutcome;
 use dms_application::inbox::CollectInboxOutcome;
 use dms_application::library::{OpenLibraryOutcome, ScanOutcome, ScanProgress, ScanResult};
+use dms_application::mail::{EmailSource, is_mail_file};
 use dms_application::port::state::Preferences;
 use dms_application::services::AppServices;
 use dms_application::sidecar::{FolderMigrationResult, SidecarMigrationOutcome, SidecarMigrationProgress};
 use dms_domain::change::DetectedChange;
+use dms_domain::document::DocumentId;
 use dms_domain::library::FolderRole;
 
 use super::AppContext;
@@ -136,6 +138,7 @@ impl AppContext {
         self.publish_preferences(&preferences);
         if open {
             self.rescan(operation)?;
+            crate::features::health::check::start_when_due(self);
         }
         Ok(())
     }
@@ -151,6 +154,8 @@ impl AppContext {
             return Ok(());
         }
         let adding = self.session.state().add_new_files_while_scanning;
+        let known: HashSet<DocumentId> =
+            self.catalog().map(|catalog| catalog.documents().keys().cloned().collect()).unwrap_or_default();
         let reporter = ScanReporter::default();
         let progress = Reporting::new(operation, |step: &ScanProgress| reporter.report(operation, step));
         let result = match services.library.scan_library.run(adding, &progress) {
@@ -166,9 +171,13 @@ impl AppContext {
             state.offline_folders = result.failed_folders.keys().map(|id| id.value().to_owned()).collect();
         });
         self.set_last_scan(Some(result.clone()));
-        self.collect_inbox(services, &result);
+        let collected = self.collect_inbox(services, &result);
         if adding {
             self.adopt_new_files(services, operation, &result);
+        }
+        let converted = self.convert_new_emails(services, &known);
+        if collected || converted {
+            self.analyze_inbox_if_automatic();
         }
         Ok(())
     }
@@ -221,19 +230,53 @@ impl AppContext {
         !cancelled
     }
 
-    /// Catalogs what arrived in the inbox of any folder and, with "Analyze automatically" on, lets the AI suggest
-    /// metadata for it in the background.
-    fn collect_inbox(self: &Arc<Self>, services: &AppServices, result: &ScanResult) {
+    /// Catalogs what arrived in the inbox of any folder; `true` when something arrived.
+    fn collect_inbox(self: &Arc<Self>, services: &AppServices, result: &ScanResult) -> bool {
         let CollectInboxOutcome::Collected(collected) = services.organize.collect_inbox.run(result) else {
-            return;
+            return false;
         };
         for change in &collected {
             self.forget(&DetectedChange::NewFile(change.clone()));
         }
         if collected.is_empty() {
-            return;
+            return false;
         }
         self.session.info(format!("Inbox: {} new documents", collected.len()));
+        true
+    }
+
+    /// With "Convert emails in the inbox automatically" on, imports the mail files this scan added to the inbox
+    /// (documents not in `known`); `true` when it imported any.
+    fn convert_new_emails(self: &Arc<Self>, services: &AppServices, known: &HashSet<DocumentId>) -> bool {
+        let Some(catalog) = self.catalog() else { return false };
+        let inbox = &catalog.settings().layout.inbox;
+        if !inbox.enabled || !inbox.convert_emails {
+            return false;
+        }
+        let emails: Vec<EmailSource> = catalog
+            .documents()
+            .values()
+            .filter(|document| !known.contains(&document.id) && inbox.contains(&document.path))
+            .filter(|document| is_mail_file(document.path.file_name()))
+            .map(|document| EmailSource::Document(document.id.clone()))
+            .collect();
+        if emails.is_empty() {
+            return false;
+        }
+        self.import_emails(services, &emails);
+        true
+    }
+
+    /// Imports `sources` as emails (call inside a library operation) and reports the outcome; with "Analyze
+    /// automatically" on, the AI then suggests metadata for the new inbox documents like for any arrival.
+    pub fn import_emails(self: &Arc<Self>, services: &AppServices, sources: &[EmailSource]) {
+        let keep_original = self.catalog().is_some_and(|catalog| catalog.settings().layout.inbox.keep_email_originals);
+        let outcome = services.organize.import_emails.run(sources, keep_original);
+        self.session.report(messages::emails_imported(&outcome));
+    }
+
+    /// Lets the AI suggest metadata for the inbox in the background while "Analyze automatically" is on.
+    pub fn analyze_inbox_if_automatic(self: &Arc<Self>) {
         let inbox = self.catalog().map(|catalog| catalog.settings().layout.inbox.clone());
         if inbox.is_some_and(|inbox| inbox.auto_analyze && inbox.ai_analysis) && self.session.state().ai_enabled {
             // Busy AI lane: the next scan offers the documents again.

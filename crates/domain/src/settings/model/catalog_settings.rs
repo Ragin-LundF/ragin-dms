@@ -1,15 +1,21 @@
 use std::collections::HashSet;
 use std::hash::Hash;
 
+use chrono::NaiveDate;
+
 use crate::DomainError;
+use crate::emergency::EmergencyFolder;
 use crate::error::require;
+use crate::expectation::ExpectationOverride;
 use crate::field::{FieldDefinition, FieldKey};
 use crate::query::{SavedSearch, SavedSearchId};
 use crate::rule::{Correspondent, MatchingRule, MatchingRuleId};
-use crate::settings::LibraryLayout;
+use crate::settings::{LibraryLayout, OwnerDetails};
 
 /// The library-wide settings that travel with the catalog to every folder and device: custom field definitions,
-/// saved searches, matching rules, known correspondents and the [`Self::layout`].
+/// saved searches, matching rules, known correspondents and the [`Self::layout`], plus the owner's details, the day
+/// bills are tracked since, dismissed contract proposals (sender names, compared ignoring case), the decisions
+/// about expected documents and the emergency folder.
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct CatalogSettings {
     pub field_definitions: Vec<FieldDefinition>,
@@ -17,6 +23,11 @@ pub struct CatalogSettings {
     pub rules: Vec<MatchingRule>,
     pub correspondents: Vec<Correspondent>,
     pub layout: LibraryLayout,
+    pub owner: Option<OwnerDetails>,
+    pub bills_tracked_since: Option<NaiveDate>,
+    pub dismissed_contract_proposals: Vec<String>,
+    pub expectations: Vec<ExpectationOverride>,
+    pub emergency_folder: Option<EmergencyFolder>,
 }
 
 impl CatalogSettings {
@@ -37,6 +48,15 @@ impl CatalogSettings {
         self.saved_searches.iter().try_for_each(SavedSearch::validate)?;
         self.rules.iter().try_for_each(MatchingRule::validate)?;
         self.correspondents.iter().try_for_each(Correspondent::validate)?;
+        require(all_distinct(self.expectations.iter().map(ExpectationOverride::key)), || {
+            "Two expectations share a correspondent and category".to_owned()
+        })?;
+        self.expectations.iter().try_for_each(ExpectationOverride::validate)?;
+        require(self.dismissed_contract_proposals.iter().all(|name| !crate::text::is_blank(name)), || {
+            "A dismissed contract proposal needs a correspondent".to_owned()
+        })?;
+        self.owner.as_ref().map_or(Ok(()), OwnerDetails::validate)?;
+        self.emergency_folder.as_ref().map_or(Ok(()), EmergencyFolder::validate)?;
         self.layout.validate()
     }
 

@@ -8,12 +8,14 @@ use specta::Type;
 use super::AppState;
 use crate::dto::IpcError;
 
-/// What the navigation badges show: documents in the inbox and open tasks.
+/// What the navigation badges show: documents in the inbox, open tasks, overdue bills and follow-ups due.
 #[derive(Debug, Clone, Default, Serialize, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct NavigationCounts {
     pub inbox: u32,
     pub tasks: u32,
+    pub to_pay: u32,
+    pub cases: u32,
 }
 
 /// Opens the library, merging the catalogs of all folders, and scans it.
@@ -66,8 +68,15 @@ pub fn navigation_counts(ctx: AppState<'_>) -> NavigationCounts {
         }
         catalog.documents().values().filter(|document| inbox.contains(&document.path)).count()
     });
-    let tasks = ctx.dashboard().map_or(0, |dashboard| dashboard.tasks.len());
-    NavigationCounts { inbox: count(inbox), tasks: count(tasks) }
+    let dashboard = ctx.dashboard();
+    let tasks = dashboard.as_ref().map_or(&[][..], |dashboard| dashboard.tasks.as_slice());
+    let badges = crate::features::organize::view::organize_badges(tasks);
+    NavigationCounts {
+        inbox: count(inbox),
+        tasks: count(tasks.len()),
+        to_pay: count(badges.to_pay),
+        cases: count(badges.cases),
+    }
 }
 
 /// Lets the AI suggest metadata for every inbox document without one (Kotlin `LibrarySession.analyzeInbox`).

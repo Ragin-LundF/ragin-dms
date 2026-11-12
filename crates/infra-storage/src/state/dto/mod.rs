@@ -15,4 +15,4 @@ pub use layout_dto::LayoutDto;
 pub use library_folder_dto::LibraryFolderDto;
 pub use settings_dto::SettingsDto;
 pub use suggested_tag_dto::SuggestedTagDto;
-pub use suggestion_dto::SuggestionDto;
+pub use suggestion_dto::{RequestedActionDto, SuggestionDto};

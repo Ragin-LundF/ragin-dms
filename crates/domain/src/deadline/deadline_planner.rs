@@ -1,7 +1,9 @@
 use chrono::NaiveDate;
 use indexmap::IndexMap;
 
+use crate::bill::BillStatus;
 use crate::catalog::Catalog;
+use crate::contract::ContractPlanner;
 use crate::dates;
 use crate::deadline::UpcomingDate;
 use crate::field::{FieldRole, FieldValue};
@@ -12,14 +14,32 @@ use crate::text;
 /// Turns the deadline fields and the opt-in retention of the documents into dashboard tasks and the "Upcoming"
 /// list. A deadline is announced its role's lead time ahead and stays for as long again after it passed; a
 /// retention task appears once its date is reached.
+///
+/// The due date of a paid bill is no deadline anymore; once an unpaid bill is overdue, [`crate::bill::BillPlanner`]
+/// asks about it instead.
 pub struct DeadlinePlanner;
 
 impl DeadlinePlanner {
     /// The deadline and retention tasks due on `today`. Pass [`FieldRole::default_lead_days`] as `lead_days` for
-    /// the defaults.
+    /// the defaults. A cancel-by field of a document of a contract that plans its own cancel-by date gets no task:
+    /// the contract's task stands for it.
     #[must_use]
     pub fn due_tasks(catalog: &Catalog, today: NaiveDate, lead_days: impl Fn(FieldRole) -> i32) -> Vec<OpenTask> {
+        let settings = catalog.settings();
+        let overdue_bill = |upcoming: &UpcomingDate| {
+            catalog
+                .documents()
+                .get(&upcoming.document_id)
+                .and_then(|document| BillStatus::of(document, settings, today))
+                == Some(BillStatus::Overdue)
+        };
+        let by_contract = ContractPlanner::documents_with_planned_cancel_by(catalog, today);
         let deadlines = deadline_dates(catalog).into_iter().filter_map(|(role, upcoming)| {
+            let replaced = (role == FieldRole::DueDate && overdue_bill(&upcoming))
+                || (role == FieldRole::CancelBy && by_contract.contains(&upcoming.document_id));
+            if replaced {
+                return None;
+            }
             let lead = i64::from(lead_days(role));
             let due = upcoming.date <= dates::plus_days(today, lead) && upcoming.date >= dates::minus_days(today, lead);
             let field_key = upcoming.field?;
@@ -52,6 +72,7 @@ impl DeadlinePlanner {
     }
 }
 
+/// The deadline dates of every document, except the due dates of paid bills.
 fn deadline_dates(catalog: &Catalog) -> Vec<(FieldRole, UpcomingDate)> {
     let roles: IndexMap<_, _> = catalog
         .settings()
@@ -63,8 +84,12 @@ fn deadline_dates(catalog: &Catalog) -> Vec<(FieldRole, UpcomingDate)> {
         .documents()
         .values()
         .flat_map(|document| {
-            document.fields.iter().filter_map(|(key, value)| {
+            let (paid, roles) = (is_paid(document, catalog), &roles);
+            document.fields.iter().filter_map(move |(key, value)| {
                 let role = *roles.get(key)?;
+                if paid && role == FieldRole::DueDate {
+                    return None;
+                }
                 let FieldValue::Date(date) = value else {
                     return None;
                 };
@@ -72,6 +97,11 @@ fn deadline_dates(catalog: &Catalog) -> Vec<(FieldRole, UpcomingDate)> {
             })
         })
         .collect()
+}
+
+fn is_paid(document: &crate::document::Document, catalog: &Catalog) -> bool {
+    // The status does not depend on the day for a paid bill.
+    BillStatus::of(document, catalog.settings(), NaiveDate::MIN) == Some(BillStatus::Paid)
 }
 
 fn retention_dates(catalog: &Catalog) -> Vec<UpcomingDate> {

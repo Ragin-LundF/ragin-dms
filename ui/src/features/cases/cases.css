@@ -1,0 +1,43 @@
+/* Cases with follow-ups (feature 4). */
+
+.cases-screen { display: flex; flex-direction: column; gap: var(--space-xl); min-height: 100%; }
+.cases-layout { display: grid; grid-template-columns: 320px 1fr; gap: var(--space-l); align-items: start; }
+
+.case-segments { display: inline-flex; align-self: flex-start; padding: 2px; border-radius: var(--shape-m); background: var(--surface-container); }
+.case-segment { display: inline-flex; align-items: center; gap: var(--space-xs); padding: var(--space-xs) 10px; border: none; border-radius: var(--shape-s); background: transparent; color: var(--on-surface-variant); cursor: pointer; }
+.case-segment.selected { background: var(--surface); color: var(--on-surface); }
+
+.case-card { display: flex; flex-direction: column; gap: 2px; padding: var(--space-m); border: var(--hairline) solid var(--outline-variant); border-radius: var(--shape-l); background: var(--surface); color: inherit; text-align: left; cursor: pointer; font: inherit; }
+.case-card.selected { border-color: var(--primary); box-shadow: 0 0 0 2px var(--primary-container); }
+
+.case-pill { flex: none; padding: 1px var(--space-s); border-radius: 999px; font-size: 11px; line-height: 16px; font-weight: 500; white-space: nowrap; background: var(--surface-high); color: var(--on-surface-variant); }
+.case-pill.attention { background: var(--primary-container); color: var(--on-primary-container); }
+.case-pill.open { background: var(--secondary-container); color: var(--on-secondary-container); }
+.case-pill.done { background: color-mix(in srgb, var(--status-good) 16%, transparent); color: var(--on-surface); }
+
+.case-detail { display: flex; flex-direction: column; gap: var(--space-m); padding: var(--space-l); border: var(--hairline) solid var(--outline-variant); border-radius: var(--shape-xl); background: var(--surface); }
+.case-detail h2 { margin: 0; }
+.case-request { display: flex; flex-direction: column; gap: var(--space-xs); padding: var(--space-m); border-radius: var(--shape-l); border: var(--hairline) solid var(--outline-variant); background: color-mix(in srgb, var(--primary-container) 50%, transparent); }
+.case-request-actions { margin: 0; padding-left: var(--space-l); }
+.case-ai-badge { display: inline-flex; align-items: center; gap: 2px; padding: 1px var(--space-s); border-radius: 999px; background: var(--ai-gradient); color: var(--on-ai-gradient); font-size: 11px; font-weight: 600; }
+.case-ai-badge svg { width: 14px; height: 14px; }
+
+.case-timeline { position: relative; display: flex; flex-direction: column; gap: var(--space-m); padding-left: 22px; }
+.case-timeline::before { content: ""; position: absolute; left: 7px; top: 4px; bottom: 4px; width: 2px; background: var(--outline-variant); }
+.case-step { position: relative; display: flex; flex-direction: column; gap: 2px; }
+.case-step::before { content: ""; position: absolute; left: -19px; top: 4px; width: 10px; height: 10px; border-radius: 50%; background: var(--surface); border: 2px solid var(--primary); }
+.case-step.received::before { border-color: var(--secondary); }
+.case-step.followUp::before { border-color: var(--tertiary); border-style: dashed; }
+.case-step.note::before { border-color: var(--outline); }
+.case-step.done .case-step-title { text-decoration: line-through; color: var(--on-surface-variant); }
+.case-step.due .case-step-title { font-weight: 600; }
+
+.case-follow-up-form { align-items: flex-start; }
+.case-follow-up-form > :first-child { flex: 1 1 0; }
+.case-actions { flex-wrap: wrap; padding-top: var(--space-m); border-top: var(--hairline) solid var(--outline-variant); }
+.case-candidates { max-height: 360px; display: flex; flex-direction: column; gap: var(--space-xs); }
+.case-candidate { padding: var(--space-xs) 0; }
+
+.review-cases { display: flex; flex-direction: column; gap: var(--space-s); padding: var(--space-m); border-radius: var(--shape-l); border: var(--hairline) solid var(--outline-variant); }
+.review-cases.row { flex-direction: row; }
+.quick-look-cases { flex-wrap: wrap; }

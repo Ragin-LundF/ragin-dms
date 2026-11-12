@@ -27,6 +27,18 @@ export function InboxCard({ inbox, aiEnabled, busyReason }: { inbox: InboxSettin
           support="Created in every library folder when you save"
           disabled={!draft.enabled}
         />
+        <SwitchRow
+          text="Convert emails in the inbox automatically"
+          checked={draft.convertEmails}
+          disabled={!draft.enabled}
+          onChange={(convertEmails) => change({ convertEmails })}
+        />
+        <SwitchRow
+          text="Keep the original email file"
+          checked={draft.keepEmailOriginals}
+          disabled={!draft.enabled}
+          onChange={(keepEmailOriginals) => change({ keepEmailOriginals })}
+        />
         {aiEnabled && (
           <>
             <SwitchRow text="Use AI for inbox documents" checked={draft.aiAnalysis} disabled={!draft.enabled} onChange={(aiAnalysis) => change({ aiAnalysis })} />
@@ -41,6 +53,12 @@ export function InboxCard({ inbox, aiEnabled, busyReason }: { inbox: InboxSettin
               checked={draft.autoAnalyze}
               disabled={!draft.enabled || !draft.aiAnalysis}
               onChange={(autoAnalyze) => change({ autoAnalyze })}
+            />
+            <SwitchRow
+              text="Propose splits for scans with 3 or more pages"
+              checked={draft.proposeSplits}
+              disabled={!draft.enabled}
+              onChange={(proposeSplits) => change({ proposeSplits })}
             />
           </>
         )}

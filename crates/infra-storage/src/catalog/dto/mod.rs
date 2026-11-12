@@ -1,20 +1,25 @@
 //! The parts of `dms-catalog.yaml`, as the Kotlin DTOs bound them. Every part with an identity or a singleton
 //! keeps the fields only a newer version knows in `unknown`, so saving does not drop them.
 
+pub mod case;
 mod catalog_dto;
 mod category_dto;
 mod classification_dto;
+pub mod contract;
 mod document_dto;
 mod field_value_dto;
 mod link_dto;
+pub mod organize;
 mod retention_dto;
 pub mod rule;
 pub mod settings;
+pub mod tax;
 
 pub use catalog_dto::CatalogDto;
 pub use category_dto::CategoryDto;
 pub use classification_dto::ClassificationDto;
 pub use document_dto::DocumentDto;
+pub(crate) use document_dto::{read_field_values, write_field_values};
 pub use field_value_dto::FieldValueDto;
 pub use link_dto::LinkDto;
 pub use retention_dto::RetentionDto;
@@ -49,6 +54,11 @@ pub(crate) fn owned(text: Option<&str>) -> Option<String> {
 
 pub(crate) fn texts_node(texts: &[String]) -> Vec<Node> {
     texts.iter().map(Node::text).collect()
+}
+
+/// `true` as a node, nothing for `false`: switches that are off are not written.
+pub(crate) fn only_true(flag: bool) -> Option<Node> {
+    flag.then_some(Node::Bool(true))
 }
 
 /// Implements [`ExtensibleDto`] for a DTO with an `unknown` field.

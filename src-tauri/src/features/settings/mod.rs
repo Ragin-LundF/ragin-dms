@@ -1,9 +1,10 @@
 //! settings: the Settings screen — library folders of this device, scanning, inbox, custom fields, matching rules
-//! and AI (Kotlin `ui/settings/**`).
+//! and AI (Kotlin `ui/settings/**`), plus the owner's details for letters.
 
 mod ai;
 pub mod commands;
-mod dto;
+pub(crate) mod dto;
 mod folders;
-mod library_settings;
+pub(crate) mod library_settings;
+pub(crate) mod owner;
 pub(crate) mod run;

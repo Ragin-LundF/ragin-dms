@@ -9,7 +9,9 @@ import EDIT from "@material-design-icons/svg/round/edit.svg?raw";
 import FOLDER from "@material-design-icons/svg/round/folder.svg?raw";
 import MORE from "@material-design-icons/svg/round/more_horiz.svg?raw";
 import OFFER from "@material-design-icons/svg/round/local_offer.svg?raw";
+import PAYMENTS from "@material-design-icons/svg/round/payments.svg?raw";
 import PERSON from "@material-design-icons/svg/round/person.svg?raw";
+import RECEIPT from "@material-design-icons/svg/round/receipt_long.svg?raw";
 import {useState} from "react";
 import type {LibraryFacetDto, LibraryFacetOptionDto_Serialize} from "../../../ipc";
 import {
@@ -34,10 +36,12 @@ const FACETS: Record<LibraryFacetDto, { label: string; icon: string; note: strin
   year: { label: "Year", icon: CALENDAR, note: "The year of the document date, or of when a document without one was added." },
   correspondent: { label: "Correspondent", icon: PERSON, note: null },
   type: { label: "Type", icon: DESCRIPTION, note: null },
+  payment: { label: "Payment", icon: PAYMENTS, note: "Bills: documents with an amount and a due date." },
   folder: { label: "Folder", icon: FOLDER, note: "Shows what is inside a folder. To move, rename or create folders, open Folders in the sidebar." },
+  tax: { label: "Tax year / area", icon: RECEIPT, note: "The documents assigned to a tax year, or to one area of it." },
 };
 
-export const FACET_ORDER: LibraryFacetDto[] = ["category", "tag", "year", "correspondent", "type", "folder"];
+export const FACET_ORDER: LibraryFacetDto[] = ["category", "tag", "year", "correspondent", "type", "payment", "folder", "tax"];
 
 /**
  * One facet as a chip (Kotlin `FacetChip`); while its filter is active it is tinted and shows its token's value. A
@@ -58,6 +62,7 @@ export function FacetChip({ facet, state, filters, busyReason, onPick, onRemove 
   const active = filters.find((filter) => filter.kind === facet) ?? null;
   const value = active && state?.tokens.find((token) => token.filter && sameFilter(token.filter, active))?.value;
   const options = state?.facets.find((entry) => entry.facet === facet)?.options ?? [];
+  if (facet === "tax" && options.length === 0 && !active) return null;
   const pick = (filter: FacetFilter) => {
     popover.close();
     if (active && sameFilter(active, filter)) onRemove(filter);

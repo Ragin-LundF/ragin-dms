@@ -2,10 +2,11 @@
 //! dialog shows, and the approval the checked rows make.
 
 use dms_application::classification::{ApprovedCategory, SuggestionApproval};
+use dms_domain::bill::Iban;
 use dms_domain::catalog::Catalog;
-use dms_domain::classification::{ClassificationSuggestion, SuggestedCategory};
+use dms_domain::classification::{ClassificationSuggestion, EInvoicePart, SuggestedCategory};
 use dms_domain::document::Document;
-use dms_domain::field::{FieldKey, FieldValues};
+use dms_domain::field::{FieldKey, FieldPresets, FieldValues};
 use dms_domain::library::{FileNamePolicy, RelativePath};
 use dms_domain::rule::RuleTarget;
 use dms_domain::taxonomy::{Category, TagName};
@@ -13,10 +14,12 @@ use dms_domain::{iso_date, text};
 
 use super::texts::{DATE_PROBLEM, parse_date};
 use crate::features::document::dto::{Review, ReviewRow, ReviewRowDraft};
+use crate::features::tax::view::review as tax_review;
 use crate::messages;
 
 const SEPARATOR: &str = " / ";
 const FIELD_PREFIX: &str = "field:";
+const E_INVOICE_HINT: &str = "Exact value from the e-invoice";
 
 pub fn present_review(
     catalog: &Catalog,
@@ -28,7 +31,13 @@ pub fn present_review(
         .confidence
         .map(|confidence| format!(" · {} % sure", (confidence * 100.0).round()))
         .unwrap_or_default();
-    let source = if suggestion.by_rules() { "your matching rules, without the AI" } else { suggestion.model.as_str() };
+    let source = if suggestion.by_rules() {
+        "your matching rules, without the AI".to_owned()
+    } else if suggestion.model == ClassificationSuggestion::E_INVOICE_MODEL {
+        "the e-invoice in the PDF, without the AI".to_owned()
+    } else {
+        suggestion.model.clone()
+    };
     Review {
         document_id: document.id.value().to_owned(),
         document_name: document.path.value().to_owned(),
@@ -45,25 +54,27 @@ fn rows_of(
 ) -> Vec<ReviewRow> {
     let metadata = &document.metadata;
     let rule_hint = |target: RuleTarget| suggestion.rule_notes.get(&target).map(|rule| format!("From rule: {rule}"));
+    let e_invoice_hint = |part: EInvoicePart| suggestion.e_invoice.contains(&part).then(|| E_INVOICE_HINT.to_owned());
     let mut rows = Vec::new();
     if let Some(title) = &suggestion.title {
         rows.push(row("title", "Title", title, metadata.title.clone().unwrap_or_default()));
     }
     if let Some(date) = suggestion.document_date {
-        rows.push(row(
-            "documentDate",
-            "Date (YYYY-MM-DD)",
-            &iso_date(date),
-            metadata.document_date.map(iso_date).unwrap_or_default(),
-        ));
+        rows.push(ReviewRow {
+            hint: e_invoice_hint(EInvoicePart::DocumentDate),
+            ..row(
+                "documentDate",
+                "Date (YYYY-MM-DD)",
+                &iso_date(date),
+                metadata.document_date.map(iso_date).unwrap_or_default(),
+            )
+        });
     }
     if let Some(correspondent) = &suggestion.correspondent {
-        rows.push(row(
-            "correspondent",
-            "Correspondent",
-            correspondent,
-            metadata.correspondent.clone().unwrap_or_default(),
-        ));
+        rows.push(ReviewRow {
+            hint: e_invoice_hint(EInvoicePart::Correspondent),
+            ..row("correspondent", "Correspondent", correspondent, metadata.correspondent.clone().unwrap_or_default())
+        });
     }
     let current_category = document.category_id.as_ref().and_then(|id| catalog.categories().get(id));
     rows.push(ReviewRow {
@@ -105,13 +116,19 @@ fn rows_of(
         });
     }
     for (key, value) in &suggestion.fields {
-        let label = catalog.settings().field(key).map_or(key.value(), |definition| definition.label.as_str());
+        let preset = FieldPresets::of(key);
+        let label = catalog
+            .settings()
+            .field(key)
+            .or(preset.as_ref())
+            .map_or(key.value(), |definition| definition.label.as_str());
         let current = document.fields.get(key).map(FieldValues::format).unwrap_or_default();
         rows.push(ReviewRow {
-            hint: rule_hint(RuleTarget::Fields),
+            hint: e_invoice_hint(EInvoicePart::Field(key.clone())).or_else(|| rule_hint(RuleTarget::Fields)),
             ..row(&format!("{FIELD_PREFIX}{}", key.value()), label, &FieldValues::format(value), current)
         });
     }
+    rows.extend(tax_review::tax_rows(suggestion.tax.as_ref(), document));
     rows
 }
 
@@ -167,13 +184,22 @@ pub fn approval_of(
         let Some(raw) = taken(&row.key) else {
             continue;
         };
-        let Some(definition) = FieldKey::new(key).ok().and_then(|key| catalog.settings().field(&key)) else {
+        let Some(definition) = FieldKey::new(key)
+            .ok()
+            .and_then(|key| catalog.settings().field(&key).cloned().or_else(|| FieldPresets::of(&key)))
+        else {
             continue;
+        };
+        let raw = if definition.key == FieldPresets::iban().key {
+            Iban::parse(&raw).map_err(|_| format!("\"{raw}\" is no valid IBAN"))?.value().to_owned()
+        } else {
+            raw
         };
         let value = FieldValues::parse(definition.field_type, &raw, currency)
             .ok_or_else(|| format!("\"{}\" does not fit the field's type", definition.label))?;
         approval.fields.insert(definition.key.clone(), value);
     }
+    approval.tax = tax_review::approved_tax(catalog, rows)?;
     Ok(approval)
 }
 
@@ -460,5 +486,33 @@ mod tests {
             vec![category("c1", "beta", None), category("c2", "Alpha", None), category("c3", "child", Some("c1"))];
         let catalog = catalog(vec![], categories, vec![], CatalogSettings::default());
         assert_eq!(category_paths(&catalog), ["Alpha", "beta", "beta / child"]);
+    }
+
+    #[test]
+    fn e_invoice_values_are_marked_and_an_invalid_iban_is_refused_while_a_valid_one_is_cleaned() {
+        let (catalog, letter) = library();
+        let mut suggestion = suggestion("d1");
+        suggestion.model = ClassificationSuggestion::E_INVOICE_MODEL.to_owned();
+        suggestion.correspondent = Some("Sample Energy".to_owned());
+        suggestion.fields.insert(FieldPresets::iban().key, dms_domain::field::FieldValue::Text("DE89".to_owned()));
+        suggestion.e_invoice = vec![EInvoicePart::Correspondent];
+
+        let review = present_review(&catalog, &letter, &suggestion, false);
+        let mut rows = drafts(&review);
+        set(&mut rows, "field:iban", "DE89 3704 0044 0532 0130 01");
+        let refused = approval_of(&catalog, &letter, &rows);
+        set(&mut rows, "field:iban", "de89 3704 0044 0532 0130 00");
+        let approved = approval_of(&catalog, &letter, &rows).expect("an approval");
+
+        assert!(review.source.starts_with("From the e-invoice in the PDF, without the AI."));
+        let hint = |key: &str| review.rows.iter().find(|row| row.key == key).and_then(|row| row.hint.clone());
+        assert_eq!(hint("correspondent").as_deref(), Some(E_INVOICE_HINT));
+        assert_eq!(hint("field:iban"), None);
+        assert_eq!(review.rows.iter().find(|row| row.key == "field:iban").map(|row| row.label.as_str()), Some("IBAN"));
+        assert_eq!(refused, Err("\"DE89 3704 0044 0532 0130 01\" is no valid IBAN".to_owned()));
+        assert_eq!(
+            approved.fields.get(&FieldPresets::iban().key),
+            Some(&dms_domain::field::FieldValue::Text("DE89370400440532013000".to_owned()))
+        );
     }
 }

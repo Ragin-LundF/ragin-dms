@@ -4,7 +4,9 @@ use dms_application::port::state::{AiSettings, LayoutPreferences, Preferences, S
 use dms_application::port::storage::StorageResult;
 use dms_domain::library::{FolderLocation, LibraryFolder, LibraryFolderId, LibraryFolders};
 
-use crate::enum_names::{self, AI_PROVIDERS, FOLDER_ROLES};
+use dms_domain::health::HealthSchedule;
+
+use crate::enum_names::{self, AI_PROVIDERS, FOLDER_ROLES, HEALTH_SCHEDULES};
 use crate::state::dto::{AiSettingsDto, LayoutDto, LibraryFolderDto, SettingsDto};
 use crate::yaml::{YamlError, YamlFile};
 
@@ -69,6 +71,12 @@ impl SettingsRepository for FileSettingsRepository {
                 folder_tree_width: coerce(settings.layout.folder_tree_width, &LayoutPreferences::FOLDER_TREE_WIDTHS),
                 folder_tree_hidden: settings.layout.folder_tree_hidden,
             },
+            // An unknown schedule falls back to the default instead of making the file unreadable.
+            health_check: settings
+                .health_check
+                .as_deref()
+                .and_then(|name| enum_names::value_of(HEALTH_SCHEDULES, name))
+                .unwrap_or_default(),
         })
     }
 
@@ -93,7 +101,9 @@ impl SettingsRepository for FileSettingsRepository {
             folder_tree_hidden: preferences.layout.folder_tree_hidden,
         };
         let add_new_files_while_scanning = preferences.add_new_files_while_scanning;
-        self.update(|current| SettingsDto { add_new_files_while_scanning, ai, layout, ..current })
+        let health_check = (preferences.health_check != HealthSchedule::default())
+            .then(|| enum_names::name_of(HEALTH_SCHEDULES, preferences.health_check).to_owned());
+        self.update(|current| SettingsDto { add_new_files_while_scanning, ai, layout, health_check, ..current })
     }
 }
 

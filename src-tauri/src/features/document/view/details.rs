@@ -70,7 +70,7 @@ pub fn display_name(document: &Document) -> &str {
     document.metadata.title.as_deref().unwrap_or_else(|| document.path.file_name())
 }
 
-fn searchable_text(document: &Document) -> String {
+pub(crate) fn searchable_text(document: &Document) -> String {
     let parts =
         [Some(document.path.value()), document.metadata.title.as_deref(), document.metadata.correspondent.as_deref()];
     text::lowercase(&parts.into_iter().flatten().collect::<Vec<_>>().join(" "))

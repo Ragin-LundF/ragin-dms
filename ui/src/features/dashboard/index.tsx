@@ -4,6 +4,7 @@ import {useDashboardView} from "./actions";
 import {TaskList} from "./tasks/task-list";
 
 export { DashboardScreen };
+export { DashButtons } from "./tasks/buttons";
 
 /** Every open task, filling the screen; it shares the dashboard's filter (Kotlin `TasksScreen`). */
 export function TasksScreen() {

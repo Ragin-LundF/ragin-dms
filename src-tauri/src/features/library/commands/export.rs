@@ -3,6 +3,7 @@
 use dms_application::export::{ExportOptions, ExportOutcome, ExportScope};
 use dms_domain::catalog::Catalog;
 use dms_domain::query::{DateRange, DocumentQuery};
+use dms_domain::tax::TaxFilter;
 use dms_domain::taxonomy::TagName;
 use dms_domain::text;
 
@@ -35,11 +36,19 @@ pub async fn library_export(
     }
     let catalog = ctx.require_catalog()?;
     let query = query_of(&catalog, &scope, &moment(&ctx)?)?;
+    let tax_year = match scope {
+        LibraryExportScopeDto::TaxYear { year } if options.tax_grouping => Some(year),
+        LibraryExportScopeDto::TaxYear { .. }
+        | LibraryExportScopeDto::View { .. }
+        | LibraryExportScopeDto::SmartFolder { .. }
+        | LibraryExportScopeDto::Correspondent { .. } => None,
+    };
     let options = ExportOptions {
         flatten: options.flatten,
         rename_to_title: options.rename_to_title,
         index: options.index,
         zip: options.zip,
+        tax_year,
     };
     let label = format!("Exporting {scope_label}");
     let exported = wait(ctx.inner(), &label, move |services, operation| {
@@ -83,14 +92,11 @@ fn query_of(catalog: &Catalog, scope: &LibraryExportScopeDto, moment: &Moment) -
                 .ok_or_else(|| IpcError::invalid("The saved view no longer exists"))
         }
         LibraryExportScopeDto::TaxYear { year } => {
+            DateRange::year(*year).map_err(|error| IpcError::invalid(error.to_string()))?;
             let wanted = TagName::of("Tax").map_err(IpcError::internal)?;
             let tax = catalog.tags().iter().find(|tag| **tag == wanted).cloned().unwrap_or(wanted);
-            let mut query = DocumentQuery {
-                dates: Some(DateRange::year(*year).map_err(|error| IpcError::invalid(error.to_string()))?),
-                ..DocumentQuery::default()
-            };
-            query.tags.all.insert(tax);
-            Ok(query)
+            let filter = TaxFilter { year: Some(*year), area: None, tag_fallback: Some(tax) };
+            Ok(DocumentQuery { tax: Some(filter), ..DocumentQuery::default() })
         }
         LibraryExportScopeDto::Correspondent { name } => {
             let name = text::trim(name);

@@ -13,4 +13,5 @@ export const operations = {
   mergeAllFolders: run(commands.mergeAllFolders),
   retryFailedOperations: run(commands.retryFailedOperations),
   detectDocumentDates: run(commands.detectDocumentDates),
+  checkArchive: run(commands.healthCheckNow),
 };

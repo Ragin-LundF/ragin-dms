@@ -2,6 +2,7 @@
 
 mod approve_suggestion;
 mod classify_all_new;
+mod e_invoice_suggestions;
 mod list_ai_models;
 pub mod model;
 mod reject_suggestion;
@@ -10,6 +11,7 @@ mod suggest_classification;
 
 pub use approve_suggestion::ApproveSuggestion;
 pub use classify_all_new::ClassifyAllNew;
+pub use e_invoice_suggestions::EInvoiceSuggestions;
 pub use list_ai_models::ListAiModels;
 pub use model::{ApprovedCategory, ClassificationProgress, SuggestOutcome, SuggestionApproval};
 pub use reject_suggestion::RejectSuggestion;

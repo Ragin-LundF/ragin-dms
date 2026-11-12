@@ -7,7 +7,9 @@ use std::sync::{Arc, Mutex};
 
 use chrono::{DateTime, NaiveDate};
 use dms_application::port::ai::{DocumentContent, DocumentContentReader, DocumentPreviewer, PageImage};
-use dms_application::port::pdf::{OcrTool, PageChange, PageInput, PdfEditor, PdfMetadata, PdfRebuilder};
+use dms_application::port::pdf::{
+    OcrTool, PageChange, PageInput, PdfEditor, PdfMetadata, PdfRebuilder, TextBlock, TextDocument,
+};
 use dms_application::port::state::AiSettings;
 use dms_application::port::storage::StorageFailure;
 use dms_domain::document::{ContentHash, Document, DocumentId};
@@ -342,6 +344,73 @@ fn a_missing_source_is_not_found_an_existing_target_refused_and_an_offline_folde
 }
 
 #[test]
+fn a_text_document_becomes_a_searchable_pdf_with_its_umlauts_and_euro_signs_on_as_many_pages_as_it_needs() {
+    let library = Library::new();
+    let editor = PdfiumEditor::new(engine());
+    let rows = (1..=120).map(|row| vec![format!("Posten {row}"), format!("{row},50 €")]).collect();
+    let document = TextDocument {
+        blocks: vec![
+            TextBlock::Heading("Kündigung für Jörg Müller".to_owned()),
+            TextBlock::KeyValueTable(vec![("Straße".to_owned(), "Hafenweg 1".to_owned())]),
+            TextBlock::Spacer,
+            TextBlock::Paragraph("Größe: 12,30 € pro Monat. ".repeat(60)),
+            TextBlock::Table { header: vec!["Posten".to_owned(), "Betrag".to_owned()], rows },
+        ],
+    };
+
+    let facts = editor.write_text_document(&library.folder, &path("letters/out.pdf"), &document).expect("written");
+
+    let file = library.file("letters/out.pdf");
+    assert_eq!(facts.size, fs::metadata(&file).expect("metadata").len());
+    let texts = engine().page_texts(&file).expect("the PDF opens");
+    assert_eq!(texts.len(), 3);
+    assert!(texts[0].starts_with("Kündigung für Jörg Müller"), "{}", texts[0]);
+    assert!(texts[0].contains("Straße") && texts[0].contains("Größe: 12,30 € pro Monat."), "{}", texts[0]);
+    assert!(texts[2].contains("Posten") && texts[2].contains("120,50 €"), "{}", texts[2]);
+    assert_eq!(fs::read_dir(library.file("letters")).expect("list").count(), 1, "no temporary file is left");
+}
+
+#[test]
+fn a_text_document_as_bytes_is_the_same_searchable_pdf() {
+    let library = Library::new();
+    let document =
+        TextDocument { blocks: vec![TextBlock::Heading("Fehlende Belege 2025: Spendenquittung €".to_owned())] };
+
+    let bytes = PdfiumEditor::new(engine()).text_document_bytes(&document).expect("rendered");
+
+    let file = library.file("bytes.pdf");
+    fs::write(&file, bytes).expect("write");
+    let texts = engine().page_texts(&file).expect("the PDF opens");
+    assert_eq!(texts.len(), 1);
+    assert!(texts[0].contains("Fehlende Belege 2025: Spendenquittung €"), "{}", texts[0]);
+}
+
+#[test]
+fn a_text_document_never_replaces_an_existing_file() {
+    let library = Library::new();
+    fs::write(library.file("taken.pdf"), "existing").expect("write");
+    let document = TextDocument { blocks: vec![TextBlock::Paragraph("new".to_owned())] };
+
+    let result = PdfiumEditor::new(engine()).write_text_document(&library.folder, &path("TAKEN.pdf"), &document);
+
+    assert_eq!(result.map_err(|error| error.reason), Err(StorageFailure::AlreadyExists));
+    assert_eq!(fs::read_to_string(library.file("taken.pdf")).expect("read"), "existing");
+}
+
+#[test]
+fn a_text_document_renders_to_the_bytes_of_a_readable_pdf() {
+    let library = Library::new();
+    let document = TextDocument { blocks: vec![TextBlock::Heading("Notfallmappe für Jörg".to_owned())] };
+
+    let bytes = PdfiumEditor::new(engine()).text_document_bytes(&document).expect("rendered");
+
+    assert!(bytes.starts_with(b"%PDF"));
+    fs::write(library.file("rendered.pdf"), &bytes).expect("write");
+    let texts = engine().page_texts(&library.file("rendered.pdf")).expect("the PDF opens");
+    assert!(texts[0].starts_with("Notfallmappe für Jörg"), "{}", texts[0]);
+}
+
+#[test]
 fn a_file_that_is_no_pdf_is_an_unsupported_format() {
     let library = Library::new();
     fs::write(library.file("fake.pdf"), "not a pdf").expect("write");
@@ -470,4 +539,163 @@ fn domain_line(line: &crate::LayoutLine) -> dms_domain::rebuild::LayoutLine {
         legible: line.legible,
         kept: None,
     }
+}
+
+// --- E-invoices
+
+/// A Factur-X invoice of the MINIMUM profile: no IBAN, no due date.
+const FACTUR_X_MINIMUM: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
+<rsm:CrossIndustryInvoice xmlns:rsm="urn:un:unece:uncefact:data:standard:CrossIndustryInvoice:100"
+    xmlns:ram="urn:un:unece:uncefact:data:standard:ReusableAggregateBusinessInformationEntity:100"
+    xmlns:udt="urn:un:unece:uncefact:data:standard:UnqualifiedDataType:100">
+  <rsm:ExchangedDocumentContext>
+    <ram:GuidelineSpecifiedDocumentContextParameter><ram:ID>urn:factur-x.eu:1p0:minimum</ram:ID></ram:GuidelineSpecifiedDocumentContextParameter>
+  </rsm:ExchangedDocumentContext>
+  <rsm:ExchangedDocument>
+    <ram:ID>RE-2026-0042</ram:ID>
+    <ram:TypeCode>380</ram:TypeCode>
+    <ram:IssueDateTime><udt:DateTimeString format="102">20261020</udt:DateTimeString></ram:IssueDateTime>
+  </rsm:ExchangedDocument>
+  <rsm:SupplyChainTradeTransaction>
+    <ram:ApplicableHeaderTradeAgreement>
+      <ram:SellerTradeParty><ram:Name>Sample Energy &amp; Water GmbH</ram:Name></ram:SellerTradeParty>
+      <ram:BuyerTradeParty><ram:Name>Example Customer</ram:Name></ram:BuyerTradeParty>
+    </ram:ApplicableHeaderTradeAgreement>
+    <ram:ApplicableHeaderTradeDelivery/>
+    <ram:ApplicableHeaderTradeSettlement>
+      <ram:InvoiceCurrencyCode>EUR</ram:InvoiceCurrencyCode>
+      <ram:SpecifiedTradeSettlementHeaderMonetarySummation>
+        <ram:TaxBasisTotalAmount>72.61</ram:TaxBasisTotalAmount>
+        <ram:TaxTotalAmount currencyID="EUR">13.79</ram:TaxTotalAmount>
+        <ram:GrandTotalAmount>86.40</ram:GrandTotalAmount>
+        <ram:DuePayableAmount>86.40</ram:DuePayableAmount>
+      </ram:SpecifiedTradeSettlementHeaderMonetarySummation>
+    </ram:ApplicableHeaderTradeSettlement>
+  </rsm:SupplyChainTradeTransaction>
+</rsm:CrossIndustryInvoice>"#;
+
+/// The payment parts of a fuller profile (EN 16931), with line items whose IDs and names must not be taken.
+const CII_WITH_PAYMENT: &str = r#"<rsm:CrossIndustryInvoice xmlns:rsm="r" xmlns:ram="a" xmlns:udt="u">
+  <rsm:ExchangedDocument><ram:ID>RE-7</ram:ID></rsm:ExchangedDocument>
+  <rsm:SupplyChainTradeTransaction>
+    <ram:IncludedSupplyChainTradeLineItem><ram:AssociatedDocumentLineDocument><ram:LineID>1</ram:LineID></ram:AssociatedDocumentLineDocument>
+      <ram:SpecifiedTradeProduct><ram:Name>Synthetic service</ram:Name></ram:SpecifiedTradeProduct></ram:IncludedSupplyChainTradeLineItem>
+    <ram:ApplicableHeaderTradeAgreement><ram:SellerTradeParty><ram:ID>S-1</ram:ID><ram:Name>Sample Repairs</ram:Name></ram:SellerTradeParty></ram:ApplicableHeaderTradeAgreement>
+    <ram:ApplicableHeaderTradeSettlement>
+      <ram:PaymentReference>KD 4711 / RE-7</ram:PaymentReference>
+      <ram:InvoiceCurrencyCode>EUR</ram:InvoiceCurrencyCode>
+      <ram:SpecifiedTradeSettlementPaymentMeans><ram:TypeCode>58</ram:TypeCode>
+        <ram:PayeePartyCreditorFinancialAccount><ram:IBANID>DE89 3704 0044 0532 0130 00</ram:IBANID></ram:PayeePartyCreditorFinancialAccount>
+        <ram:PayeeSpecifiedCreditorFinancialInstitution><ram:BICID>COBADEFFXXX</ram:BICID></ram:PayeeSpecifiedCreditorFinancialInstitution>
+      </ram:SpecifiedTradeSettlementPaymentMeans>
+      <ram:SpecifiedTradePaymentTerms><ram:DueDateDateTime><udt:DateTimeString format="102">20261115</udt:DateTimeString></ram:DueDateDateTime></ram:SpecifiedTradePaymentTerms>
+      <ram:SpecifiedTradeSettlementHeaderMonetarySummation><ram:DuePayableAmount>164.50</ram:DuePayableAmount></ram:SpecifiedTradeSettlementHeaderMonetarySummation>
+    </ram:ApplicableHeaderTradeSettlement>
+  </rsm:SupplyChainTradeTransaction>
+</rsm:CrossIndustryInvoice>"#;
+
+fn euros(amount: &str) -> dms_domain::money::Money {
+    dms_domain::money::Money {
+        amount: dms_domain::field::Decimal::parse(amount).expect("decimal"),
+        currency: dms_domain::field::CurrencyCode::new("EUR").expect("currency"),
+    }
+}
+
+#[test]
+fn a_factur_x_pdf_gives_its_exact_values_and_other_pdfs_none() {
+    let library = Library::new();
+    crate::test_support::write_pdf_with_attachment(
+        &library.file("invoice.pdf"),
+        "factur-x.xml",
+        FACTUR_X_MINIMUM.as_bytes(),
+    );
+    write_text_pdf(&library.file("letter.pdf"), &[Some(SAMPLE_TEXT)]);
+    let reader = reader_with(AiSettings::default());
+
+    let e_invoice = reader.read_e_invoice(&library.folder, &document("invoice.pdf")).expect("an e-invoice");
+
+    assert_eq!(
+        e_invoice,
+        dms_domain::bill::EInvoice {
+            seller: Some("Sample Energy & Water GmbH".to_owned()),
+            invoice_number: Some("RE-2026-0042".to_owned()),
+            issue_date: NaiveDate::from_ymd_opt(2026, 10, 20),
+            amount: Some(euros("86.40")),
+            ..Default::default()
+        }
+    );
+    assert_eq!(reader.read_e_invoice(&library.folder, &document("letter.pdf")), None);
+    assert_eq!(reader.read_e_invoice(&library.folder, &document("missing.pdf")), None);
+}
+
+#[test]
+fn the_zugferd_attachment_name_counts_too_ignoring_case() {
+    let library = Library::new();
+    crate::test_support::write_pdf_with_attachment(
+        &library.file("invoice.pdf"),
+        "ZUGFeRD-invoice.xml",
+        CII_WITH_PAYMENT.as_bytes(),
+    );
+
+    let e_invoice = reader_with(AiSettings::default()).read_e_invoice(&library.folder, &document("invoice.pdf"));
+
+    assert_eq!(e_invoice.and_then(|it| it.invoice_number).as_deref(), Some("RE-7"));
+}
+
+#[test]
+fn the_payment_means_due_date_and_reference_are_read_and_line_items_ignored() {
+    let e_invoice = content::parse_e_invoice(CII_WITH_PAYMENT.as_bytes()).expect("an e-invoice");
+
+    assert_eq!(e_invoice.seller.as_deref(), Some("Sample Repairs"));
+    assert_eq!(e_invoice.invoice_number.as_deref(), Some("RE-7"));
+    assert_eq!(e_invoice.iban.map(|iban| iban.value().to_owned()).as_deref(), Some("DE89370400440532013000"));
+    assert_eq!(e_invoice.bic.as_deref(), Some("COBADEFFXXX"));
+    assert_eq!(e_invoice.due_date, NaiveDate::from_ymd_opt(2026, 11, 15));
+    assert_eq!(e_invoice.payment_reference.as_deref(), Some("KD 4711 / RE-7"));
+    assert_eq!(e_invoice.amount, Some(euros("164.50")));
+}
+
+#[test]
+fn broken_or_foreign_xml_is_no_e_invoice() {
+    assert_eq!(content::parse_e_invoice(b"<not closed"), None);
+    assert_eq!(content::parse_e_invoice(b"<Invoice><cbc:ID>UBL-1</cbc:ID></Invoice>"), None);
+}
+
+#[test]
+fn a_mail_in_the_library_is_read_and_its_attachments_written_next_to_it_never_over_a_file() {
+    use dms_application::port::mail::{MailConverter, MailSource};
+
+    let library = Library::new();
+    fs::create_dir_all(library.file("Inbox")).expect("inbox");
+    fs::write(library.file("Inbox/rechnung.eml"), crate::mail::tests::MAIL).expect("write");
+    let converter = EmlMailConverter::default();
+    let source = MailSource::Library(path("Inbox/rechnung.eml"));
+
+    let mail = converter.read(&library.folder, &source).expect("read");
+    let facts = converter.write_attachment(&library.folder, &source, 1, &path("Inbox/AGB.pdf")).expect("written");
+    let again = converter.write_attachment(&library.folder, &source, 0, &path("Inbox/AGB.pdf"));
+
+    assert_eq!(mail.subject.as_deref(), Some("Ihre Rechnung für Oktober"));
+    assert_eq!(mail.attachments.len(), 2);
+    assert_eq!(facts.size, mail.attachments[1].size);
+    assert_eq!(fs::read(library.file("Inbox/AGB.pdf")).expect("read"), b"%PDF-1.4 agb");
+    assert_eq!(again.map_err(|error| error.reason), Err(StorageFailure::AlreadyExists));
+    let missing = converter.read(&library.folder, &MailSource::Library(path("Inbox/gone.eml")));
+    assert_eq!(missing.map_err(|error| error.reason), Err(StorageFailure::NotFound));
+}
+
+#[test]
+fn the_editor_reads_the_text_and_the_blank_pages_of_a_stack_in_the_library() {
+    let library = Library::new();
+    let line = "Letter from the tax office about the return for the year 2025";
+    write_text_pdf(&library.file("Inbox/stack.pdf"), &[Some(line), None]);
+    let editor = PdfiumEditor::new(engine());
+
+    let texts = editor.page_texts(&library.folder, &path("Inbox/stack.pdf")).expect("texts");
+    let blank = editor.blank_pages(&library.folder, &path("Inbox/stack.pdf")).expect("blank pages");
+    let missing = editor.blank_pages(&library.folder, &path("gone.pdf"));
+
+    assert_eq!(texts, vec![line.to_owned(), String::new()]);
+    assert_eq!(blank, vec![false, true]);
+    assert_eq!(missing.map_err(|error| error.reason), Err(StorageFailure::NotFound));
 }

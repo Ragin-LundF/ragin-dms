@@ -31,6 +31,7 @@ tauri-plugin-dialog = "2"
 tauri-plugin-opener = "2"
 rfd = { version = "0.17", default-features = false, features = ["common-controls-v6"] }
 percent-encoding = "2"
+fast_qr = { version = "0.14", default-features = false, features = ["svg"] }
 tauri-specta = { version = "=2.0.0-rc.28", features = ["derive", "typescript"] }
 specta = { version = "=2.0.0-rc.28", features = ["derive"] }
 specta-typescript = "=0.0.15"

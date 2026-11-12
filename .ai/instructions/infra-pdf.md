@@ -2,17 +2,18 @@
 
 Use this file when touching `crates/infra-pdf` (`dms_infra_pdf`): reading documents for the AI and search, thumbnails and page pictures, page tools, text layers, embedded metadata, the rebuild of scans, or the installed OCR program.
 
-The engine is PDFium through `pdfium-render` (rendering, text, writing pages) plus `lopdf` (metadata). Office files are read with `zip` + `quick-xml` (DOCX, PPTX) and `calamine` (XLSX).
+The engine is PDFium through `pdfium-render` (rendering, text, writing pages) plus `lopdf` (metadata). Office files are read with `zip` + `quick-xml` (DOCX, PPTX) and `calamine` (XLSX), emails with `mail-parser`.
 
 ## Module layout
 
 | Module | Purpose |
 |---|---|
 | `engine` | `PdfEngine`: binds the PDFium library once per process (`bind`, from the app's resource folder; `dev_library()` for tests and `cargo run`). Every operation is synchronous; callers run it on a blocking thread. |
-| `document` | Reading (`read_content`, `page_texts`, `has_text_layer`, `render_page`, `thumbnail`), page tools (`rewrite`, `merge`), the invisible text layer (`add_text_layer`) and metadata (`read_metadata` via PDFium, `write_metadata` via `lopdf`, document info and XMP). |
+| `document` | Reading (`read_content`, `page_texts` (one text per page, for the split), `has_text_layer`, `render_page`, `thumbnail`), page tools (`rewrite`, `merge`, `blank_pages`), the invisible text layer (`add_text_layer`), metadata (`read_metadata` via PDFium, `write_metadata` via `lopdf`, document info and XMP), and the text document writer (`text_writer`: `write_text_document`, `text_document_bytes`). |
+| `mail` | `read_mail`: an `.eml` file (RFC 5322) as header, plain-text body (the HTML body as text when there is none) and attachments. |
 | `rebuild` | `Rebuilder`: the "Convert to real PDF" engine (deskew, page preparation, crops, composing text and kept image regions). |
 | `images`, `fonts`, `files`, `ocr` | Vision JPEG and layout PNG scaling; the bundled Liberation fonts (`crates/infra-pdf/fonts/`); temporary files and placing results; `OcrMyPdf` for the installed `ocrmypdf`. |
-| `adapter` | The port implementations, which only map types: `FileContentReader` (`DocumentContentReader`), `FilePreviewer` (`DocumentPreviewer`), `PdfiumEditor` (`PdfEditor`), `PdfiumRebuilder` (`PdfRebuilder`), `OcrMyPdfTool` (`OcrTool`), bundled in `PdfAdapters`; `LibraryLocations` resolves library paths. Office reading in `adapter::content`. |
+| `adapter` | The port implementations, which only map types: `FileContentReader` (`DocumentContentReader`), `FilePreviewer` (`DocumentPreviewer`), `PdfiumEditor` (`PdfEditor`), `PdfiumRebuilder` (`PdfRebuilder`), `OcrMyPdfTool` (`OcrTool`), bundled in `PdfAdapters`; `LibraryLocations` resolves library paths. Office reading, the e-invoice reader and `EmlMailConverter` (`port::mail::MailConverter`, writes the attachments as files of their own) in `adapter::content`. |
 
 ## File safety rules
 
@@ -38,6 +39,13 @@ The engine is PDFium through `pdfium-render` (rendering, text, writing pages) pl
 - Text is cut to the configured input budget (`inputCharacters`) before it leaves the adapter.
 - Reading never modifies the source file. Reading a cloud placeholder downloads it, so reading runs only for documents the user asked to classify or search.
 - DOCX headers, footers and footnotes and PPTX notes are not read (a documented change from 1.x).
+- **E-invoices** (`adapter::content::e_invoice_content`): the XML attachment of a PDF named `factur-x.xml`, `zugferd-invoice.xml`, `ZUGFeRD-invoice.xml` or `xrechnung.xml` (looked for in this order), read in the CII syntax for the values a bill needs. Any failure (no attachment, broken XML, UBL, a PDF that does not open) gives `None`, never an error; a malformed IBAN is left out.
+- **Blank pages** (`blank_pages`): a page counts as blank with less than 0.1 % ink on a picture at 50 dpi, such as a separator sheet.
+
+## Text documents
+
+- `write_text_document` writes text blocks (letters, overviews, the mail as PDF) to a new PDF at a target that must not exist yet; `text_document_bytes` returns the same PDF as bytes for files outside the library (the missing-items list of a tax export).
+- A4 pages, the embedded Liberation fonts as CID fonts (like the text layer, so umlauts and other non-Latin-1 characters stay), lines broken at word boundaries and pages broken on their own.
 
 ## PDFium rules and pitfalls
 

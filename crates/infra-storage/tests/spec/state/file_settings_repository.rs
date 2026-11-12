@@ -69,6 +69,7 @@ fn preferences_default_to_adding_new_files_and_are_kept_apart_from_the_folders()
             folder_tree_width: 300,
             folder_tree_hidden: true,
         },
+        ..Preferences::default()
     };
 
     repository.save_preferences(&preferences).expect("saved");
@@ -103,6 +104,7 @@ fn saved_preferences_have_the_bytes_jackson_wrote() {
             folder_tree_width: 300,
             folder_tree_hidden: false,
         },
+        ..Preferences::default()
     };
 
     FileSettingsRepository::new(&path).save_preferences(&preferences).expect("saved");

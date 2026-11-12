@@ -86,6 +86,6 @@ pub fn date_of(text: &str) -> Result<chrono::NaiveDate, YamlError> {
     parse_iso_date(text).ok_or_else(|| YamlError(format!("Text '{text}' could not be parsed as a date")))
 }
 
-fn decimal(text: &str) -> Result<Decimal, YamlError> {
+pub fn decimal(text: &str) -> Result<Decimal, YamlError> {
     Decimal::parse(text).ok_or_else(|| YamlError(format!("Not a number: {text}")))
 }

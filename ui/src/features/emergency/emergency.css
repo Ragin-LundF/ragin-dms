@@ -1,0 +1,18 @@
+/* The emergency folder (feature 8). */
+
+.emergency-screen { display: flex; flex-direction: column; gap: var(--space-xl); min-height: 100%; }
+.emergency-columns { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: var(--space-xl); align-items: start; }
+.emergency-list { gap: var(--space-l); }
+.emergency-group { text-transform: uppercase; letter-spacing: 0.06em; }
+.emergency-item { padding: var(--space-s) var(--space-m); border: 1px solid var(--outline-variant); border-radius: var(--space-m); background: var(--surface); }
+.emergency-item .link-button { background: none; border: 0; padding: 0; text-align: left; color: inherit; cursor: pointer; }
+.emergency-changed, .emergency-due { padding: 2px 8px; border-radius: 999px; color: var(--status-warning); border: 1px solid var(--status-warning); white-space: nowrap; }
+.emergency-page { background: var(--surface-lowest); border: 1px solid var(--outline-variant); border-radius: var(--space-xs); padding: var(--space-l); aspect-ratio: 1 / 1.41; overflow: hidden; display: flex; flex-direction: column; gap: var(--space-xs); }
+.emergency-page table { width: 100%; border-collapse: collapse; margin-top: var(--space-s); }
+.emergency-page th, .emergency-page td { text-align: left; padding: var(--space-xs); border-bottom: 1px solid var(--outline-variant); vertical-align: top; }
+.emergency-groups { flex-wrap: wrap; }
+.emergency-choices { max-height: 320px; display: flex; flex-direction: column; }
+.emergency-choice { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: var(--space-s) var(--space-m); background: none; border: 0; border-radius: var(--space-s); cursor: pointer; text-align: left; color: inherit; }
+.emergency-choice:hover { background: var(--surface-container); }
+.emergency-member { align-items: center; }
+@media (max-width: 1000px) { .emergency-columns { grid-template-columns: 1fr; } }

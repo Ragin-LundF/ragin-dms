@@ -9,13 +9,19 @@ use dms_domain::task::OpenTask;
 use super::actions::{remove_all_duplicates, trash_retained};
 use super::buttons::{ButtonExt, button};
 use super::context::TaskContext;
-use crate::features::dashboard::dto::{AttentionSeverity, DashboardAction, DashboardButtonDto, TaskGroupKind};
+use crate::features::dashboard::dto::{
+    AttentionSeverity, DashboardAction, DashboardButtonDto, DashboardScreenDto, TaskGroupKind,
+};
 use crate::session::Lane;
 
 /// Every group in the order the dashboard lists them.
-pub const ORDER: [TaskGroupKind; 13] = [
+pub const ORDER: [TaskGroupKind; 19] = [
     TaskGroupKind::Suggestions,
+    TaskGroupKind::Bills,
     TaskGroupKind::Deadlines,
+    TaskGroupKind::Contracts,
+    TaskGroupKind::Cases,
+    TaskGroupKind::ExpectedDocuments,
     TaskGroupKind::Retention,
     TaskGroupKind::LearnedRules,
     TaskGroupKind::NewFiles,
@@ -26,6 +32,8 @@ pub const ORDER: [TaskGroupKind; 13] = [
     TaskGroupKind::Conflicts,
     TaskGroupKind::CatalogMerge,
     TaskGroupKind::FailedOperations,
+    TaskGroupKind::ArchiveHealth,
+    TaskGroupKind::EmergencyFolder,
     TaskGroupKind::Restructure,
 ];
 
@@ -51,6 +59,36 @@ pub fn group_of(task: &OpenTask, context: &TaskContext<'_>) -> TaskGroupKind {
         OpenTask::RetentionDue { .. } => TaskGroupKind::Retention,
         OpenTask::RestructureSuggested { .. } => TaskGroupKind::Restructure,
         OpenTask::ReviewLearnedRule(_) => TaskGroupKind::LearnedRules,
+        OpenTask::BillOverdue { .. } => TaskGroupKind::Bills,
+        OpenTask::ExpectedDocumentMissing(_) => TaskGroupKind::ExpectedDocuments,
+        OpenTask::ReviewContractProposal(_) | OpenTask::ContractCancelBy { .. } => TaskGroupKind::Contracts,
+        OpenTask::FollowUpDue { .. } | OpenTask::CaseWaitingTooLong { .. } => TaskGroupKind::Cases,
+        OpenTask::DamagedCopy { .. } | OpenTask::UnreadableDocument { .. } => TaskGroupKind::ArchiveHealth,
+        OpenTask::EmergencyFolderRefresh { .. } => TaskGroupKind::EmergencyFolder,
+    }
+}
+
+/// The screen that answers the tasks of `group`, for the groups of the "Organize" features.
+pub fn screen_of(group: TaskGroupKind) -> Option<DashboardScreenDto> {
+    match group {
+        TaskGroupKind::Bills | TaskGroupKind::ExpectedDocuments => Some(DashboardScreenDto::Bills),
+        TaskGroupKind::Contracts => Some(DashboardScreenDto::Contracts),
+        TaskGroupKind::Cases => Some(DashboardScreenDto::Cases),
+        TaskGroupKind::ArchiveHealth => Some(DashboardScreenDto::Settings),
+        TaskGroupKind::EmergencyFolder => Some(DashboardScreenDto::Emergency),
+        TaskGroupKind::Suggestions
+        | TaskGroupKind::Deadlines
+        | TaskGroupKind::Retention
+        | TaskGroupKind::LearnedRules
+        | TaskGroupKind::NewFiles
+        | TaskGroupKind::Missing
+        | TaskGroupKind::Modified
+        | TaskGroupKind::Moved
+        | TaskGroupKind::Duplicates
+        | TaskGroupKind::Conflicts
+        | TaskGroupKind::CatalogMerge
+        | TaskGroupKind::FailedOperations
+        | TaskGroupKind::Restructure => None,
     }
 }
 
@@ -69,6 +107,12 @@ pub fn label(group: TaskGroupKind) -> &'static str {
         TaskGroupKind::CatalogMerge => "Catalog merge",
         TaskGroupKind::FailedOperations => "Failed operations",
         TaskGroupKind::Restructure => "Folder structure",
+        TaskGroupKind::Bills => "Bills overdue",
+        TaskGroupKind::ExpectedDocuments => "Expected but missing",
+        TaskGroupKind::Contracts => "Contracts",
+        TaskGroupKind::Cases => "Cases",
+        TaskGroupKind::ArchiveHealth => "Archive health",
+        TaskGroupKind::EmergencyFolder => "Emergency folder",
     }
 }
 
@@ -87,24 +131,35 @@ pub fn icon(group: TaskGroupKind) -> &'static str {
         TaskGroupKind::CatalogMerge => "merge_type",
         TaskGroupKind::FailedOperations => "sync_problem",
         TaskGroupKind::Restructure => "account_tree",
+        TaskGroupKind::Bills => "payments",
+        TaskGroupKind::ExpectedDocuments => "event_busy",
+        TaskGroupKind::Contracts => "autorenew",
+        TaskGroupKind::Cases => "forum",
+        TaskGroupKind::ArchiveHealth => "health_and_safety",
+        TaskGroupKind::EmergencyFolder => "emergency",
     }
 }
 
 /// Dates that passed first, then what needs a decision, then the rest.
 pub fn severity_of(group: TaskGroupKind) -> AttentionSeverity {
     match group {
-        TaskGroupKind::Deadlines | TaskGroupKind::Retention => AttentionSeverity::Passed,
+        TaskGroupKind::Deadlines | TaskGroupKind::Retention | TaskGroupKind::Bills => AttentionSeverity::Passed,
         TaskGroupKind::Missing
         | TaskGroupKind::Modified
         | TaskGroupKind::Moved
         | TaskGroupKind::Duplicates
         | TaskGroupKind::Conflicts
         | TaskGroupKind::CatalogMerge
-        | TaskGroupKind::FailedOperations => AttentionSeverity::Soon,
+        | TaskGroupKind::FailedOperations
+        | TaskGroupKind::ExpectedDocuments
+        | TaskGroupKind::Contracts
+        | TaskGroupKind::Cases
+        | TaskGroupKind::ArchiveHealth => AttentionSeverity::Soon,
         TaskGroupKind::Suggestions
         | TaskGroupKind::LearnedRules
         | TaskGroupKind::NewFiles
-        | TaskGroupKind::Restructure => AttentionSeverity::Info,
+        | TaskGroupKind::Restructure
+        | TaskGroupKind::EmergencyFolder => AttentionSeverity::Info,
     }
 }
 
@@ -154,7 +209,13 @@ pub fn bulk_buttons(group: TaskGroupKind, tasks: &[&OpenTask], context: &TaskCon
         | TaskGroupKind::Conflicts
         | TaskGroupKind::CatalogMerge
         | TaskGroupKind::FailedOperations
-        | TaskGroupKind::Restructure => Vec::new(),
+        | TaskGroupKind::Restructure
+        | TaskGroupKind::Bills
+        | TaskGroupKind::ExpectedDocuments
+        | TaskGroupKind::Contracts
+        | TaskGroupKind::Cases
+        | TaskGroupKind::ArchiveHealth
+        | TaskGroupKind::EmergencyFolder => Vec::new(),
     };
     buttons.into_iter().map(|button| button.waits_for(Lane::Library)).collect()
 }

@@ -35,7 +35,8 @@ impl Catalog {
         }))
     }
 
-    /// Removes the catalog entry and its links; what happens to the file is the caller's decision.
+    /// Removes the catalog entry, its links and every reference of contracts, cases, tax years and the emergency
+    /// folder to it; what happens to the file is the caller's decision.
     #[must_use]
     pub fn remove_document(&self, document_id: &DocumentId) -> CatalogUpdate {
         if !self.documents.contains_key(document_id) {
@@ -44,6 +45,10 @@ impl Catalog {
         self.applied(|catalog| {
             catalog.documents.shift_remove(document_id);
             catalog.links.retain(|link| !link.touches(document_id));
+            let keep = |id: &DocumentId| id != document_id;
+            catalog.records = catalog.records.retaining_documents(&keep);
+            catalog.settings.emergency_folder =
+                catalog.settings.emergency_folder.as_ref().map(|folder| folder.retaining(&keep, &|_| true));
         })
     }
 
@@ -205,7 +210,7 @@ impl Catalog {
         self.update_document(document_id, IndexSet::new(), |document| document.retention = retention)
     }
 
-    fn update_document(
+    pub(super) fn update_document(
         &self,
         document_id: &DocumentId,
         added_tags: IndexSet<TagName>,

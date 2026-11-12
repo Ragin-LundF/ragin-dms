@@ -3,16 +3,22 @@ import INBOX from "@material-design-icons/svg/round/move_to_inbox.svg?raw";
 import TASKS from "@material-design-icons/svg/round/checklist.svg?raw";
 import LIBRARY from "@material-design-icons/svg/round/folder.svg?raw";
 import ASK from "@material-design-icons/svg/round/question_answer.svg?raw";
+import BILLS from "@material-design-icons/svg/round/payments.svg?raw";
+import CONTRACTS from "@material-design-icons/svg/round/autorenew.svg?raw";
+import TAX from "@material-design-icons/svg/round/receipt_long.svg?raw";
+import CASES from "@material-design-icons/svg/round/forum.svg?raw";
+import EMERGENCY from "@material-design-icons/svg/round/emergency.svg?raw";
 import RESTRUCTURE from "@material-design-icons/svg/round/account_tree.svg?raw";
 import SETTINGS from "@material-design-icons/svg/round/settings.svg?raw";
 import {createStore, useStore} from "../shared/store";
 
-export type Screen = "dashboard" | "inbox" | "tasks" | "library" | "ask" | "restructure" | "settings";
+export type Screen = "dashboard" | "inbox" | "tasks" | "library" | "ask" | "bills" | "contracts" | "tax" | "cases" | "emergency" | "restructure" | "settings";
 
 /** The groups of the navigation, each under a small label. */
 export const NAV_GROUPS = [
   { id: "home", label: "Home" },
   { id: "documents", label: "Documents" },
+  { id: "organize", label: "Organize" },
   { id: "maintain", label: "Maintain" },
 ] as const;
 
@@ -23,6 +29,11 @@ export const SCREENS: { id: Screen; label: string; icon: string; group: (typeof 
   { id: "tasks", label: "Open tasks", icon: TASKS, group: "home" },
   { id: "library", label: "Library", icon: LIBRARY, group: "documents" },
   { id: "ask", label: "Ask", icon: ASK, group: "documents" },
+  { id: "bills", label: "To pay", icon: BILLS, group: "organize" },
+  { id: "contracts", label: "Contracts", icon: CONTRACTS, group: "organize" },
+  { id: "tax", label: "Tax years", icon: TAX, group: "organize" },
+  { id: "cases", label: "Cases", icon: CASES, group: "organize" },
+  { id: "emergency", label: "Emergency folder", icon: EMERGENCY, group: "organize" },
   { id: "restructure", label: "Restructure", icon: RESTRUCTURE, group: "maintain" },
   { id: "settings", label: "Settings", icon: SETTINGS, group: null },
 ];

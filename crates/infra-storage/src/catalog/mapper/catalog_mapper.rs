@@ -4,7 +4,7 @@
 
 use std::collections::{HashMap, HashSet};
 
-use dms_domain::catalog::{Catalog, CatalogRevision, LibraryId};
+use dms_domain::catalog::{Catalog, CatalogRecords, CatalogRevision, LibraryId};
 use dms_domain::document::{ClassificationRecord, ContentHash, Document, DocumentId, DocumentMetadata};
 use dms_domain::library::RelativePath;
 use dms_domain::link::DocumentLink;
@@ -14,7 +14,8 @@ use dms_domain::{iso_date, text};
 use indexmap::{IndexMap, IndexSet};
 
 use crate::catalog::CatalogMigrations;
-use crate::catalog::dto::{CatalogDto, CategoryDto, ClassificationDto, DocumentDto, LinkDto, RetentionDto};
+use crate::catalog::dto::{CatalogDto, CategoryDto, ClassificationDto, DocumentDto, LinkDto};
+use crate::catalog::mapper::records::{case_mapper, contract_mapper, tax_mapper};
 use crate::catalog::mapper::{field_mapper, query_mapper, settings_mapper, unknown_fields};
 use crate::enum_names::{self, CLASSIFICATION_SOURCES};
 use crate::instant;
@@ -37,8 +38,7 @@ pub fn to_dto(catalog: &Catalog, previous: Option<&CatalogDto>) -> CatalogDto {
         .into_iter()
         .map(|document| {
             let previous_document = previous_documents.get(document.id.value()).copied();
-            let mut mapped =
-                document_to_dto(document, previous_document.and_then(|previous| previous.retention.as_ref()));
+            let mut mapped = document_to_dto(document, previous_document);
             unknown_fields::carry(&mut mapped, previous_document);
             mapped
         })
@@ -74,6 +74,14 @@ pub fn to_dto(catalog: &Catalog, previous: Option<&CatalogDto>) -> CatalogDto {
         rules: Vec::new(),
         correspondents: Vec::new(),
         layout: None,
+        owner: None,
+        bills_tracked_since: None,
+        dismissed_contract_proposals: Vec::new(),
+        expectations: Vec::new(),
+        emergency_folder: None,
+        contracts: contract_mapper::to_dto(catalog.contracts(), previous.map_or(&[], |previous| &previous.contracts)),
+        cases: case_mapper::to_dto(catalog.cases(), previous.map_or(&[], |previous| &previous.cases)),
+        tax_years: tax_mapper::years_to_dto(catalog.tax_years(), previous.map_or(&[], |previous| &previous.tax_years)),
         unknown: IndexMap::new(),
     };
     settings_mapper::fill_settings(&mut dto, catalog.settings(), previous);
@@ -81,7 +89,8 @@ pub fn to_dto(catalog: &Catalog, previous: Option<&CatalogDto>) -> CatalogDto {
     dto
 }
 
-/// The catalog in `dto`.
+/// The catalog in `dto`. An older version that removed a document or contract keeps the 2.1 parts that referred to
+/// it as unknown fields, so such references are dropped here, like links, instead of making the file unreadable.
 ///
 /// # Errors
 /// Fails when the file breaks a catalog rule.
@@ -100,6 +109,17 @@ pub fn to_domain(dto: &CatalogDto) -> Result<Catalog, YamlError> {
         })
         .collect::<Result<IndexMap<_, _>, YamlError>>()?;
     let revision = u64::try_from(dto.revision).map_err(|_| YamlError("Revision must not be negative".to_owned()))?;
+    let known_document = |id: &DocumentId| ids.contains(id);
+    let records = CatalogRecords {
+        contracts: contract_mapper::to_domain(&dto.contracts)?,
+        cases: case_mapper::to_domain(&dto.cases)?,
+        tax_years: tax_mapper::years_to_domain(&dto.tax_years)?,
+    }
+    .retaining_documents(&known_document);
+    let mut settings = settings_mapper::settings_to_domain(dto)?;
+    settings.emergency_folder = settings
+        .emergency_folder
+        .map(|folder| folder.retaining(&known_document, &|id| records.contracts.contains_key(id)));
     Ok(Catalog::new(
         LibraryId::new(dto.library_id.as_str())?,
         CatalogRevision::new(revision),
@@ -107,8 +127,9 @@ pub fn to_domain(dto: &CatalogDto) -> Result<Catalog, YamlError> {
         categories,
         tags,
         links,
-        settings_mapper::settings_to_domain(dto)?,
-    )?)
+        settings,
+    )?
+    .with_records(records)?)
 }
 
 /// The links between documents the file has. An older version that removed a document keeps the links it did not
@@ -153,7 +174,7 @@ fn category_to_domain(category: &CategoryDto) -> Result<Category, YamlError> {
     })
 }
 
-fn document_to_dto(document: &Document, previous_retention: Option<&RetentionDto>) -> DocumentDto {
+fn document_to_dto(document: &Document, previous: Option<&DocumentDto>) -> DocumentDto {
     DocumentDto {
         id: document.id.value().to_owned(),
         path: document.path.value().to_owned(),
@@ -173,14 +194,18 @@ fn document_to_dto(document: &Document, previous_retention: Option<&RetentionDto
         fields: field_mapper::values_to_dto(&document.fields),
         note: document.note.clone(),
         retention: document.retention.as_ref().map(|retention| {
-            let mut dto = RetentionDto {
+            let mut dto = crate::catalog::dto::RetentionDto {
                 keep_until: retention.keep_until.map(iso_date),
                 settled_at: retention.settled_at.map(instant::format),
                 unknown: IndexMap::new(),
             };
-            unknown_fields::carry(&mut dto, previous_retention);
+            unknown_fields::carry(&mut dto, previous.and_then(|previous| previous.retention.as_ref()));
             dto
         }),
+        tax: document
+            .tax
+            .as_ref()
+            .map(|tax| tax_mapper::assignment_to_dto(tax, previous.and_then(|previous| previous.tax.as_ref()))),
         unknown: IndexMap::new(),
     }
 }
@@ -225,5 +250,6 @@ fn document_to_domain(document: &DocumentDto) -> Result<Document, YamlError> {
         fields: field_mapper::values_to_domain(&document.fields)?,
         note: document.note.clone().filter(|note| !text::is_blank(note)),
         retention,
+        tax: document.tax.as_ref().map(tax_mapper::assignment_to_domain).transpose()?,
     })
 }

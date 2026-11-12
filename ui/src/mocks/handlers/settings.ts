@@ -37,7 +37,7 @@ const ROLES = { dueDate: "Due date", cancelBy: "Cancel by", contractEnd: "Contra
 
 /** The catalog settings of the mocked library; the inbox mock reads its inbox from here. */
 export const mockLibrarySettings: LibrarySettingsDto = {
-  inbox: { enabled: true, path: "Inbox", aiAnalysis: true, aiTargetFolder: true, autoAnalyze: false },
+  inbox: { enabled: true, path: "Inbox", aiAnalysis: true, aiTargetFolder: true, autoAnalyze: false, convertEmails: false, keepEmailOriginals: false, proposeSplits: true },
   fields: [
     { key: "amount", label: "Amount", text: "Amount  (amount, Amount)" },
     { key: "due", label: "Due date", text: "Due date  (due, Date · deadline: Due date)" },
@@ -50,6 +50,7 @@ export const mockLibrarySettings: LibrarySettingsDto = {
     { id: "r-1", name: "Northbank", title: "Northbank (learned)", description: "When from Northbank: category Bank statements, tags 2026", enabled: true },
     { id: "r-2", name: "Rule for City Power", title: "Rule for City Power (manual)", description: "When from City Power and name like *invoice*: category Home, tags invoice, folder Home", enabled: false },
   ],
+  owner: { name: "Alex Example", address: "Main Street 1\n12345 Exampletown", email: "alex@example.org", phone: "" },
 };
 
 function settingsState() {
@@ -132,6 +133,15 @@ function changeLibrarySettings(change: LibrarySettingsChangeDto_Deserialize) {
       settings.rules = settings.rules.filter((rule) => rule.id !== change.ruleId);
       done = "Removed the rule";
       break;
+    case "saveOwner": {
+      const trim = (text: string) => text.trim();
+      const owner = { name: trim(change.owner.name), address: change.owner.address.split("\n").map(trim).filter(Boolean).join("\n"), email: trim(change.owner.email), phone: trim(change.owner.phone) };
+      const empty = !owner.name && !owner.address && !owner.email && !owner.phone;
+      if (!empty && !owner.name) return void mockMessage("Your name must not be blank", true);
+      settings.owner = owner;
+      done = empty ? "Removed your details" : "Saved your details";
+      break;
+    }
   }
   return mockOperation("Saving the library settings", "library", 2, done);
 }

@@ -3,5 +3,5 @@
 pub mod model;
 mod suggested_category;
 
-pub use model::{ClassificationSuggestion, SuggestedFolder, SuggestedTag};
+pub use model::{ClassificationSuggestion, EInvoicePart, RequestedAction, SuggestedFolder, SuggestedTag};
 pub use suggested_category::SuggestedCategory;

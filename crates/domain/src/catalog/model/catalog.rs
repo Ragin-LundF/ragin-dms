@@ -3,16 +3,20 @@ use std::collections::HashSet;
 use indexmap::{IndexMap, IndexSet};
 
 use crate::DomainError;
-use crate::catalog::{CatalogRevision, CatalogUpdate, LibraryId};
+use crate::cases::{Case, CaseId};
+use crate::catalog::{CatalogRecords, CatalogRevision, CatalogUpdate, LibraryId};
+use crate::contract::{Contract, ContractId};
 use crate::document::{ContentHash, Document, DocumentId};
 use crate::error::require;
 use crate::library::RelativePath;
 use crate::link::DocumentLink;
 use crate::settings::CatalogSettings;
+use crate::tax::TaxYear;
 use crate::taxonomy::{Category, CategoryId, TagName};
 
 /// The aggregate root: every document of a library with its categorization, plus the categories and tags in
-/// use, the [`Self::links`] between documents and the library-wide [`Self::settings`].
+/// use, the [`Self::links`] between documents, the library-wide [`Self::settings`] and the [`Self::records`]
+/// (contracts, cases, tax years).
 ///
 /// A catalog is immutable. Every change goes through one of its functions, which returns either a new catalog
 /// with the next [`Self::revision`] or the reason the change was refused. The invariants checked in
@@ -29,13 +33,14 @@ pub struct Catalog {
     pub(super) tags: IndexSet<TagName>,
     pub(super) links: IndexSet<DocumentLink>,
     pub(super) settings: CatalogSettings,
+    pub(super) records: CatalogRecords,
 }
 
 impl Catalog {
     /// # Errors
     /// Fails when keys do not match ids, two documents share a path, a category, tag or link refers to
     /// something unknown, the category tree has a cycle, two links connect the same documents, or any part is
-    /// invalid on its own.
+    /// invalid on its own. The catalog starts without records; see [`Self::with_records`].
     pub fn new(
         library_id: LibraryId,
         revision: CatalogRevision,
@@ -45,8 +50,21 @@ impl Catalog {
         links: IndexSet<DocumentLink>,
         settings: CatalogSettings,
     ) -> Result<Self, DomainError> {
-        let catalog = Self { library_id, revision, documents, categories, tags, links, settings };
+        let records = CatalogRecords::default();
+        let catalog = Self { library_id, revision, documents, categories, tags, links, settings, records };
         catalog.validate()?;
+        Ok(catalog)
+    }
+
+    /// The same catalog, same revision, with `records`.
+    ///
+    /// # Errors
+    /// Fails when a record is invalid or refers to an unknown document, or the emergency folder refers to an unknown
+    /// contract.
+    pub fn with_records(self, records: CatalogRecords) -> Result<Self, DomainError> {
+        let catalog = Self { records, ..self };
+        catalog.validate()?;
+        catalog.validate_emergency_contracts()?;
         Ok(catalog)
     }
 
@@ -60,6 +78,7 @@ impl Catalog {
             tags: IndexSet::new(),
             links: IndexSet::new(),
             settings: CatalogSettings::default(),
+            records: CatalogRecords::default(),
         }
     }
 
@@ -101,7 +120,26 @@ impl Catalog {
         require(pairs.len() == self.links.len(), || "Two links connect the same documents".to_owned())?;
         documents.values().try_for_each(Document::validate)?;
         categories.values().try_for_each(Category::validate)?;
-        self.settings.validate()
+        self.settings.validate()?;
+        self.records.validate()?;
+        self.validate_record_references()
+    }
+
+    /// Records and the emergency folder refer only to documents the catalog has.
+    fn validate_record_references(&self) -> Result<(), DomainError> {
+        let emergency =
+            self.settings.emergency_folder.iter().flat_map(crate::emergency::EmergencyFolder::referenced_documents);
+        require(self.records.referenced_documents().chain(emergency).all(|id| self.documents.contains_key(id)), || {
+            "A record refers to an unknown document".to_owned()
+        })
+    }
+
+    fn validate_emergency_contracts(&self) -> Result<(), DomainError> {
+        let mut contracts =
+            self.settings.emergency_folder.iter().flat_map(crate::emergency::EmergencyFolder::referenced_contracts);
+        require(contracts.all(|id| self.records.contracts.contains_key(id)), || {
+            "The emergency folder refers to an unknown contract".to_owned()
+        })
     }
 
     #[must_use]
@@ -137,6 +175,26 @@ impl Catalog {
     #[must_use]
     pub fn settings(&self) -> &CatalogSettings {
         &self.settings
+    }
+
+    #[must_use]
+    pub fn records(&self) -> &CatalogRecords {
+        &self.records
+    }
+
+    #[must_use]
+    pub fn contracts(&self) -> &indexmap::IndexMap<ContractId, Contract> {
+        &self.records.contracts
+    }
+
+    #[must_use]
+    pub fn cases(&self) -> &indexmap::IndexMap<CaseId, Case> {
+        &self.records.cases
+    }
+
+    #[must_use]
+    pub fn tax_years(&self) -> &indexmap::IndexMap<i32, TaxYear> {
+        &self.records.tax_years
     }
 
     // --- Queries
@@ -188,13 +246,17 @@ impl Catalog {
 
     // --- Settings
 
-    /// Replaces the library-wide settings: field definitions, saved searches, rules and layout.
+    /// Replaces the library-wide settings: field definitions, saved searches, rules, layout, owner, expectations,
+    /// the emergency folder and the rest.
     ///
     /// # Errors
-    /// Fails for invalid settings.
+    /// Fails for invalid settings, or an emergency folder that refers to an unknown document or contract.
     pub fn change_settings(&self, settings: CatalogSettings) -> Result<CatalogUpdate, DomainError> {
         settings.validate()?;
-        Ok(self.applied(|catalog| catalog.settings = settings))
+        let changed = Self { settings, ..self.clone() };
+        changed.validate_record_references()?;
+        changed.validate_emergency_contracts()?;
+        Ok(self.applied(|catalog| catalog.settings = changed.settings))
     }
 
     // --- Helpers
@@ -208,6 +270,7 @@ impl Catalog {
     }
 
     /// The same catalog with other parts, for [`crate::catalog::CatalogMerger`]; no checks, no new revision.
+    /// References to documents or contracts the parts lack are dropped.
     pub(crate) fn with_parts(
         &self,
         documents: IndexMap<DocumentId, Document>,
@@ -215,6 +278,7 @@ impl Catalog {
         tags: IndexSet<TagName>,
         links: IndexSet<DocumentLink>,
         settings: CatalogSettings,
+        records: CatalogRecords,
     ) -> Self {
         Self {
             library_id: self.library_id.clone(),
@@ -224,7 +288,22 @@ impl Catalog {
             tags,
             links,
             settings,
+            records,
         }
+        .without_dangling_references()
+    }
+
+    /// The catalog without references of records and the emergency folder to documents or contracts it lacks.
+    fn without_dangling_references(mut self) -> Self {
+        let documents = &self.documents;
+        let records = self.records.retaining_documents(&|id| documents.contains_key(id));
+        let emergency_folder =
+            self.settings.emergency_folder.as_ref().map(|folder| {
+                folder.retaining(&|id| documents.contains_key(id), &|id| records.contracts.contains_key(id))
+            });
+        self.records = records;
+        self.settings.emergency_folder = emergency_folder;
+        self
     }
 
     pub(crate) fn with_revision(mut self, revision: CatalogRevision) -> Self {

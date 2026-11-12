@@ -1,0 +1,15 @@
+/* The letter dialog (prototype "Cancellation letter (draft)"). */
+
+.letter-form { gap: var(--space-m); }
+.letter-waiting { padding: var(--space-xl) 0; justify-content: center; }
+.letter-problem { color: var(--error); margin: 0; }
+.letter-note { margin: 0; }
+.letter-folder { max-width: var(--status-text-max-width); }
+.letter-origin {
+  display: inline-flex; align-items: center; gap: var(--space-xs); padding: 2px var(--space-s);
+  border-radius: var(--shape-xl); background: var(--surface-container); color: var(--on-surface-variant);
+}
+.letter-origin.ai { background: var(--ai-gradient); color: var(--on-ai-gradient); }
+.letter-origin svg { width: var(--icon); height: var(--icon); }
+.letter-case-options { flex-wrap: wrap; margin-top: var(--space-s); }
+.letter-days { width: 56px; padding: 2px var(--space-xs); border: var(--hairline) solid var(--outline); border-radius: var(--shape-xs); background: transparent; color: inherit; font: inherit; }

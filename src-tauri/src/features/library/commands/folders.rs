@@ -5,18 +5,20 @@
 use dms_application::common::OperationOutcome;
 use dms_application::document::AddDocumentsOutcome;
 use dms_application::folder::FolderEntriesOutcome;
+use dms_application::mail::{EmailSource, is_mail_file};
 use dms_application::port::storage::ExternalFile;
 use dms_application::services::AppServices;
 use dms_domain::library::{FileNamePolicy, RelativePath};
 use dms_domain::text;
 
-use super::operation::{start, wait};
+use super::operation::wait;
 use super::view::parse_paths;
 use crate::commands::AppState;
 use crate::dto::IpcError;
 use crate::features::library::dto::folders::LibraryConfirmationDto;
 use crate::features::library::dto::params::parse_path;
 use crate::features::library::view::folders::delete_confirmation;
+use crate::features::settings::run::{perform, services as settings_services};
 use crate::messages;
 use crate::session::reporting::blocking;
 use crate::session::{Lane, UiMessage};
@@ -145,34 +147,50 @@ pub async fn library_add_files(ctx: AppState<'_>, paths: Vec<String>, target: St
         .filter(|path| std::path::Path::new(path).is_file())
         .map(|path| ExternalFile::new(path).map_err(|error| IpcError::invalid(error.to_string())))
         .collect::<Result<_, _>>()?;
-    if files.is_empty() {
+    // Dropped mail files are imported as emails: a PDF of the mail plus its attachments.
+    let (emails, files): (Vec<ExternalFile>, Vec<ExternalFile>) =
+        files.into_iter().partition(|file| is_mail_file(file.file_name()));
+    let emails: Vec<EmailSource> =
+        emails.into_iter().map(|file| EmailSource::External { file, folder: target.clone() }).collect();
+    if files.is_empty() && emails.is_empty() {
         ctx.session.report(UiMessage::error("Only files can be added, not folders"));
         return Ok(());
     }
-    let label = format!("Adding {} file(s)", files.len());
-    let started = start(ctx.inner(), &label, Lane::Library, false, move |services, operation| {
-        let message = match services.documents.add_documents.run(&files, &target) {
-            AddDocumentsOutcome::Added(added) => {
-                let done = added.iter().filter(|file| matches!(file.outcome, OperationOutcome::Done { .. })).count();
-                let duplicates = added.iter().filter(|file| !file.duplicates.is_empty()).count();
-                let mut parts = vec![format!("Added {done} of {} file(s)", files.len())];
-                if duplicates > 0 {
-                    parts.push(format!("{duplicates} already in the library under another name"));
-                }
-                if let Some(problem) = added.iter().find(|file| !matches!(file.outcome, OperationOutcome::Done { .. }))
-                {
-                    parts.push(format!("{}: {}", problem.source.file_name(), messages::of(&problem.outcome, "").text));
-                }
-                let text = parts.join("; ");
-                if done < files.len() { UiMessage::error(text) } else { UiMessage::info(text) }
-            }
-            AddDocumentsOutcome::LibraryNotOpen => messages::of(&OperationOutcome::LibraryNotOpen, ""),
-        };
-        operation.session().report(message);
+    let label = format!("Adding {} file(s)", files.len() + emails.len());
+    let started = perform(ctx.inner(), &label, Lane::Library, move |app, operation| {
+        let services = settings_services(app)?;
+        if !emails.is_empty() {
+            app.import_emails(services, &emails);
+            app.analyze_inbox_if_automatic();
+        }
+        if !files.is_empty() {
+            operation.session().report(added_message(services, &files, &target));
+        }
+        Ok(())
     });
     match started {
         Err(error) if error.code != "busy" => Err(error),
         _ => Ok(()),
+    }
+}
+
+/// Adds `files` to `target` and says how many were added, which are duplicates and why the first one failed.
+fn added_message(services: &AppServices, files: &[ExternalFile], target: &RelativePath) -> UiMessage {
+    match services.documents.add_documents.run(files, target) {
+        AddDocumentsOutcome::Added(added) => {
+            let done = added.iter().filter(|file| matches!(file.outcome, OperationOutcome::Done { .. })).count();
+            let duplicates = added.iter().filter(|file| !file.duplicates.is_empty()).count();
+            let mut parts = vec![format!("Added {done} of {} file(s)", files.len())];
+            if duplicates > 0 {
+                parts.push(format!("{duplicates} already in the library under another name"));
+            }
+            if let Some(problem) = added.iter().find(|file| !matches!(file.outcome, OperationOutcome::Done { .. })) {
+                parts.push(format!("{}: {}", problem.source.file_name(), messages::of(&problem.outcome, "").text));
+            }
+            let text = parts.join("; ");
+            if done < files.len() { UiMessage::error(text) } else { UiMessage::info(text) }
+        }
+        AddDocumentsOutcome::LibraryNotOpen => messages::of(&OperationOutcome::LibraryNotOpen, ""),
     }
 }
 

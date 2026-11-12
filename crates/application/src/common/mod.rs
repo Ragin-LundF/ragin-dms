@@ -8,6 +8,7 @@ pub mod model;
 mod operation_outcome;
 mod progress;
 mod sibling_names;
+mod source_texts;
 
 pub use activity_recorder::ActivityRecorder;
 pub use document_dates::DocumentDates;
@@ -16,3 +17,4 @@ pub use model::LibrarySnapshot;
 pub use operation_outcome::OperationOutcome;
 pub use progress::{NoProgress, Progress};
 pub use sibling_names::SiblingNames;
+pub use source_texts::source_texts;

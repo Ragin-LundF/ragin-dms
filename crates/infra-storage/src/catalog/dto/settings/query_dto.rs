@@ -21,12 +21,15 @@ pub struct QueryDto {
     pub fields: Vec<FieldConditionDto>,
     pub added_since: Option<String>,
     pub content_text: Option<String>,
+    pub tax_year: Option<i32>,
+    pub tax_area: Option<String>,
+    pub tax_tag_fallback: Option<String>,
     pub unknown: IndexMap<String, Node>,
 }
 
 extensible!(QueryDto);
 
-const KNOWN: [&str; 14] = [
+const KNOWN: [&str; 17] = [
     "text",
     "category",
     "uncategorized",
@@ -41,6 +44,9 @@ const KNOWN: [&str; 14] = [
     "fields",
     "addedSince",
     "contentText",
+    "taxYear",
+    "taxArea",
+    "taxTagFallback",
 ];
 
 impl QueryDto {
@@ -61,6 +67,9 @@ impl QueryDto {
             fields: read_list(fields, "fields", FieldConditionDto::read)?,
             added_since: owned(fields.opt_text("addedSince")?),
             content_text: owned(fields.opt_text("contentText")?),
+            tax_year: fields.opt_i32("taxYear")?,
+            tax_area: owned(fields.opt_text("taxArea")?),
+            tax_tag_fallback: owned(fields.opt_text("taxTagFallback")?),
             unknown: fields.unknown(&KNOWN),
         })
     }
@@ -81,6 +90,9 @@ impl QueryDto {
             .non_empty_list("fields", self.fields.iter().map(FieldConditionDto::write).collect())
             .non_empty_text("addedSince", self.added_since.as_deref())
             .non_empty_text("contentText", self.content_text.as_deref())
+            .opt_node("taxYear", self.tax_year.map(Node::int))
+            .non_empty_text("taxArea", self.tax_area.as_deref())
+            .non_empty_text("taxTagFallback", self.tax_tag_fallback.as_deref())
             .unknown(&self.unknown)
             .build()
     }

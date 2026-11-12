@@ -3,7 +3,7 @@
 
 mod tax_tag;
 
-pub(crate) use tax_tag::tax_tag_of;
+pub(crate) use tax_tag::{is_tax_tag, tax_tag_of};
 
 /// One prompt template, trimmed when it is filled, as Kotlin trimmed it on loading.
 #[derive(Debug, Clone, Copy)]
@@ -31,11 +31,20 @@ pub(crate) const CLASSIFICATION_OUTLINE_NONE: Template =
     Template(include_str!("../../prompts/classification-outline-none.md"));
 pub(crate) const CLASSIFICATION_REQUEST: Template = Template(include_str!("../../prompts/classification-request.md"));
 pub(crate) const CLASSIFICATION_RULES: Template = Template(include_str!("../../prompts/classification-rules.md"));
+pub(crate) const CONTRACT_TERMS: Template = Template(include_str!("../../prompts/contract-terms.md"));
+pub(crate) const CONTRACT_TERMS_REQUEST: Template = Template(include_str!("../../prompts/contract-terms-request.md"));
 pub(crate) const DOCUMENT_IMAGES: Template = Template(include_str!("../../prompts/document-images.md"));
 pub(crate) const DOCUMENT_TEXT: Template = Template(include_str!("../../prompts/document-text.md"));
+pub(crate) const LETTER: Template = Template(include_str!("../../prompts/letter.md"));
+pub(crate) const LETTER_REQUEST: Template = Template(include_str!("../../prompts/letter-request.md"));
+pub(crate) const QUERY: Template = Template(include_str!("../../prompts/query.md"));
+pub(crate) const QUERY_REQUEST: Template = Template(include_str!("../../prompts/query-request.md"));
 pub(crate) const REBUILD_LAYOUT: Template = Template(include_str!("../../prompts/rebuild-layout.md"));
 pub(crate) const REBUILD_LAYOUT_REQUEST: Template = Template(include_str!("../../prompts/rebuild-layout-request.md"));
 pub(crate) const REBUILD_LINE: Template = Template(include_str!("../../prompts/rebuild-line.md"));
+pub(crate) const SPLIT: Template = Template(include_str!("../../prompts/split.md"));
+pub(crate) const SPLIT_PAGE: Template = Template(include_str!("../../prompts/split-page.md"));
+pub(crate) const SPLIT_REQUEST: Template = Template(include_str!("../../prompts/split-request.md"));
 pub(crate) const SUMMARY: Template = Template(include_str!("../../prompts/summary.md"));
 pub(crate) const SUMMARY_REQUEST: Template = Template(include_str!("../../prompts/summary-request.md"));
 pub(crate) const TAGS: Template = Template(include_str!("../../prompts/tags.md"));

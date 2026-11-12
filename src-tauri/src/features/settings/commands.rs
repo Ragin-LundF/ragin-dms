@@ -128,6 +128,7 @@ pub fn check_inbox_path(path: String) -> Option<String> {
 #[tauri::command]
 #[specta::specta]
 pub fn save_inbox(ctx: AppState<'_>, inbox: InboxSettingsDto) -> Result<(), IpcError> {
+    ctx.require_catalog()?;
     let Some(inbox) = inbox_settings_of(&inbox) else {
         return Err(IpcError::invalid(inbox_path_problem(&inbox.path).unwrap_or("Invalid inbox path")));
     };

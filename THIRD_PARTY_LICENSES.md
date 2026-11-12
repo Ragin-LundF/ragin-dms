@@ -38,10 +38,13 @@ Linked into the app; each crate's license text is in its source package (`cargo 
 | tauri, tauri-build, tauri-plugin-dialog, tauri-plugin-opener | desktop shell | Apache-2.0 OR MIT |
 | tauri-specta, specta, specta-typescript | typed commands | MIT |
 | percent-encoding, iana-time-zone | desktop shell | MIT OR Apache-2.0 |
+| fast_qr | payment QR codes (GiroCode) as SVG | MIT |
 | rfd | crash dialog | MIT |
 | ureq, base64 | AI adapters (HTTP, images) | MIT OR Apache-2.0 |
 | calamine | XLSX text for search and AI | MIT |
-| zip | Office files, exports | MIT |
+| zip | Office files, exports, the encrypted emergency ZIP | MIT |
+| aes, pbkdf2, hmac, sha1 | AES-256 encryption of the emergency ZIP (through zip) | MIT OR Apache-2.0 |
+| mail-parser | reading emails (.eml) for the email import | Apache-2.0 OR MIT |
 | quick-xml | DOCX/PPTX text | MIT |
 | saphyr-parser | catalog and settings YAML | MIT OR Apache-2.0 |
 | notify | folder watcher | CC0-1.0 |

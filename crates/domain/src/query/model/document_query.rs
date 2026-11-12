@@ -8,6 +8,7 @@ use crate::document::Document;
 use crate::error::require;
 use crate::library::RelativePath;
 use crate::query::{DateRange, FieldCondition, QueryContext, TagFilter};
+use crate::tax::TaxFilter;
 use crate::taxonomy::{CategoryId, TagName};
 use crate::text;
 
@@ -17,7 +18,7 @@ use crate::text;
 /// [`Self::text`] looks at the path, title, correspondent, tags and note. [`Self::category`] includes its
 /// subcategories. [`Self::dates`] applies to the document date, or to the day the document was added when it has
 /// none. [`Self::content_text`] is a term in the documents' text; [`Self::matches`] ignores it, because only the
-/// content search can read the texts.
+/// content search can read the texts. [`Self::tax`] looks at the documents' tax assignment.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct DocumentQuery {
     pub text: Option<String>,
@@ -31,6 +32,7 @@ pub struct DocumentQuery {
     pub fields: Vec<FieldCondition>,
     pub added_since: Option<DateTime<Utc>>,
     pub content_text: Option<String>,
+    pub tax: Option<TaxFilter>,
 }
 
 impl DocumentQuery {
@@ -43,6 +45,9 @@ impl DocumentQuery {
         })?;
         if let Some(dates) = &self.dates {
             dates.validate()?;
+        }
+        if let Some(tax) = &self.tax {
+            tax.validate()?;
         }
         self.fields.iter().try_for_each(FieldCondition::validate)
     }
@@ -63,12 +68,14 @@ impl DocumentQuery {
             && self.folder.as_ref().is_none_or(|folder| document.path.is_inside(folder))
             && self.fields.iter().all(|condition| condition.matches(&document.fields, context.today))
             && self.added_since.is_none_or(|since| document.added_at >= since)
+            && self.tax.as_ref().is_none_or(|tax| tax.matches(document, date_of(document, context)))
     }
 
     /// `true` if the query names a category, tag or field the catalog no longer has, for example after the
     /// category was removed; such a smart folder is shown as invalid instead of silently empty.
     #[must_use]
     pub fn refers_to_missing(&self, catalog: &Catalog) -> bool {
+        // The tax filter's fallback tag is not required: the documents with a tax assignment match without it.
         let mut tags_used = self.tags.all.iter().chain(&self.tags.any).chain(&self.tags.none);
         self.category.as_ref().is_some_and(|category| !catalog.categories().contains_key(category))
             || !tags_used.all(|tag| catalog.tags().contains(tag))

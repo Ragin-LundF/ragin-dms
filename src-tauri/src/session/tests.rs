@@ -132,3 +132,36 @@ fn cancel_frees_the_lane_while_a_blocking_call_still_runs() {
     assert!(session.state().busy_in(Lane::Ai).is_none());
     drop(release);
 }
+
+#[test]
+fn a_yielding_operation_stops_for_another_operation_of_its_lane_and_knows_it_was_preempted() {
+    let (session, recorder, _finished) = session();
+    let (preempted_tx, preempted_rx) = channel::<bool>();
+    let (ran_tx, ran_rx) = channel::<()>();
+    assert!(session.perform_yielding("Checking the archive", Lane::Library, move |operation| {
+        while !operation.is_cancelled() {
+            std::thread::yield_now();
+        }
+        let _ = preempted_tx.send(operation.is_preempted());
+        Ok(())
+    }));
+
+    assert!(session.perform("Saving the catalog", Lane::Library, false, move |_| {
+        let _ = ran_tx.send(());
+        Ok(())
+    }));
+
+    assert!(preempted_rx.recv_timeout(Duration::from_secs(5)).expect("the check stopped"));
+    ran_rx.recv_timeout(Duration::from_secs(5)).expect("the action ran");
+    assert_eq!(recorder.messages.lock().expect("lock").len(), 0, "no 'cancelled' message for a preemption");
+}
+
+#[test]
+fn an_ordinary_operation_is_never_preempted() {
+    let (session, _, finished) = session();
+    let (release, gate) = channel::<()>();
+    assert!(session.perform("Scanning", Lane::Library, true, move |_| gate.recv().map_err(|error| error.to_string())));
+    assert!(!session.perform("Saving the catalog", Lane::Library, false, |_| Ok(())));
+    release.send(()).expect("release");
+    wait(&finished);
+}

@@ -200,22 +200,33 @@ pub fn suggest_with_ai(
 }
 
 /// Applies `approval` as "Applying the suggestion for {path}", reports "Filed {path}", then embeds the metadata into
-/// the PDF when the library wants that.
-pub fn approve(ctx: &AppContext, document: &Document, approval: SuggestionApproval) -> Result<(), IpcError> {
+/// the PDF when the library wants that. `then` runs after a successful approval with the approved catalog, in the
+/// same operation; a refusal it answers is reported, `None` did nothing.
+pub fn approve(
+    ctx: &AppContext,
+    document: &Document,
+    approval: SuggestionApproval,
+    then: impl FnOnce(&AppServices, &Catalog) -> Option<OperationOutcome> + Send + 'static,
+) -> Result<(), IpcError> {
     let (id, path) = (document.id.clone(), document.path.value().to_owned());
     perform(ctx, &format!("Applying the suggestion for {path}"), Lane::Library, false, move |services, operation| {
         let session = operation.session();
         let outcome = services.ai.approve_suggestion.run(&id, &approval);
         session.report(messages::of(&outcome, &format!("Filed {path}")));
-        match &outcome {
-            OperationOutcome::Done { catalog, .. } if catalog.settings().layout.embed_metadata => {
-                let embedded = services.pdf.embed_pdf_metadata.run(&id);
-                if !matches!(embedded, OperationOutcome::Done { .. }) {
-                    session.report(messages::of(&embedded, ""));
-                }
+        let OperationOutcome::Done { catalog, .. } = &outcome else {
+            session.error(format!("Approval refused for {path}"));
+            return Ok(());
+        };
+        if catalog.settings().layout.embed_metadata {
+            let embedded = services.pdf.embed_pdf_metadata.run(&id);
+            if !matches!(embedded, OperationOutcome::Done { .. }) {
+                session.report(messages::of(&embedded, ""));
             }
-            OperationOutcome::Done { .. } => {}
-            _ => session.error(format!("Approval refused for {path}")),
+        }
+        if let Some(refused) =
+            then(services, catalog).filter(|followed| !matches!(followed, OperationOutcome::Done { .. }))
+        {
+            session.report(messages::of(&refused, ""));
         }
         Ok(())
     })

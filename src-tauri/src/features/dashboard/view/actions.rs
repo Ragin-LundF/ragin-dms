@@ -4,11 +4,16 @@
 use dms_application::resolution::DuplicatePreference;
 use dms_domain::change::{ContentConflict, MissingFile, ModifiedFile, NewFile};
 use dms_domain::document::{Document, DocumentId};
+use dms_domain::expectation::ExpectedDocument;
+use dms_domain::iso_date;
 use dms_domain::library::{LibraryFolderId, RelativePath};
 use dms_domain::task::OpenTask;
 
 use super::buttons::{ButtonExt, button, confirmation};
 use super::context::TaskContext;
+use super::groups::{group_of, screen_of};
+use crate::features::bills::view::expected_title;
+use crate::features::cases::view as cases;
 use crate::features::dashboard::dto::{
     DashboardAction, DashboardButtonDto, DashboardButtonStyle, DashboardConfirmationDto, DuplicateCopyDto, MoveChoice,
     TaskFileDto,
@@ -60,7 +65,19 @@ pub fn buttons_for(task: &OpenTask, context: &TaskContext<'_>) -> Vec<DashboardB
             ),
             dismiss(),
         ],
-        OpenTask::ResolveDuplicates { .. } | OpenTask::DeadlineDue { .. } => vec![dismiss()],
+        OpenTask::ResolveDuplicates { .. } | OpenTask::DeadlineDue { .. } | OpenTask::UnreadableDocument { .. } => {
+            vec![dismiss()]
+        }
+        OpenTask::DamagedCopy { document_id, folder_id, source_folder_id } => vec![
+            button(
+                format!("Repair from {}…", context.folder_name(source_folder_id)),
+                DashboardAction::RepairCopy { task_key: key.clone() },
+            )
+            .icon("healing")
+            .style(DashboardButtonStyle::Tonal)
+            .confirm(repair_copy(document_id, folder_id, source_folder_id, context)),
+            dismiss(),
+        ],
         OpenTask::ResolveContentConflict(change) => with(conflict_buttons(&key, change, context), dismiss()),
         OpenTask::ReviewCatalogMerge(_) => vec![button("OK", DashboardAction::Dismiss { task_key: key.clone() })],
         OpenTask::RetryFailedOperations { .. } => {
@@ -79,8 +96,77 @@ pub fn buttons_for(task: &OpenTask, context: &TaskContext<'_>) -> Vec<DashboardB
                 .style(DashboardButtonStyle::Tonal),
             button("Reject", DashboardAction::Dismiss { task_key: key.clone() }).style(DashboardButtonStyle::Text),
         ],
+        OpenTask::BillOverdue { document_id, .. } => bill_buttons(document_id),
+        OpenTask::ExpectedDocumentMissing(expected) => expected_buttons(&key, expected, context),
+        OpenTask::ReviewContractProposal(proposal) => vec![
+            button(
+                "Create contract",
+                DashboardAction::CreateContract {
+                    correspondent: proposal.correspondent.clone(),
+                    document_ids: proposal.document_ids.iter().map(ToString::to_string).collect(),
+                },
+            )
+            .icon("add")
+            .style(DashboardButtonStyle::Tonal),
+            button("Dismiss", DashboardAction::DismissContractProposal { task_key: key.clone() })
+                .style(DashboardButtonStyle::Text),
+        ],
+        OpenTask::ContractCancelBy { contract_id, .. } => {
+            let open =
+                |draft_letter| DashboardAction::OpenContract { contract_id: contract_id.to_string(), draft_letter };
+            vec![
+                button("Open", open(false)).icon("arrow_forward").style(DashboardButtonStyle::Tonal),
+                button("Draft cancellation letter", open(true)).icon("edit_note"),
+                dismiss(),
+            ]
+        }
+        OpenTask::FollowUpDue { case_id, .. } => cases::follow_up_buttons(case_id, &key),
+        OpenTask::CaseWaitingTooLong { case_id, .. } => cases::waiting_buttons(case_id, &key, context.catalog()),
+        OpenTask::EmergencyFolderRefresh { .. } => {
+            screen_of(group_of(task, context)).map(open_screen).into_iter().chain([dismiss()]).collect()
+        }
     };
     buttons.into_iter().map(|button| button.waits_for(Lane::Library)).collect()
+}
+
+/// "Mark as paid" and "QR code" for an overdue bill; "Open" comes with the files.
+fn bill_buttons(document_id: &DocumentId) -> Vec<DashboardButtonDto> {
+    let document_id = document_id.to_string();
+    vec![
+        button("Mark as paid", DashboardAction::MarkBillPaid { document_id: document_id.clone() })
+            .icon("check")
+            .style(DashboardButtonStyle::Tonal),
+        button("QR code", DashboardAction::ShowPaymentCode { document_id }).icon("qr_code_2"),
+    ]
+}
+
+/// "Requested", "Ignore once", "Stop expecting…" and "Draft request" for a missing document.
+fn expected_buttons(key: &str, expected: &ExpectedDocument, context: &TaskContext<'_>) -> Vec<DashboardButtonDto> {
+    let task_key = key.to_owned();
+    let what = expected_title(expected, context.catalog());
+    let draft = DashboardAction::DraftRequest {
+        recipient: expected.correspondent.clone(),
+        document_ids: Vec::new(),
+        subject_facts: vec![format!("{what} expected around {}, not received", iso_date(expected.expected_on))],
+    };
+    vec![
+        button("Requested", DashboardAction::ExpectedRequested { task_key: task_key.clone() })
+            .icon("schedule_send")
+            .style(DashboardButtonStyle::Tonal),
+        button("Ignore once", DashboardAction::Dismiss { task_key: task_key.clone() }),
+        button("Stop expecting…", DashboardAction::StopExpecting { task_key }).confirm(confirmation(
+            "Stop expecting".to_owned(),
+            format!("No more reminders when documents from {} ({what}) are late.", expected.correspondent),
+            Vec::new(),
+            "Stop expecting",
+        )),
+        button("Draft request", draft).icon("edit_note").style(DashboardButtonStyle::Text),
+    ]
+}
+
+/// "Open" for the screen of a feature task; it only navigates.
+fn open_screen(screen: crate::features::dashboard::dto::DashboardScreenDto) -> DashboardButtonDto {
+    button("Open", DashboardAction::OpenScreen { screen }).icon("arrow_forward").style(DashboardButtonStyle::Tonal)
 }
 
 fn with(mut buttons: Vec<DashboardButtonDto>, last: DashboardButtonDto) -> Vec<DashboardButtonDto> {
@@ -105,9 +191,15 @@ pub fn retention_buttons(document_ids: &[DocumentId], context: &TaskContext<'_>)
 pub fn files_for(task: &OpenTask, context: &TaskContext<'_>) -> Vec<TaskFile> {
     match task {
         OpenTask::ReviewSuggestion(suggestion) => document_file(&suggestion.document_id, context),
-        OpenTask::DeadlineDue { document_id, .. } | OpenTask::RetentionDue { document_id, .. } => {
-            document_file(document_id, context)
-        }
+        OpenTask::DeadlineDue { document_id, .. }
+        | OpenTask::RetentionDue { document_id, .. }
+        | OpenTask::BillOverdue { document_id, .. }
+        | OpenTask::UnreadableDocument { document_id } => document_file(document_id, context),
+        OpenTask::DamagedCopy { document_id, folder_id, .. } => context
+            .path_of(document_id)
+            .map(|path| task_file(&format!("Open {} copy", context.folder_name(folder_id)), folder_id, path))
+            .into_iter()
+            .collect(),
         OpenTask::AdoptNewFile(change) => first_of(&change.present_in, &change.path, context),
         OpenTask::RestoreOrDelete(change) => first_of(&change.present_in, &change.path, context),
         OpenTask::ReviewModification(change) => {
@@ -134,7 +226,13 @@ pub fn files_for(task: &OpenTask, context: &TaskContext<'_>) -> Vec<TaskFile> {
         OpenTask::ReviewCatalogMerge(_)
         | OpenTask::RetryFailedOperations { .. }
         | OpenTask::RestructureSuggested { .. }
-        | OpenTask::ReviewLearnedRule(_) => Vec::new(),
+        | OpenTask::ReviewLearnedRule(_)
+        | OpenTask::ExpectedDocumentMissing(_)
+        | OpenTask::ReviewContractProposal(_)
+        | OpenTask::ContractCancelBy { .. }
+        | OpenTask::FollowUpDue { .. }
+        | OpenTask::CaseWaitingTooLong { .. }
+        | OpenTask::EmergencyFolderRefresh { .. } => Vec::new(),
     }
 }
 
@@ -368,6 +466,26 @@ fn keep_duplicate(kept: &Document, document_ids: &[DocumentId], context: &TaskCo
         ),
         affected,
         "Move copies to trash",
+    )
+}
+
+fn repair_copy(
+    document_id: &DocumentId,
+    damaged: &LibraryFolderId,
+    source: &LibraryFolderId,
+    context: &TaskContext<'_>,
+) -> DashboardConfirmationDto {
+    let path = context.document_path(document_id);
+    confirmation(
+        format!("Repair from {}", context.folder_name(source)),
+        format!(
+            "The damaged copy goes to the trash of {} and the intact copy of {} takes its place. The intact copy is \
+             compared with the catalog once more right before.",
+            context.folder_name(damaged),
+            context.folder_name(source)
+        ),
+        vec![format!("{}: {path}", context.folder_name(damaged))],
+        "Repair",
     )
 }
 

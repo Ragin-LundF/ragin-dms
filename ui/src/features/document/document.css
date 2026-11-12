@@ -109,3 +109,8 @@
 .assist-chip:hover { background: color-mix(in srgb, var(--on-surface) 8%, transparent); }
 .icon-btn.filled-icon-button { background: var(--primary); color: var(--on-primary); }
 .icon-btn.filled-icon-button:disabled { background: color-mix(in srgb, var(--on-surface) 12%, transparent); color: color-mix(in srgb, var(--on-surface) 38%, transparent); }
+
+/* The rows of the "Organize" features; hidden while no feature has a row for the document. */
+.quick-look-organize { display: flex; flex-direction: column; gap: var(--space-s); }
+.quick-look-organize:empty { display: none; }
+.quick-look-organize > button { align-self: flex-start; }

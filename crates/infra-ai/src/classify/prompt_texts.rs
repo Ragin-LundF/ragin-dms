@@ -120,7 +120,7 @@ fn fields_of(request: &ClassificationRequest) -> String {
     listed(&fields)
 }
 
-fn type_name(field_type: FieldType) -> &'static str {
+pub(crate) fn type_name(field_type: FieldType) -> &'static str {
     match field_type {
         FieldType::Text => "TEXT",
         FieldType::Number => "NUMBER",
@@ -148,7 +148,7 @@ pub(crate) fn path_of(category: &Category, categories: &[Category]) -> String {
     names.join(" / ")
 }
 
-fn listed<S: AsRef<str>>(values: &[S]) -> String {
+pub(crate) fn listed<S: AsRef<str>>(values: &[S]) -> String {
     if values.is_empty() {
         return "none yet".to_owned();
     }

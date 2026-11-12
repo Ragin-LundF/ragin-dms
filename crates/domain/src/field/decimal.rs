@@ -98,6 +98,60 @@ impl Decimal {
         low_64_bits(&integer)
     }
 
+    /// Zero with scale 0.
+    #[must_use]
+    pub fn zero() -> Self {
+        Self { unscaled: BigInt::from(0), scale: 0 }
+    }
+
+    /// Like `BigDecimal.add`: exact, with the larger of both scales.
+    #[must_use]
+    pub fn plus(&self, other: &Self) -> Self {
+        let scale = self.scale.max(other.scale);
+        Self { unscaled: self.aligned_to(scale) + other.aligned_to(scale), scale }
+    }
+
+    /// Like `BigDecimal.negate`: same scale.
+    #[must_use]
+    pub fn negated(&self) -> Self {
+        Self { unscaled: -&self.unscaled, scale: self.scale }
+    }
+
+    /// Like `BigDecimal.multiply` by a whole number: exact, same scale.
+    #[must_use]
+    pub fn times(&self, factor: u32) -> Self {
+        Self { unscaled: &self.unscaled * BigInt::from(factor), scale: self.scale }
+    }
+
+    /// `self / divisor` with `scale` decimal places, rounded half up (away from zero), like
+    /// `BigDecimal.divide(divisor, scale, RoundingMode.HALF_UP)`.
+    ///
+    /// # Panics
+    /// Never for a divisor above zero; a zero divisor is a programming error.
+    #[must_use]
+    pub fn divided_rounded(&self, divisor: u32, scale: u32) -> Self {
+        assert!(divisor > 0, "invariant: division by zero");
+        let target = i32::try_from(scale).unwrap_or(i32::MAX);
+        let (numerator, denominator) = if target >= self.scale {
+            (shifted(&self.unscaled, target.abs_diff(self.scale)), BigInt::from(divisor))
+        } else {
+            (self.unscaled.clone(), shifted(&BigInt::from(divisor), self.scale.abs_diff(target)))
+        };
+        let quotient = &numerator / &denominator;
+        let remainder = &numerator % &denominator;
+        let doubled = BigInt::from(remainder.magnitude().clone()) * 2;
+        let rounded = if doubled >= denominator {
+            if numerator.sign() == Sign::Minus { quotient - 1 } else { quotient + 1 }
+        } else {
+            quotient
+        };
+        Self { unscaled: rounded, scale: target }
+    }
+
+    fn aligned_to(&self, scale: i32) -> BigInt {
+        shifted(&self.unscaled, scale.abs_diff(self.scale))
+    }
+
     /// The order of magnitude: digits minus scale.
     fn adjusted_exponent(&self) -> i64 {
         i64::try_from(digit_count(&self.unscaled)).unwrap_or(i64::MAX) - i64::from(self.scale)
@@ -182,5 +236,18 @@ mod tests {
         assert_eq!(decimal("-7.9").to_i64_truncated(), -7);
         assert_eq!(decimal("0.5").to_i64_truncated(), 0);
         assert_eq!(decimal("1e100").to_i64_truncated(), 0);
+    }
+    #[test]
+    fn arithmetic_is_exact_and_rounds_half_up() {
+        assert_eq!(decimal("12.5").plus(&decimal("0.25")), decimal("12.75"));
+        assert_eq!(decimal("-1").plus(&decimal("0.50")), decimal("-0.50"));
+        assert_eq!(Decimal::zero().plus(&decimal("3.10")), decimal("3.10"));
+        assert_eq!(decimal("29.99").times(12), decimal("359.88"));
+        assert_eq!(decimal("100").divided_rounded(3, 2), decimal("33.33"));
+        assert_eq!(decimal("0.05").divided_rounded(2, 2), decimal("0.03"));
+        assert_eq!(decimal("-0.05").divided_rounded(2, 2), decimal("-0.03"));
+        assert_eq!(decimal("1.2345").divided_rounded(1, 2), decimal("1.23"));
+        assert_eq!(decimal("1.235").divided_rounded(1, 2), decimal("1.24"));
+        assert_eq!(decimal("1e2").divided_rounded(4, 2), decimal("25.00"));
     }
 }
