@@ -8,6 +8,7 @@ import {quickLook} from "../../features/document";
 import {addFilesToTopLevel} from "../../features/library";
 import {openDocument, openLibrary} from "../../features/library/navigation";
 import {startRebuild} from "../../features/pdf";
+import {openSplit} from "../../features/split";
 import {operations} from "../../session/operations";
 import {busyIn, LIBRARY_QUERY, report, useSession} from "../../session/session";
 import {Icon} from "../../shared/components";
@@ -130,6 +131,7 @@ function runAction(action: PaletteActionId) {
     mergeAll: operations.mergeAllFolders,
     retryFailed: operations.retryFailedOperations,
     detectDates: operations.detectDocumentDates,
+    checkArchive: operations.checkArchive,
     addFiles: () => void addFilesToTopLevel(),
     // The AI batches show their progress and results on the dashboard, so it comes to the front.
     tagUntagged: () => {
@@ -140,6 +142,11 @@ function runAction(action: PaletteActionId) {
       goTo("dashboard");
       aiBatches.classifyAll();
     },
+    splitStack: () => {
+      const shown = quickLook.get().documentId;
+      if (shown) void openSplit(shown, "");
+      else report({ text: "Open a scanned PDF in the library first", isError: true });
+    },
     convertToRealPdf: () => {
       const shown = quickLook.get().documentId;
       if (shown) startRebuild(shown);
@@ -148,6 +155,11 @@ function runAction(action: PaletteActionId) {
     openDashboard: () => goTo("dashboard"),
     openTasks: () => goTo("tasks"),
     openLibrary: () => goTo("library"),
+    openBills: () => goTo("bills"),
+    openContracts: () => goTo("contracts"),
+    openTax: () => goTo("tax"),
+    openCases: () => goTo("cases"),
+    openEmergency: () => goTo("emergency"),
     openSettings: () => goTo("settings"),
   };
   actions[action]();

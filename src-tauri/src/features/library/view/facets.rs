@@ -1,16 +1,19 @@
 //! The values each facet chip offers, with how many documents of the view have them (Kotlin `FacetOptions`).
 
-use std::collections::{HashMap, HashSet};
+use std::cmp::Reverse;
+use std::collections::{BTreeMap, HashMap, HashSet};
 
+use dms_domain::bill::BillStatus;
 use dms_domain::catalog::Catalog;
 use dms_domain::document::{Document, DocumentKind};
+use dms_domain::tax::TaxArea;
 use dms_domain::taxonomy::CategoryId;
 use dms_domain::text;
 
 use super::filter::year_of;
-use super::tokens::kind_label;
+use super::tokens::{kind_label, payment_label};
 use super::trees;
-use crate::features::library::model::{Facet, FacetFilter, Moment, YearFilter};
+use crate::features::library::model::{Facet, FacetFilter, Moment, TaxFacet, YearFilter};
 
 /// One value a facet chip offers; `depth` indents subcategories and subfolders, `missing` marks "Without a category".
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -38,7 +41,9 @@ pub fn of(documents: &[&Document], catalog: &Catalog, moment: &Moment) -> Vec<(F
                 Facet::Year => years(documents, moment),
                 Facet::Correspondent => correspondents(documents),
                 Facet::Type => kinds(documents),
+                Facet::Payment => payments(documents, catalog, moment),
                 Facet::Folder => folders(documents),
+                Facet::Tax => tax_years(documents),
             };
             (facet, options)
         })
@@ -135,6 +140,21 @@ fn kinds(documents: &[&Document]) -> Vec<FacetOption> {
         .collect()
 }
 
+/// Open, overdue and paid bills; documents that are no bills have no payment state.
+fn payments(documents: &[&Document], catalog: &Catalog, moment: &Moment) -> Vec<FacetOption> {
+    [BillStatus::Open, BillStatus::Overdue, BillStatus::Paid]
+        .into_iter()
+        .filter_map(|status| {
+            let today = moment.today();
+            let count = documents
+                .iter()
+                .filter(|document| BillStatus::of(document, catalog.settings(), today) == Some(status))
+                .count();
+            (count > 0).then(|| FacetOption::new(FacetFilter::Payment(status), payment_label(status), count))
+        })
+        .collect()
+}
+
 fn folders(documents: &[&Document]) -> Vec<FacetOption> {
     trees::folders(documents.iter().copied(), &[], None)
         .into_iter()
@@ -142,6 +162,27 @@ fn folders(documents: &[&Document]) -> Vec<FacetOption> {
         .map(|entry| FacetOption {
             depth: entry.depth - 1,
             ..FacetOption::new(FacetFilter::Folder(entry.path), entry.name, entry.document_count)
+        })
+        .collect()
+}
+
+/// Every tax year with assigned documents, newest first, each followed by its areas.
+fn tax_years(documents: &[&Document]) -> Vec<FacetOption> {
+    let mut counts: BTreeMap<(Reverse<i32>, Option<usize>), usize> = BTreeMap::new();
+    for tax in documents.iter().filter_map(|document| document.tax.as_ref()) {
+        let area = TaxArea::ALL.iter().position(|area| *area == tax.area);
+        *counts.entry((Reverse(tax.year), None)).or_default() += 1;
+        *counts.entry((Reverse(tax.year), area)).or_default() += 1;
+    }
+    counts
+        .into_iter()
+        .map(|((Reverse(year), area), count)| {
+            let facet = TaxFacet { year, area: area.map(|index| TaxArea::ALL[index]) };
+            let label = facet.area.map_or_else(|| year.to_string(), |area| area.label().to_owned());
+            FacetOption {
+                depth: usize::from(facet.area.is_some()),
+                ..FacetOption::new(FacetFilter::Tax(facet), label, count)
+            }
         })
         .collect()
 }
@@ -226,9 +267,84 @@ mod tests {
     }
 
     #[test]
+    fn tax_years_are_newest_first_each_followed_by_its_areas() {
+        let catalog = TestCatalog::new()
+            .document("a.pdf", |document| {
+                document.tax(2024, TaxArea::Donations, None);
+            })
+            .document("b.pdf", |document| {
+                document.tax(2025, TaxArea::HealthCosts, None);
+            })
+            .document("c.pdf", |document| {
+                document.tax(2025, TaxArea::Income, None);
+            })
+            .document("d.pdf", |_| {})
+            .build();
+
+        let options = facet(&catalog, Facet::Tax);
+
+        assert_eq!(
+            labels(&options),
+            [
+                ("2025".to_owned(), 2),
+                ("Income".to_owned(), 1),
+                ("Health costs".to_owned(), 1),
+                ("2024".to_owned(), 1),
+                ("Donations".to_owned(), 1),
+            ]
+        );
+        assert_eq!(options[1].filter, FacetFilter::Tax(TaxFacet { year: 2025, area: Some(TaxArea::Income) }));
+        assert_eq!((options[0].depth, options[1].depth), (0, 1));
+    }
+
+    #[test]
     fn folders_are_a_tree_without_the_root() {
         let options = facet(&sample(), Facet::Folder);
         assert_eq!(labels(&options), [("Home".to_owned(), 2), ("Power".to_owned(), 1)]);
         assert_eq!(options[1].depth, 1);
+    }
+
+    #[test]
+    fn the_payment_facet_counts_open_overdue_and_paid_bills_and_the_filter_shows_them() {
+        use dms_domain::field::FieldPresets;
+
+        use crate::features::library::model::View;
+        use crate::features::library::test_catalog::path;
+        use crate::features::library::view::filter::{Matches, documents};
+
+        let bill = |due: chrono::NaiveDate, paid: bool| {
+            move |document: &mut crate::features::library::test_catalog::DocumentBuilder| {
+                document.money("amount", "12.30").field_date("due", due);
+                if paid {
+                    document.field_date("paid-on", due);
+                }
+            }
+        };
+        let today = moment().today();
+        let catalog = TestCatalog::new()
+            .settings(|settings| {
+                settings.field_definitions =
+                    vec![FieldPresets::amount(), FieldPresets::due_date(), FieldPresets::paid_on()];
+            })
+            .document("open.pdf", bill(today + chrono::Days::new(5), false))
+            .document("late.pdf", bill(today - chrono::Days::new(5), false))
+            .document("paid.pdf", bill(today - chrono::Days::new(9), true))
+            .document("letter.pdf", |_| {})
+            .build();
+
+        let late = documents(
+            &catalog,
+            &View::Folder(path("")),
+            &[FacetFilter::Payment(BillStatus::Overdue)],
+            "",
+            &moment(),
+            &Matches::default(),
+        );
+
+        assert_eq!(
+            labels(&facet(&catalog, Facet::Payment)),
+            [("Open".to_owned(), 1), ("Overdue".to_owned(), 1), ("Paid".to_owned(), 1)]
+        );
+        assert_eq!(late.iter().map(|document| document.path.value()).collect::<Vec<_>>(), ["late.pdf"]);
     }
 }

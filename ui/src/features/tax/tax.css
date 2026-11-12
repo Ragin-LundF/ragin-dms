@@ -1,0 +1,45 @@
+/* The tax year folder (feature 3). */
+
+.tax-screen { display: flex; flex-direction: column; gap: var(--space-xl); min-height: 100%; }
+.tax-layout { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: var(--space-l); align-items: start; }
+.tax-areas { display: flex; flex-direction: column; gap: var(--space-s); }
+.tax-side { display: flex; flex-direction: column; gap: var(--space-m); }
+.tax-area { border: var(--hairline) solid var(--outline-variant); border-radius: var(--shape-l); background: var(--surface); }
+.tax-area-head { list-style: none; cursor: pointer; padding: var(--space-m) var(--space-l); display: flex; align-items: center; gap: var(--space-s); }
+.tax-area-head::-webkit-details-marker { display: none; }
+.tax-chevron { color: var(--on-surface-variant); transition: transform 0.2s; }
+.tax-area[open] .tax-chevron { transform: rotate(90deg); }
+.tax-count { margin-left: auto; }
+.tax-pill { padding: 2px 8px; border-radius: 999px; }
+.tax-pill-good { background: color-mix(in srgb, var(--status-good) 16%, transparent); color: var(--on-surface); }
+.tax-pill-warning { background: color-mix(in srgb, var(--status-warning) 24%, transparent); color: var(--on-surface); }
+.tax-pill-error { background: var(--error-container); color: var(--on-error-container); }
+.tax-items { padding: 0 var(--space-l) var(--space-s) 40px; display: flex; flex-direction: column; align-items: flex-start; }
+.tax-item { display: flex; align-items: center; gap: var(--space-s); padding: var(--space-s) 0; border-bottom: var(--hairline) solid var(--outline-variant); width: 100%; }
+.tax-item-off .tax-item-text { opacity: 0.6; }
+.tax-item-text { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.tax-ellipsis { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tax-amount { font-feature-settings: "tnum"; white-space: nowrap; }
+.tax-check { width: 18px; height: 18px; border-radius: var(--shape-xs); display: grid; place-items: center; flex: none; box-sizing: border-box; }
+.tax-check-found { background: var(--status-good); color: var(--on-primary); }
+.tax-check-missing { border: 2px dashed var(--error); }
+.tax-check-expected { border: 2px dashed var(--status-warning); }
+.tax-check-notNeeded { border: 2px solid var(--outline); }
+.tax-stat { font-size: 26px; line-height: 32px; font-weight: 600; }
+.tax-legend { display: flex; flex-wrap: wrap; gap: var(--space-m); color: var(--on-surface-variant); }
+.tax-legend span::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: var(--space-xs); vertical-align: -1px; }
+.tax-legend-found::before { background: var(--status-good); }
+.tax-legend-expected::before { background: var(--status-warning); }
+.tax-legend-missing::before { background: var(--error); }
+.tax-sum { display: flex; align-items: center; justify-content: space-between; gap: var(--space-s); padding: var(--space-xs) 0; border-bottom: var(--hairline) solid var(--outline-variant); }
+.tax-choices { max-height: 320px; overflow: auto; display: flex; flex-direction: column; }
+.tax-choice { text-align: left; display: flex; flex-direction: column; padding: var(--space-s); border: none; background: transparent; color: var(--on-surface); border-radius: var(--shape-xs); cursor: pointer; font: inherit; }
+.tax-choice:hover { background: color-mix(in srgb, var(--on-surface) 8%, transparent); }
+
+.tax-preview {
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-s) var(--space-m);
+  border-radius: var(--shape-m);
+  background: var(--surface-container);
+}

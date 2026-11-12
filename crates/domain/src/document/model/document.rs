@@ -7,11 +7,13 @@ use crate::error::require;
 use crate::field::{FieldKey, FieldValue};
 use crate::library::RelativePath;
 use crate::retention::Retention;
+use crate::tax::TaxAssignment;
 use crate::taxonomy::{CategoryId, TagName};
 use crate::text;
 
 /// A file in the library together with everything the catalog knows about it: metadata, category, tags,
-/// custom [`Self::fields`], a free-text [`Self::note`] and an opt-in [`Self::retention`].
+/// custom [`Self::fields`], a free-text [`Self::note`], an opt-in [`Self::retention`] and its place in a tax return
+/// ([`Self::tax`]).
 ///
 /// Fields are public like the properties of the Kotlin data class; [`Self::validate`] checks the rules its
 /// `init` block checked, and [`crate::catalog::Catalog::new`] runs it for every document.
@@ -29,6 +31,7 @@ pub struct Document {
     pub fields: IndexMap<FieldKey, FieldValue>,
     pub note: Option<String>,
     pub retention: Option<Retention>,
+    pub tax: Option<TaxAssignment>,
 }
 
 impl Document {
@@ -56,6 +59,7 @@ impl Document {
             fields: IndexMap::new(),
             note: None,
             retention: None,
+            tax: None,
         };
         document.validate()?;
         Ok(document)
@@ -63,7 +67,7 @@ impl Document {
 
     /// # Errors
     /// Fails for the root path, a blank note, an empty retention, or invalid metadata, classification or
-    /// field values.
+    /// field values, or an invalid tax assignment.
     pub fn validate(&self) -> Result<(), DomainError> {
         require(!self.path.is_root(), || "A document needs a file path".to_owned())?;
         require(self.note.as_deref().is_none_or(|note| !text::is_blank(note)), || {
@@ -75,6 +79,9 @@ impl Document {
         self.metadata.validate()?;
         if let Some(classification) = &self.classification {
             classification.validate()?;
+        }
+        if let Some(tax) = &self.tax {
+            tax.validate()?;
         }
         self.fields.values().try_for_each(FieldValue::validate)
     }

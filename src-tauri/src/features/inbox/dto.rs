@@ -17,7 +17,7 @@ pub struct InboxStateDto {
 
 /// One inbox document, newest added first. `subfolder` is where in the inbox it lies ("" directly inside),
 /// `suggestion_note` is " · AI suggests {folder}", " · AI suggestion waiting" or "", `prefill` the folder the
-/// library's path template gives it.
+/// library's path template gives it, `email` whether it is a mail file the row can import.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct InboxRowDto {
@@ -32,4 +32,5 @@ pub struct InboxRowDto {
     pub suggestion_note: String,
     pub analyzable: bool,
     pub prefill: Option<String>,
+    pub email: bool,
 }

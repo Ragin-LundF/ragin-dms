@@ -2,19 +2,26 @@
 //! failing the whole suggestion: an unknown date format, an invalid file name, a blank tag.
 
 use dms_application::port::ai::ClassificationRequest;
-use dms_domain::classification::{ClassificationSuggestion, SuggestedCategory, SuggestedFolder, SuggestedTag};
-use dms_domain::field::{FieldKey, FieldValue, FieldValues};
+use dms_domain::bill::Iban;
+use dms_domain::classification::{
+    ClassificationSuggestion, RequestedAction, SuggestedCategory, SuggestedFolder, SuggestedTag,
+};
+use dms_domain::field::{FieldKey, FieldPresets, FieldType, FieldValue, FieldValues};
 use dms_domain::library::{FileNamePolicy, RelativePath};
+use dms_domain::money::Money;
+use dms_domain::tax::{TaxArea, TaxAssignment};
 use dms_domain::taxonomy::{Category, TagName};
 use dms_domain::{parse_iso_date, text};
 use indexmap::{IndexMap, IndexSet};
 
 use super::prompt_texts::path_of;
-use super::suggestion_dto::{FieldAnswerDto, SuggestionDto};
+use super::suggestion_dto::{FieldAnswerDto, RequestedActionDto, SuggestionDto};
+use crate::prompt::is_tax_tag;
 
 const MAX_TAGS: usize = 8;
 const PAGE_BREAK: &str = "\u{c}";
 const MAX_EXTENSION: usize = 5;
+const MAX_REQUESTED_ACTIONS: usize = 5;
 
 pub(crate) fn to_suggestion(
     answer: &SuggestionDto,
@@ -33,8 +40,56 @@ pub(crate) fn to_suggestion(
     suggestion.confidence = answer.confidence.map(|confidence| confidence.clamp(0.0, 1.0));
     suggestion.target_folder = target_folder_of(answer, request);
     suggestion.fields = fields_of(&answer.fields, request);
+    suggestion.fields.extend(payment_fields(answer));
     suggestion.target_reason = cleaned(answer.target_reason.as_deref()).map(|reason| first_line(&reason).to_owned());
+    if suggestion.tags.iter().any(|tag| is_tax_tag(tag.name.value())) {
+        suggestion.tax = tax_of(answer, request);
+    }
+    suggestion.requested_actions = requested_actions_of(&answer.requested_actions);
     suggestion
+}
+
+const TAX_AREAS: [(&str, TaxArea); 9] = [
+    ("income", TaxArea::Income),
+    ("pensionInsurance", TaxArea::PensionInsurance),
+    ("householdServices", TaxArea::HouseholdServices),
+    ("donations", TaxArea::Donations),
+    ("healthCosts", TaxArea::HealthCosts),
+    ("workExpenses", TaxArea::WorkExpenses),
+    ("capitalIncome", TaxArea::CapitalIncome),
+    ("rental", TaxArea::Rental),
+    ("other", TaxArea::Other),
+];
+
+/// The tax year and area, both needed; the deductible part only for household services and craftsmen, where it is
+/// the labour share, and only as an amount of money.
+fn tax_of(answer: &SuggestionDto, request: &ClassificationRequest) -> Option<TaxAssignment> {
+    let year: i32 = cleaned(answer.tax_year.as_deref())?.parse().ok()?;
+    let area_name = cleaned(answer.tax_area.as_deref())?;
+    let area = TAX_AREAS.iter().find(|(name, _)| name.eq_ignore_ascii_case(&area_name)).map(|(_, area)| *area)?;
+    let deductible = cleaned(answer.deductible.as_deref())
+        .filter(|_| area == TaxArea::HouseholdServices)
+        .and_then(|raw| FieldValues::parse(FieldType::Money, &raw, request.default_currency.as_ref()))
+        .as_ref()
+        .and_then(Money::of_field);
+    let tax = TaxAssignment { year, area, deductible };
+    tax.validate().is_ok().then_some(tax)
+}
+
+/// The requested actions with a text, at most [`MAX_REQUESTED_ACTIONS`]; a due date that is no date is dropped,
+/// the action kept.
+fn requested_actions_of(answers: &[RequestedActionDto]) -> Vec<RequestedAction> {
+    answers
+        .iter()
+        .filter_map(|answer| {
+            Some(RequestedAction {
+                text: first_line(&cleaned(answer.text.as_deref())?).to_owned(),
+                due_date: cleaned(answer.due_date.as_deref()).and_then(|date| parse_iso_date(&date)),
+                references: answer.references.iter().filter_map(|reference| cleaned(Some(reference))).collect(),
+            })
+        })
+        .take(MAX_REQUESTED_ACTIONS)
+        .collect()
 }
 
 /// The text read on the page images: the pages separated by a form feed, so a text layer can put each on its own
@@ -63,6 +118,18 @@ fn fields_of(answers: &[FieldAnswerDto], request: &ClassificationRequest) -> Ind
         .collect()
 }
 
+/// The IBAN (only one that passes its checksum) and the payment reference printed on a bill, as the standard bill
+/// fields.
+fn payment_fields(answer: &SuggestionDto) -> Vec<(FieldKey, FieldValue)> {
+    let iban = cleaned(answer.iban.as_deref())
+        .and_then(|iban| Iban::parse(&iban).ok())
+        .map(|iban| (FieldPresets::iban().key, FieldValue::Text(iban.value().to_owned())));
+    let reference = cleaned(answer.payment_reference.as_deref()).map(|reference| {
+        (FieldPresets::payment_reference().key, FieldValue::Text(text::trim(first_line(&reference)).to_owned()))
+    });
+    iban.into_iter().chain(reference).collect()
+}
+
 /// A folder of the outline, or a new folder directly below one that the model flagged as new; any other path, and
 /// every path when no outline was sent, is dropped.
 fn target_folder_of(answer: &SuggestionDto, request: &ClassificationRequest) -> Option<SuggestedFolder> {
@@ -83,7 +150,7 @@ fn target_folder_of(answer: &SuggestionDto, request: &ClassificationRequest) -> 
 }
 
 /// An existing category by name or path, ignoring case; otherwise a new one, below its parent if named.
-fn category_of(name: &str, categories: &[Category]) -> Option<SuggestedCategory> {
+pub(crate) fn category_of(name: &str, categories: &[Category]) -> Option<SuggestedCategory> {
     let key = text::lowercase(name);
     let path_key = |category: &Category| text::lowercase(&path_of(category, categories));
     if let Some(existing) =

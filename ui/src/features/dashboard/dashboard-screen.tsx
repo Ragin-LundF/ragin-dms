@@ -10,6 +10,8 @@ import {AiBand, DashboardHeader, StatRow} from "./overview/header";
 import {CategoryCard, CorrespondentCard, KindCard, TagCloudCard, YearChartCard} from "./overview/library-cards";
 import {RecentDocumentsCard} from "./overview/recent-card";
 import {ActivityPanel, FolderPanel} from "./overview/status-cards";
+import {ExpectedCard} from "./organize/expected-card";
+import {OrganizeCards} from "./organize/organize-cards";
 import ERROR from "@material-design-icons/svg/round/error_outline.svg?raw";
 
 const show = (selection: LibrarySelection, query = "") => openLibrary({ kind: "show", selection, query });
@@ -39,6 +41,8 @@ function DashboardOverview({ view }: { view: DashboardView }) {
       <DashboardHeader line={view.headerLine} />
       <StatRow columns={view.stats} onOpen={(link) => (link === "inbox" ? goTo("inbox") : show({ kind: "uncategorized" }))} />
       {view.aiBand && <AiBand band={view.aiBand} />}
+      <OrganizeCards />
+      <ExpectedCard />
       <div className="dashboard-section focus-section">
         <AttentionPanel attention={view.attention} onShowAllTasks={() => goTo("tasks")} />
         <RecentDocumentsCard documents={view.recent} primaryFolderId={view.primaryFolderId} onOpen={openDocument} onShowAll={() => show({ kind: "recent" })} />

@@ -6,8 +6,8 @@ use dms_application::port::ai::{
     ModelList,
 };
 use dms_application::port::state::{AiProvider, AiSettings};
-use dms_domain::classification::{ClassificationSuggestion, SuggestedCategory, SuggestedFolder};
-use dms_domain::field::{CurrencyCode, Decimal, FieldPresets, FieldValue};
+use dms_domain::classification::{ClassificationSuggestion, RequestedAction, SuggestedCategory, SuggestedFolder};
+use dms_domain::field::{CurrencyCode, Decimal, FieldKey, FieldPresets, FieldValue};
 use dms_domain::rule::RuleResult;
 use indexmap::{IndexMap, IndexSet};
 use serde_json::json;
@@ -58,6 +58,34 @@ fn the_request_carries_the_model_the_prompt_and_the_answer_schema() {
     assert_eq!(body["response_format"]["json_schema"]["name"], "document_classification");
     assert_eq!(body["temperature"], 0.1);
     assert!(body["messages"][0]["content"].as_str().expect("system").contains("Invoices / Energy"));
+}
+
+#[test]
+fn a_letter_that_asks_for_something_answers_its_requested_actions_and_the_schema_asks_for_them() {
+    let answer = r#"{"title":"Request for receipts","requestedActions":[
+        {"text":" Send the plumber invoices ","dueDate":"2026-11-30","references":["R-2026-114"," "]},
+        {"text":"Reply","dueDate":"by the end of the month","references":null},
+        {"text":" ","dueDate":null,"references":[]}]}"#;
+    let server = StubServer::start(move |_| ok(chat_answer(answer)));
+    let ai = server.adapters(local_settings(), None);
+
+    let suggestion = suggested(ai.client.suggest(&request()));
+
+    assert_eq!(
+        suggestion.requested_actions,
+        vec![
+            RequestedAction {
+                text: "Send the plumber invoices".to_owned(),
+                due_date: NaiveDate::from_ymd_opt(2026, 11, 30),
+                references: vec!["R-2026-114".to_owned()],
+            },
+            RequestedAction { text: "Reply".to_owned(), due_date: None, references: Vec::new() },
+        ]
+    );
+    let schema = &server.chat_bodies()[0]["response_format"]["json_schema"]["schema"];
+    assert!(schema["required"].as_array().expect("required").contains(&json!("requestedActions")));
+    let prompt = server.chat_bodies()[0]["messages"][0]["content"].as_str().expect("system").to_owned();
+    assert!(prompt.contains("requestedActions: only if the document is a letter that asks the person"));
 }
 
 #[test]
@@ -471,6 +499,37 @@ fn field_values_must_be_defined_and_fit_their_type_a_missing_currency_takes_the_
 }
 
 #[test]
+fn a_printed_iban_and_payment_reference_become_bill_fields_and_an_invalid_iban_is_dropped() {
+    let answer = |iban: &str| SuggestionDto {
+        iban: Some(iban.to_owned()),
+        payment_reference: Some(" KD 4711 \nsecond line".to_owned()),
+        ..SuggestionDto::default()
+    };
+
+    let valid = suggestion_mapper::to_suggestion(&answer("de89 3704 0044 0532 0130 00"), &request(), "m").fields;
+    let invalid = suggestion_mapper::to_suggestion(&answer("DE89 3704 0044 0532 0130 01"), &request(), "m").fields;
+
+    assert_eq!(
+        valid,
+        IndexMap::from([
+            (FieldPresets::iban().key, FieldValue::Text("DE89370400440532013000".to_owned())),
+            (FieldPresets::payment_reference().key, FieldValue::Text("KD 4711".to_owned())),
+        ])
+    );
+    assert_eq!(invalid.keys().map(FieldKey::value).collect::<Vec<_>>(), ["payment-reference"]);
+}
+
+#[test]
+fn the_answer_schema_asks_for_iban_and_payment_reference() {
+    let schema = super::suggestion_schema::suggestion_schema();
+    let required: Vec<&str> =
+        schema["required"].as_array().expect("required").iter().filter_map(|name| name.as_str()).collect();
+
+    assert!(required.contains(&"iban") && required.contains(&"paymentReference"));
+    assert_eq!(schema["properties"]["iban"]["type"], json!(["string", "null"]));
+}
+
+#[test]
 fn page_texts_become_one_transcription_with_a_form_feed_between_pages() {
     let paged = map(SuggestionDto {
         transcription: Some("all".to_owned()),
@@ -508,4 +567,38 @@ fn a_lenient_answer_with_nulls_and_numbers_is_read() {
     assert!(answer.tags.is_empty() && answer.fields.is_empty());
     assert!(SuggestionDto::parse("no json").is_none());
     assert!(SuggestionDto::parse(r#"{"tags": "Tax"}"#).is_none());
+}
+
+#[test]
+fn a_tax_document_gets_its_year_area_and_labour_share_and_others_get_no_tax() {
+    let tax_answer = |area: &str| SuggestionDto {
+        tags: vec!["Tax".to_owned()],
+        tax_year: Some("2025".to_owned()),
+        tax_area: Some(area.to_owned()),
+        deductible: Some("684.50 EUR".to_owned()),
+        ..SuggestionDto::default()
+    };
+
+    let craftsman = map(tax_answer("householdServices")).tax.expect("a tax assignment");
+    let donation = map(tax_answer("Donations")).tax.expect("a tax assignment");
+    let untagged = map(SuggestionDto { tags: vec!["Home".to_owned()], ..tax_answer("donations") });
+    let unknown_area = map(tax_answer("holidays"));
+    let wrong_year = map(SuggestionDto { tax_year: Some("25".to_owned()), ..tax_answer("donations") });
+
+    assert_eq!((craftsman.year, craftsman.area), (2025, dms_domain::tax::TaxArea::HouseholdServices));
+    let labour = craftsman.deductible.expect("the labour share");
+    assert_eq!((labour.amount, labour.currency.value()), (Decimal::parse("684.50").expect("amount"), "EUR"));
+    assert_eq!(donation.deductible, None, "a deductible part only for household services");
+    assert_eq!(untagged.tax, None, "only with the tax tag");
+    assert_eq!(unknown_area.tax, None);
+    assert_eq!(wrong_year.tax, None);
+}
+
+#[test]
+fn the_answer_schema_asks_for_the_tax_values() {
+    let schema = super::suggestion_schema::suggestion_schema();
+    let required: Vec<&str> =
+        schema["required"].as_array().expect("required").iter().filter_map(|name| name.as_str()).collect();
+    assert!(["taxYear", "taxArea", "deductible"].iter().all(|name| required.contains(name)));
+    assert_eq!(schema["properties"]["taxYear"]["type"], json!(["integer", "null"]));
 }

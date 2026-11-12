@@ -34,6 +34,26 @@ impl PdfEngine {
         Ok(text_of(&document, usize::MAX)?.trim().to_string())
     }
 
+    /// The content of the first file attachment whose name is one of `names` (ignoring case), in the order of
+    /// `names`; `None` when the PDF has none of them.
+    ///
+    /// # Errors
+    /// [`PdfError::NotFound`] or [`PdfError::UnsupportedFormat`] if the file cannot be opened or the attachment
+    /// not read.
+    pub fn attachment(self, path: &Path, names: &[&str]) -> Result<Option<Vec<u8>>, PdfError> {
+        let document = self.open(path)?;
+        let attachments = document.attachments();
+        let by_name: Vec<(String, _)> =
+            attachments.iter().map(|attachment| (attachment.name().to_lowercase(), attachment)).collect();
+        for wanted in names {
+            let wanted = wanted.to_lowercase();
+            if let Some((_, attachment)) = by_name.iter().find(|(name, _)| *name == wanted) {
+                return Ok(Some(attachment.save_to_bytes()?));
+            }
+        }
+        Ok(None)
+    }
+
     /// The text of every page, each trimmed.
     ///
     /// # Errors

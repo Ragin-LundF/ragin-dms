@@ -29,9 +29,37 @@ impl FieldPresets {
         preset("warranty-until", "Warranty until", FieldType::Date, Some(FieldRole::WarrantyEnd))
     }
 
+    /// The day a bill was paid; set, it makes the bill paid.
+    #[must_use]
+    pub fn paid_on() -> FieldDefinition {
+        preset("paid-on", "Paid on", FieldType::Date, None)
+    }
+
+    #[must_use]
+    pub fn iban() -> FieldDefinition {
+        preset("iban", "IBAN", FieldType::Text, None)
+    }
+
+    #[must_use]
+    pub fn payment_reference() -> FieldDefinition {
+        preset("payment-reference", "Payment reference", FieldType::Text, None)
+    }
+
+    /// The standard fields "Add standard fields" offers; the bill fields are added on first use instead.
     #[must_use]
     pub fn all() -> Vec<FieldDefinition> {
         vec![Self::amount(), Self::due_date(), Self::cancel_by(), Self::contract_end(), Self::warranty_end()]
+    }
+}
+
+impl FieldPresets {
+    /// The standard field with `key`, the bill fields included.
+    #[must_use]
+    pub fn of(key: &FieldKey) -> Option<FieldDefinition> {
+        Self::all()
+            .into_iter()
+            .chain([Self::paid_on(), Self::iban(), Self::payment_reference()])
+            .find(|definition| &definition.key == key)
     }
 }
 

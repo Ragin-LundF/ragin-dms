@@ -12,6 +12,7 @@ use indexmap::IndexMap;
 
 use crate::catalog::dto::CatalogDto;
 use crate::catalog::dto::settings::{CorrespondentDto, InboxDto, LayoutDto};
+use crate::catalog::mapper::records::organize_mapper;
 use crate::catalog::mapper::{field_mapper, query_mapper, rule_mapper, unknown_fields};
 use crate::yaml::YamlError;
 
@@ -59,6 +60,19 @@ pub fn fill_settings(dto: &mut CatalogDto, settings: &CatalogSettings, previous:
     dto.rules = rules;
     dto.correspondents = correspondents;
     dto.layout = layout_to_dto(&settings.layout, previous.and_then(|previous| previous.layout.as_ref()));
+    dto.owner = settings
+        .owner
+        .as_ref()
+        .map(|owner| organize_mapper::owner_to_dto(owner, previous.and_then(|previous| previous.owner.as_ref())));
+    dto.bills_tracked_since = settings.bills_tracked_since.map(dms_domain::iso_date);
+    dto.dismissed_contract_proposals.clone_from(&settings.dismissed_contract_proposals);
+    dto.expectations = organize_mapper::expectations_to_dto(
+        &settings.expectations,
+        previous.map_or(&[], |previous| &previous.expectations),
+    );
+    dto.emergency_folder = settings.emergency_folder.as_ref().map(|folder| {
+        organize_mapper::emergency_to_dto(folder, previous.and_then(|previous| previous.emergency_folder.as_ref()))
+    });
 }
 
 pub fn settings_to_domain(dto: &CatalogDto) -> Result<CatalogSettings, YamlError> {
@@ -79,6 +93,11 @@ pub fn settings_to_domain(dto: &CatalogDto) -> Result<CatalogSettings, YamlError
             })
             .collect(),
         layout: dto.layout.as_ref().map(layout_to_domain).transpose()?.unwrap_or_default(),
+        owner: dto.owner.as_ref().map(organize_mapper::owner_to_domain),
+        bills_tracked_since: dto.bills_tracked_since.as_deref().map(field_mapper::date_of).transpose()?,
+        dismissed_contract_proposals: dto.dismissed_contract_proposals.clone(),
+        expectations: organize_mapper::expectations_to_domain(&dto.expectations)?,
+        emergency_folder: dto.emergency_folder.as_ref().map(organize_mapper::emergency_to_domain).transpose()?,
     })
 }
 
@@ -100,6 +119,9 @@ fn layout_to_dto(layout: &LibraryLayout, previous: Option<&LayoutDto>) -> Option
             ai_analysis: inbox.ai_analysis,
             ai_target_folder: inbox.ai_target_folder,
             auto_analyze: inbox.auto_analyze,
+            propose_splits: inbox.propose_splits,
+            convert_emails: inbox.convert_emails,
+            keep_email_originals: inbox.keep_email_originals,
             unknown: IndexMap::new(),
         });
     if let Some(inbox_dto) = &mut inbox_dto {
@@ -127,6 +149,9 @@ fn layout_to_domain(layout: &LayoutDto) -> Result<LibraryLayout, YamlError> {
                 ai_analysis: inbox.ai_analysis,
                 ai_target_folder: inbox.ai_target_folder,
                 auto_analyze: inbox.auto_analyze,
+                propose_splits: inbox.propose_splits,
+                convert_emails: inbox.convert_emails,
+                keep_email_originals: inbox.keep_email_originals,
             })
         })
         .transpose()?;

@@ -24,6 +24,7 @@ function inboxState(): InboxStateDto_Serialize {
             suggestionNote: document.suggestion ? (document.correspondent ? " · AI suggests Home/Bills" : " · AI suggestion waiting") : "",
             analyzable: document.kind !== "other",
             prefill: null,
+            email: document.path.toLowerCase().endsWith(".eml"),
           };
         })
     : [];
@@ -51,6 +52,11 @@ export const inboxHandlers: Record<string, Handler> = {
     const name = fileName(found.path);
     mockOperation(`Analyzing ${name}`, "ai", 4, `The AI suggested a classification for ${name}`);
     found.suggestion = true;
+    return null;
+  },
+  inbox_import_emails: ({ documentIds }) => {
+    const count = (documentIds as string[]).length;
+    mockOperation(`Importing ${count} email(s)`, "library", 3, `Imported ${count} email(s) with 2 attachment(s)`);
     return null;
   },
   analyze_inbox: () => mockOperation("Analyzing the inbox", "ai", 6, "Analyzing the inbox: finished", true),

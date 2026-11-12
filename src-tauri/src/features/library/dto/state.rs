@@ -65,7 +65,9 @@ pub enum LibraryFacetDto {
     Year,
     Correspondent,
     Type,
+    Payment,
     Folder,
+    Tax,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]

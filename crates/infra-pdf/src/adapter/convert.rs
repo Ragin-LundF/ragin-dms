@@ -184,3 +184,15 @@ pub(super) fn rebuilt_handle(rebuilt: &pdf::RebuiltFile) -> engine::RebuiltFile 
         source_hash: rebuilt.source_hash.value().to_owned(),
     }
 }
+
+pub(super) fn text_block(block: &pdf::TextBlock) -> crate::TextBlock {
+    match block {
+        pdf::TextBlock::Heading(text) => crate::TextBlock::Heading(text.clone()),
+        pdf::TextBlock::Paragraph(text) => crate::TextBlock::Paragraph(text.clone()),
+        pdf::TextBlock::KeyValueTable(rows) => crate::TextBlock::KeyValueTable(rows.clone()),
+        pdf::TextBlock::Table { header, rows } => {
+            crate::TextBlock::Table { header: header.clone(), rows: rows.clone() }
+        }
+        pdf::TextBlock::Spacer => crate::TextBlock::Spacer,
+    }
+}

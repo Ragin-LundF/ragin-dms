@@ -2,12 +2,13 @@ use chrono::NaiveDate;
 use indexmap::IndexMap;
 
 use crate::DomainError;
-use crate::classification::{SuggestedCategory, SuggestedFolder, SuggestedTag};
+use crate::classification::{EInvoicePart, RequestedAction, SuggestedCategory, SuggestedFolder, SuggestedTag};
 use crate::document::DocumentId;
 use crate::error::require;
 use crate::field::{FieldKey, FieldValue};
 use crate::library::FileNamePolicy;
 use crate::rule::RuleTarget;
+use crate::tax::TaxAssignment;
 use crate::text;
 
 /// What the AI proposes for one document. A suggestion is a value, never applied state: nothing in it reaches
@@ -15,7 +16,9 @@ use crate::text;
 ///
 /// [`Self::target_folder`] is where the document could be filed, with a one-line [`Self::target_reason`];
 /// [`Self::fields`] are values for the library's custom fields; [`Self::rule_notes`] names the rule behind each
-/// part that came from the matching rules instead of the AI.
+/// part that came from the matching rules instead of the AI; [`Self::e_invoice`] the values read from the PDF's
+/// e-invoice. [`Self::tax`] is the tax year and area for a document that matters for a tax return;
+/// [`Self::requested_actions`] what a letter asks the person to do, offered as follow-ups of a case.
 #[derive(Debug, Clone, PartialEq)]
 pub struct ClassificationSuggestion {
     pub document_id: DocumentId,
@@ -32,11 +35,16 @@ pub struct ClassificationSuggestion {
     pub target_reason: Option<String>,
     pub fields: IndexMap<FieldKey, FieldValue>,
     pub rule_notes: IndexMap<RuleTarget, String>,
+    pub tax: Option<TaxAssignment>,
+    pub e_invoice: Vec<EInvoicePart>,
+    pub requested_actions: Vec<RequestedAction>,
 }
 
 impl ClassificationSuggestion {
     /// The model name of suggestions the matching rules made without the AI.
     pub const RULES_MODEL: &'static str = "rules";
+    /// The model name of suggestions made from an e-invoice alone, without the AI.
+    pub const E_INVOICE_MODEL: &'static str = "e-invoice";
 
     /// A suggestion that proposes nothing yet; set the fields, then [`Self::validate`].
     #[must_use]
@@ -56,6 +64,9 @@ impl ClassificationSuggestion {
             target_reason: None,
             fields: IndexMap::new(),
             rule_notes: IndexMap::new(),
+            tax: None,
+            e_invoice: Vec::new(),
+            requested_actions: Vec::new(),
         }
     }
 
@@ -79,6 +90,9 @@ impl ClassificationSuggestion {
         if let Some(folder) = &self.target_folder {
             folder.validate()?;
         }
+        if let Some(tax) = &self.tax {
+            tax.validate()?;
+        }
         self.fields.values().try_for_each(FieldValue::validate)
     }
 
@@ -86,5 +100,13 @@ impl ClassificationSuggestion {
     #[must_use]
     pub fn by_rules(&self) -> bool {
         self.model == Self::RULES_MODEL
+    }
+
+    /// `true` if the AI took part in this suggestion; `false` for the rules and an e-invoice alone.
+    #[must_use]
+    pub fn by_ai(&self) -> bool {
+        let without_e_invoice =
+            self.model.strip_suffix(&format!(" + {}", Self::E_INVOICE_MODEL)).unwrap_or(&self.model);
+        without_e_invoice != Self::RULES_MODEL && without_e_invoice != Self::E_INVOICE_MODEL
     }
 }

@@ -3,7 +3,7 @@
 
 pub mod actions;
 mod attention;
-mod buttons;
+pub(crate) mod buttons;
 pub mod context;
 pub mod groups;
 mod stats;

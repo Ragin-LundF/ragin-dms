@@ -15,4 +15,6 @@ pub enum CatalogRejection {
     FieldNotDefined,
     FieldTypeMismatch,
     LinkNotFound,
+    ContractNotFound,
+    CaseNotFound,
 }

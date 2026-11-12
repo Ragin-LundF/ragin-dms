@@ -1,8 +1,10 @@
+use chrono::NaiveDate;
 use dms_application::port::state::TaskStore;
 use dms_application::port::storage::StorageResult;
 use dms_domain::catalog::CatalogMergeConflict;
 use dms_domain::classification::ClassificationSuggestion;
 use dms_domain::document::DocumentId;
+use dms_domain::expectation::ExpectationSnoozes;
 use dms_domain::task::TaskKey;
 use indexmap::{IndexMap, IndexSet};
 
@@ -13,6 +15,7 @@ pub struct InMemoryTaskStore {
     pub suggestions: Shared<IndexMap<DocumentId, ClassificationSuggestion>>,
     pub conflicts: Shared<Vec<CatalogMergeConflict>>,
     pub dismissed: Shared<IndexSet<TaskKey>>,
+    pub snoozes: Shared<ExpectationSnoozes>,
 }
 
 impl TaskStore for InMemoryTaskStore {
@@ -46,5 +49,14 @@ impl TaskStore for InMemoryTaskStore {
 
     fn dismissed_keys(&self) -> StorageResult<IndexSet<TaskKey>> {
         Ok(self.dismissed.get())
+    }
+
+    fn snooze(&self, key: &TaskKey, until: NaiveDate) -> StorageResult<()> {
+        self.snoozes.update(|snoozes| snoozes.snoozed_until.insert(key.clone(), until));
+        Ok(())
+    }
+
+    fn snoozes(&self) -> StorageResult<ExpectationSnoozes> {
+        Ok(self.snoozes.get())
     }
 }

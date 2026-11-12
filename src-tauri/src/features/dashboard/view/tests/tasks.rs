@@ -235,3 +235,58 @@ fn failed_operations_and_folder_structure() {
     assert_eq!(restructure.title, "41 files without structure in Scans");
     assert_eq!(restructure.buttons[0].action, DashboardAction::Restructure { folder: "Scans".to_owned() });
 }
+
+#[test]
+fn feature_tasks_get_their_rows_and_bills_their_own_buttons() {
+    let day = chrono::NaiveDate::from_ymd_opt(2026, 11, 8).expect("date");
+    let built = dashboard(vec![
+        OpenTask::BillOverdue { document_id: id("d1"), due: day },
+        OpenTask::CaseWaitingTooLong { case_id: dms_domain::cases::CaseId::new("case-1").expect("id"), since: day },
+        OpenTask::DamagedCopy {
+            document_id: id("d1"),
+            folder_id: folder_id(SYNC),
+            source_folder_id: folder_id(PRIMARY),
+        },
+    ]);
+    let view = present(library().catalog(), Some(&built));
+
+    let order: Vec<TaskGroupKind> = view.groups.iter().map(|group| group.group).collect();
+    assert_eq!(order, vec![TaskGroupKind::Bills, TaskGroupKind::Cases, TaskGroupKind::ArchiveHealth]);
+    let bill = only_row(&view, TaskGroupKind::Bills);
+    assert_eq!(bill.title, "Overdue since 2026-11-08: Bills/a.pdf");
+    assert_eq!(labels(&bill.buttons), vec!["Mark as paid", "QR code"]);
+    assert_eq!(labels(&bill.opens), vec!["Open"]);
+    assert_eq!(bill.buttons[0].action, DashboardAction::MarkBillPaid { document_id: "d1".to_owned() });
+    let case = only_row(&view, TaskGroupKind::Cases);
+    assert_eq!(case.title, "No answer yet: case-1");
+    let damaged = only_row(&view, TaskGroupKind::ArchiveHealth);
+    assert_eq!(labels(&damaged.buttons), vec!["Repair from Main…", "Dismiss"]);
+    assert_eq!(damaged.buttons[0].action, DashboardAction::RepairCopy { task_key: format!("damaged:d1:{SYNC}") });
+    assert!(damaged.buttons[0].confirm.is_some(), "a repair trashes a file, so it asks first");
+    assert_eq!(damaged.detail, "Main has an intact copy");
+}
+
+#[test]
+fn a_missing_expected_document_offers_requested_ignore_once_stop_and_a_request_letter() {
+    let expected = dms_domain::expectation::ExpectedDocument {
+        correspondent: "Employer Ltd".to_owned(),
+        category_id: None,
+        expected_on: chrono::NaiveDate::from_ymd_opt(2026, 1, 15).expect("date"),
+        rhythm: dms_domain::expectation::Rhythm::Yearly,
+        first_seen_year: 2021,
+    };
+    let task = OpenTask::ExpectedDocumentMissing(expected);
+    let key = task.key().value().to_owned();
+    let view = present(library().catalog(), Some(&dashboard(vec![task])));
+
+    let row = only_row(&view, TaskGroupKind::ExpectedDocuments);
+
+    assert_eq!(row.title, "Regular document from Employer Ltd expected by 2026-01-15");
+    assert_eq!(row.detail, "Arrived every January since 2021; nothing new so far");
+    assert_eq!(labels(&row.buttons), vec!["Requested", "Ignore once", "Stop expecting…", "Draft request"]);
+    assert_eq!(row.buttons[1].action, DashboardAction::Dismiss { task_key: key.clone() });
+    assert!(row.buttons[2].confirm.is_some());
+    assert!(
+        matches!(&row.buttons[3].action, DashboardAction::DraftRequest { recipient, .. } if recipient == "Employer Ltd")
+    );
+}

@@ -13,12 +13,13 @@ mod error;
 mod files;
 mod fonts;
 mod images;
+mod mail;
 mod ocr;
 mod rebuild;
 #[cfg(test)]
 mod test_support;
 
-pub use document::{DocumentContent, PageChange, PdfDate, PdfMetadata};
+pub use document::{DocumentContent, PageChange, PdfDate, PdfMetadata, TextBlock};
 pub use engine::PdfEngine;
 pub use error::PdfError;
 pub use files::{FileFacts, TEMPORARY_PREFIX};

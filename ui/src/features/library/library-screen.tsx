@@ -173,7 +173,8 @@ function apply(request: LibraryRequest) {
   viewStore.set((state) => {
     const opened = opening(state, request.selection);
     const year = request.year == null ? null : { kind: "year" as const, year: request.year, andEarlier: request.yearAndEarlier ?? false };
-    return { ...opened, query: request.query, filters: year ? withFilter(opened.filters, year) : opened.filters };
+    const filters = [...(year ? [year] : []), ...(request.filters ?? [])].reduce(withFilter, opened.filters);
+    return { ...opened, query: request.query, filters };
   });
   closeQuickLook();
 }

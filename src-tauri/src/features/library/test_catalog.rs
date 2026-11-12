@@ -6,7 +6,9 @@ use dms_domain::catalog::{Catalog, CatalogUpdate, LibraryId};
 use dms_domain::document::{ContentHash, Document, DocumentId};
 use dms_domain::field::{CurrencyCode, Decimal, FieldKey, FieldValue};
 use dms_domain::library::RelativePath;
+use dms_domain::money::Money;
 use dms_domain::settings::CatalogSettings;
+use dms_domain::tax::{TaxArea, TaxAssignment};
 use dms_domain::taxonomy::{Category, CategoryId, TagName};
 
 use super::model::Moment;
@@ -126,6 +128,16 @@ impl DocumentBuilder {
             currency: CurrencyCode::new("EUR").expect("valid currency"),
         };
         self.document.fields.insert(FieldKey::new(key).expect("valid key"), value);
+        self
+    }
+
+    /// Assigns the document to a tax year and area, with a deductible part in euros if given.
+    pub fn tax(&mut self, year: i32, area: TaxArea, deductible: Option<&str>) -> &mut Self {
+        let deductible = deductible.map(|amount| Money {
+            amount: Decimal::parse(amount).expect("valid amount"),
+            currency: CurrencyCode::new("EUR").expect("valid currency"),
+        });
+        self.document.tax = Some(TaxAssignment { year, area, deductible });
         self
     }
 

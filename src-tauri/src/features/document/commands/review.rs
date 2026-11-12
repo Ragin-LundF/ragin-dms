@@ -4,6 +4,8 @@
 use super::wiring;
 use crate::commands::AppState;
 use crate::dto::IpcError;
+use crate::features::cases::commands::apply_review_choice;
+use crate::features::cases::dto::CasesReviewChoiceDto;
 use crate::features::document::dto::{Review, ReviewRowDraft};
 use crate::features::document::view::review::{approval_of, present_review};
 
@@ -24,14 +26,15 @@ pub fn suggestion_review(ctx: AppState<'_>, document_id: String) -> Result<Optio
     Ok(Some(present_review(&catalog, document, &suggestion, wiring::accept_file_names(&ctx))))
 }
 
-/// Applies the checked rows. Returns why the review stays open (a value that does not fit, or a busy library), or
-/// `None` when the approval started and the review closes.
+/// Applies the checked rows, then the case choice if any. Returns why the review stays open (a value that does not
+/// fit, or a busy library), or `None` when the approval started and the review closes.
 #[tauri::command]
 #[specta::specta]
 pub fn approve_review(
     ctx: AppState<'_>,
     document_id: String,
     rows: Vec<ReviewRowDraft>,
+    cases: Option<CasesReviewChoiceDto>,
 ) -> Result<Option<String>, IpcError> {
     let catalog = ctx.require_catalog()?;
     let document = wiring::find_document(&catalog, &document_id)?;
@@ -39,7 +42,11 @@ pub fn approve_review(
         Ok(approval) => approval,
         Err(problem) => return Ok(Some(problem)),
     };
-    match wiring::approve(&ctx, document, approval) {
+    let id = document.id.clone();
+    let then = move |services: &_, catalog: &_| {
+        cases.as_ref().map(|choice| apply_review_choice(services, catalog, &id, choice))
+    };
+    match wiring::approve(&ctx, document, approval, then) {
         Ok(()) => Ok(None),
         Err(error) if error.code == "busy" => Ok(Some(error.message)),
         Err(error) => Err(error),
@@ -62,7 +69,7 @@ pub fn accept_suggestion(ctx: AppState<'_>, document_id: String) -> Result<Optio
         .into_iter()
         .map(|row| ReviewRowDraft { key: row.key, accepted: row.accepted, value: row.value })
         .collect();
-    approve_review(ctx, document_id, rows)
+    approve_review(ctx, document_id, rows, None)
 }
 
 /// "Reject suggestion" in the review; `false` while the library is busy, so the review stays open.

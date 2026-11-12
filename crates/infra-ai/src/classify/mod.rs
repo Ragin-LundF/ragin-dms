@@ -5,7 +5,7 @@ mod naming_convention;
 mod open_ai_compatible_client;
 pub(crate) mod prompt_texts;
 pub(crate) mod suggestion_dto;
-mod suggestion_mapper;
+pub(crate) mod suggestion_mapper;
 mod suggestion_schema;
 
 pub use open_ai_compatible_client::OpenAiCompatibleClient;

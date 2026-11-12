@@ -1,14 +1,16 @@
-import { useState, type ReactNode } from "react";
-import type { LibrarySettingsDto, SettingsStateDto_Serialize } from "../../ipc";
-import { ScreenHeader } from "../../shared/components";
-import { AiSettingsCard } from "./ai/ai-card";
-import { FoldersCard, WelcomeCard } from "./folders-card";
-import { FieldsCard } from "./library/fields-card";
-import { InboxCard } from "./library/inbox-card";
-import { RulesCard } from "./library/rules-card";
-import { useBusyReason, useLibrarySettings, useSettingsState } from "./queries";
-import { ScanningCard } from "./scanning-card";
-import { SECTIONS, SectionList, type SettingsSection } from "./section-list";
+import {type ReactNode, useState} from "react";
+import type {LibrarySettingsDto, SettingsStateDto_Serialize} from "../../ipc";
+import {ScreenHeader} from "../../shared/components";
+import {AiSettingsCard} from "./ai/ai-card";
+import {FoldersCard, WelcomeCard} from "./folders-card";
+import {FieldsCard} from "./library/fields-card";
+import {HealthSettingsCard} from "./health-card";
+import {InboxCard} from "./library/inbox-card";
+import {OwnerCard} from "./library/owner-card";
+import {RulesCard} from "./library/rules-card";
+import {useBusyReason, useLibrarySettings, useSettingsState} from "./queries";
+import {ScanningCard} from "./scanning-card";
+import {SectionList, SECTIONS, type SettingsSection} from "./section-list";
 import "./settings.css";
 
 /**
@@ -61,7 +63,12 @@ function SectionedSettings({ state, busyReason }: { state: SettingsStateDto_Seri
 function card(section: SettingsSection, state: SettingsStateDto_Serialize, library: LibrarySettingsDto | null, busyReason: string | null): ReactNode {
   switch (section) {
     case "folders":
-      return <FoldersCard rows={state.folders} busyReason={busyReason} />;
+      return (
+        <>
+          <FoldersCard rows={state.folders} busyReason={busyReason} />
+          {library && <OwnerCard owner={library.owner} busyReason={busyReason} />}
+        </>
+      );
     case "scanning":
       return <ScanningCard addNewFiles={state.addNewFilesWhileScanning} busyReason={busyReason} />;
     case "inbox":
@@ -70,6 +77,8 @@ function card(section: SettingsSection, state: SettingsStateDto_Serialize, libra
       return library && <FieldsCard settings={library} busyReason={busyReason} />;
     case "rules":
       return library && <RulesCard rules={library.rules} busyReason={busyReason} />;
+    case "health":
+      return <HealthSettingsCard busyReason={busyReason} />;
     case "ai":
       return <AiSettingsCard settings={state.ai} busyReason={busyReason} />;
   }

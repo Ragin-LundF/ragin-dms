@@ -14,6 +14,7 @@ use indexmap::IndexSet;
 use crate::fs::storage_io::{OrIoError, failure};
 use crate::fs::{atomic_files, content_hasher, folder_walk, path_resolver};
 use crate::platform::SystemTrash;
+use crate::scan::CloudPlaceholders;
 
 /// File operations inside one library folder. Never overwrites: an existing entry with the same name, ignoring
 /// case and normalization, is a collision, and a replaced file goes to the trash first.
@@ -136,6 +137,19 @@ impl DocumentStorage for FileSystemDocumentStorage {
         let file = existing_file(&root, path)?;
         let size = fs::metadata(&file).or_io()?.len();
         Ok(FileFacts { size, content_hash: Some(content_hasher::hash(&file).or_io()?) })
+    }
+
+    fn read_local_facts(&self, folder: &LibraryFolder, path: &RelativePath) -> StorageResult<Option<FileFacts>> {
+        let root = root_of(folder)?;
+        let Some(file) = path_resolver::existing(&root, path).filter(|file| file.is_file()) else {
+            let stub = path_resolver::target(&root, path).with_file_name(format!(".{}.icloud", path.file_name()));
+            return if stub.is_file() { Ok(None) } else { Err(failure(StorageFailure::NotFound)) };
+        };
+        let metadata = fs::metadata(&file).or_io()?;
+        if CloudPlaceholders::is_not_downloaded(&metadata) {
+            return Ok(None);
+        }
+        Ok(Some(FileFacts { size: metadata.len(), content_hash: Some(content_hasher::hash(&file).or_io()?) }))
     }
 
     fn same_content(&self, folder: &LibraryFolder, first: &RelativePath, second: &RelativePath) -> StorageResult<bool> {

@@ -18,6 +18,8 @@ dms_application                   use cases (see domain-application.md)
 
 The app runs on **macOS, Windows and Linux**. Browser and mobile targets are out of scope; `npm --prefix ui run dev:mock` runs the UI in a browser with mock data for development only.
 
+2.1 feature areas in `src-tauri/src/features`: `bills` (To pay, payment QR codes, expected documents), `contracts`, `tax`, `cases`, `emergency`, `letters` (the letter dialog other areas open), `health` (the archive check and catalog snapshots), `split` ("Split a stack"), `plain_search` ("Turn into filters"), and `organize` (what the screens of the "Organize" group share, such as badges).
+
 ## Where logic goes
 
 - Anything that derives state from the catalog, the dashboard or other domain types (filters, facets, groups, rows, task texts, counts, statistics, validations with domain rules) is a **presenter** in Rust: a pure function in `features/<area>/view*` that takes the catalog and the view parameters and returns a DTO, unit-tested with a synthetic catalog. React sends its view parameters (selection, filters, query, sort) and renders the DTO.
@@ -43,12 +45,13 @@ The app runs on **macOS, Windows and Linux**. Browser and mobile targets are out
 - After an operation changed the library, `session.changed()` tells the window to reload its queries.
 - `SessionLog` keeps the last lines of what the app did in this session for the log panel. It is not written to disk.
 - `update_preferences` is the one writer of the device preferences (layout, AI settings). Every persisted setting has one writer; the UI never writes settings files.
+- The archive check (`features/health/check.rs`) runs in the `Library` lane. Besides "Check now", the menu and the palette, it starts by itself after the library opened when the schedule says it is due; such a background check pauses 30 ms between two files so the computer stays responsive.
 - A scan with the preference "Add new files while scanning" catalogs new files of the primary in batches while it runs, so the library fills up live; files only the sync folders have are adopted right after the scan.
 
 ## TypeScript rules (`ui`)
 
-- Feature folders: `ui/src/features/<area>` (`dashboard`, `library`, `document` (quick look, details, review, assistant), `inbox`, `settings`, `restructure`, `ask`, `pdf`). Each area has one CSS file and an `index.tsx` that exports what other areas may use.
-- Shell: `ui/src/shell` (app shell, `navigation`, `palette` (⌘K / Ctrl+K), `status` (the status bar with library state, folders online, running operations with progress, Cancel and Log), `toolbar`, `screens.ts` with `goTo`/`takeRequest`). Session state and operations: `ui/src/session`. Shared: `ui/src/shared` (`components`, `format`, `hooks`, `platform.ts`).
+- Feature folders: `ui/src/features/<area>` (`dashboard`, `library`, `document` (quick look, details, review, assistant), `inbox`, `settings` (with the archive health in `settings/health`), `restructure`, `ask`, `pdf`, and from 2.1 `bills`, `contracts`, `tax`, `cases`, `emergency`, `letters`, `split`). Each area has one CSS file and an `index.tsx` that exports what other areas may use.
+- Shell: `ui/src/shell` (app shell, `navigation` with the groups of `NAV_GROUPS` in `screens.ts`: Home, Documents, Organize (To pay, Contracts, Tax years, Cases, Emergency folder), Maintain, `palette` (⌘K / Ctrl+K), `status` (the status bar with library state, folders online, running operations with progress, Cancel and Log), `toolbar`, `screens.ts` with `goTo`/`takeRequest`). Session state and operations: `ui/src/session`. Shared: `ui/src/shared` (`components`, `format`, `hooks`, `platform.ts`).
 - Reads through TanStack Query with keys starting with `LIBRARY_QUERY`, so a finished operation reloads them. Actions are plain command calls with `.catch(reportError)`.
 - Use the shared components first (`shared/components`: buttons, fields, menus, tooltips, dialogs, cards, thumbnails). Confirmations and text input go through the promise-based dialogs (`dialogs.confirm`, `dialogs.askText`).
 - Platform wording and keys come from `shared/platform.ts` (`commandKey`, `shortcutLabel`, `fileManagerName()`): "Show in Finder" on macOS, "Show in Explorer" on Windows, "Show in file manager" on Linux; ⌘ on macOS, Ctrl elsewhere.
@@ -72,14 +75,14 @@ The dashboard is the home screen and the **only place where detected changes bec
 ## The library
 
 - The sidebar holds views (All documents, Inbox, Needs review, Added this month, Folders, Saved views; no Trash, trashed documents are in the system trash), foldable to a rail and resizable. Panel widths are device preferences and go through `update_preferences` only.
-- All filters are facet filters in the library's view parameters, applied only by the library presenter, shown both as tokens in the search field and as facet chips. Type and Needs review cannot be a `DocumentQuery`, so saving or exporting such a view is refused with a reason.
+- All filters are facet filters in the library's view parameters, applied only by the library presenter, shown both as tokens in the search field and as facet chips. Facets: Category, Tag, Year, Correspondent, Type, Payment, Folder, Tax. The Dates and Field filters that "Turn into filters" makes have no facet and show only as tokens. Type and Needs review cannot be a `DocumentQuery`, so saving or exporting such a view is refused with a reason.
 - Documents show grouped in a grid or list, can be ticked for the bulk bar, and open in one quick look. Keys: "/" to search, Space for quick look, arrows for next/previous; every shortcut is also in the Documents menu.
 - Text search runs `SearchContents` after a typing pause while its switch is on; it only reads, so it never waits for a lane.
 - Drag targets are folders (tree, tile, breadcrumb). Every drop target highlights while a document hovers over it and names what the drop will do. A drop that changes nothing does nothing.
 
 ## AI is optional
 
-AI is optional per device (`AiSettings::enabled`, "Use AI" in Settings › AI, sent to the window as `aiEnabled` in the session state). While it is off, no AI feature is shown: Ask in the navigation, the AI band and inbox analysis on the dashboard, the inbox AI actions and their settings, the AI actions of the quick look and the bulk bar, "Convert to real PDF", and the AI actions of the toolbar and the palette. A new AI feature must hide the same way.
+AI is optional per device (`AiSettings::enabled`, "Use AI" in Settings › AI, sent to the window as `aiEnabled` in the session state). While it is off, no AI feature is shown: Ask in the navigation, the AI band and inbox analysis on the dashboard, the inbox AI actions and their settings, the AI actions of the quick look and the bulk bar, "Convert to real PDF", and the AI actions of the toolbar and the palette. Also hidden: "Split a stack", "Turn into filters" (plain words), reading contract terms, and the AI parts of the review. A new AI feature must hide the same way.
 
 ## Errors and feedback
 
@@ -93,7 +96,7 @@ AI is optional per device (`AiSettings::enabled`, "Use AI" in Settings › AI, s
 
 - Light and dark theme following the system setting, Material 3 metrics. Colours, spacing, shapes and the type scale are CSS variables in `ui/src/styles/theme.css`; use them, never hex colours or ad-hoc sizes in components. The type scale is set in Geist, bundled in `ui/src/assets/fonts` with its licence (`geist-OFL.txt`).
 - Icons: Material Icons round (`@material-design-icons/svg/round/<name>.svg?raw` with the shared `Icon`).
-- `--ai-gradient` is only for what the AI does (AI band, AI suggestion card, AI buttons) and the logo.
+- `--ai-gradient` is only for what the AI does (AI band, AI suggestion card, AI buttons) and the logo. `--ai-chip` (with `--ai-chip-border`) marks chips and tokens the AI made.
 - Charts follow fixed rules: a fixed colour order (never cycled), thin marks, a legend with counts, and labels only where they help. Status colours are reserved for states and never used as a chart colour; a state also carries an icon or a label, never colour alone.
 - Short labels (tags, chips, file sizes, folder names) do not wrap and truncate with an ellipsis.
 - Keyboard first: every main action has a shortcut and a menu entry (`menu.rs`: Library, Edit, Documents, View); the review supports approve → next without the mouse. The Edit menu (undo, redo, cut, copy, paste, select all) exists because the webview needs it on macOS; keep ⌘A / Ctrl+A in text fields selecting text and outside them ticking all documents.

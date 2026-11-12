@@ -1,0 +1,31 @@
+/* Contracts and subscriptions (feature 2). */
+
+.contracts-screen { display: flex; flex-direction: column; gap: var(--space-xl); min-height: 100%; }
+.contracts-layout { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: var(--space-l); align-items: start; }
+.contracts-totals { flex-direction: row; align-items: center; gap: var(--space-xl); }
+.contracts-totals > .column { white-space: nowrap; }
+.contracts-change { margin-left: auto; }
+.contracts-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: var(--space-m); }
+
+.contract-card { display: flex; flex-direction: column; gap: var(--space-s); padding: var(--space-l); text-align: left; border: var(--hairline) solid var(--outline-variant); border-radius: var(--shape-xl); background: var(--surface); cursor: pointer; }
+.contract-card:hover { border-color: var(--primary); }
+.contract-card.selected { border-color: var(--primary); box-shadow: 0 0 0 2px var(--primary-container); }
+.contract-card.ended { opacity: 0.7; }
+.contract-logo { display: grid; place-items: center; width: 34px; height: 34px; flex: none; border-radius: var(--shape-m); color: var(--on-primary); font-weight: 700; }
+
+.contract-pill { display: inline-block; padding: 2px var(--space-s); border-radius: 999px; font-size: 11px; font-weight: 600; line-height: 16px; }
+.contract-pill.warning { background: color-mix(in srgb, var(--status-warning) 22%, transparent); color: var(--on-surface); }
+.contract-pill.danger { background: var(--error-container); color: var(--on-error-container); }
+.contract-pill.neutral { background: var(--surface-container); color: var(--on-surface-variant); }
+.contract-pill.good { background: color-mix(in srgb, var(--status-good) 16%, transparent); color: var(--on-surface); }
+
+.contract-detail { display: flex; flex-direction: column; gap: var(--space-l); position: sticky; top: 0; }
+.contract-figures { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-m); }
+.price-chart { display: block; width: 100%; height: auto; }
+.price-chart-axis { stroke: var(--outline-variant); }
+.price-chart-value { font-size: 11px; font-weight: 600; fill: var(--on-surface); }
+.price-chart-day { font-size: 11px; fill: var(--on-surface-variant); }
+.btn-ai { background: var(--ai-gradient); color: var(--on-ai-gradient); border: none; }
+.contract-review-row { padding: var(--space-s) 0; border-bottom: var(--hairline) solid var(--outline-variant); }
+
+.contract-row { display: flex; align-items: center; gap: var(--space-s); flex-wrap: wrap; }

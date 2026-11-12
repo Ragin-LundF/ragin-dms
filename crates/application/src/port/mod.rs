@@ -4,7 +4,9 @@
 pub mod ai;
 pub mod assistant;
 pub mod export;
+pub mod health;
 pub mod index;
+pub mod mail;
 pub mod pdf;
 pub mod plan;
 pub mod sidecar;
@@ -16,7 +18,7 @@ pub mod system;
 mod tests {
     use std::sync::Arc;
 
-    use super::{ai, assistant, export, index, pdf, plan, sidecar, state, storage, system};
+    use super::{ai, assistant, export, health, index, mail, pdf, plan, sidecar, state, storage, system};
 
     /// Every port must work as `Arc<dyn Port>` shared across threads: object safe, `Send` and `Sync`.
     fn shareable<T: ?Sized + Send + Sync>(_: Option<Arc<T>>) {}
@@ -31,8 +33,12 @@ mod tests {
         shareable::<dyn ai::PageLayoutReader>(None);
         shareable::<dyn assistant::DocumentAssistant>(None);
         shareable::<dyn assistant::LibraryAssistant>(None);
+        shareable::<dyn assistant::LetterWriter>(None);
         shareable::<dyn export::ExportWriter>(None);
+        shareable::<dyn health::CatalogSnapshots>(None);
+        shareable::<dyn health::HealthStore>(None);
         shareable::<dyn index::VectorIndex>(None);
+        shareable::<dyn mail::MailConverter>(None);
         shareable::<dyn pdf::OcrTool>(None);
         shareable::<dyn pdf::PdfEditor>(None);
         shareable::<dyn pdf::PdfRebuilder>(None);

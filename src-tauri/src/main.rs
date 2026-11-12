@@ -18,7 +18,7 @@ mod session;
 use std::sync::Arc;
 
 use tauri::Manager;
-use tauri_specta::{Builder, collect_commands, collect_events};
+use tauri_specta::{Builder, ErrorHandlingMode, collect_commands, collect_events};
 
 use crate::session::Session;
 
@@ -72,6 +72,7 @@ fn compose(app: &tauri::App, session: Arc<Session>) -> context::AppContext {
 #[allow(clippy::too_many_lines)] // the list of commands and events, one per line
 fn specta_builder() -> Builder<tauri::Wry> {
     Builder::<tauri::Wry>::new()
+        .error_handling(ErrorHandlingMode::Result)
         .commands(collect_commands![
             // shell
             commands::session::session_state,
@@ -200,6 +201,78 @@ fn specta_builder() -> Builder<tauri::Wry> {
             features::pdf::rebuild_commands::start_rebuild,
             features::pdf::rebuild_commands::rebuild_compare,
             features::pdf::rebuild_commands::choose_rebuild,
+            // letters
+            features::letters::commands::letter_draft,
+            features::letters::commands::letter_save,
+            features::tax::commands::tax_year_view,
+            features::tax::commands::tax_open_year,
+            features::tax::commands::tax_update_item,
+            features::tax::commands::tax_assign,
+            features::tax::commands::tax_document,
+            features::tax::commands::tax_document_choices,
+            features::tax::commands::tax_progress,
+            // bills
+            features::bills::commands::bills_view,
+            features::bills::commands::bills_start_tracking,
+            features::bills::commands::bills_mark_paid,
+            features::bills::commands::bills_mark_unpaid,
+            features::bills::commands::bills_settle_older,
+            features::bills::commands::bills_payment_code,
+            features::bills::commands::bills_document,
+            features::bills::commands::bills_read_e_invoice,
+            features::bills::commands::bills_expected_missing,
+            features::bills::commands::bills_expected_requested,
+            features::bills::commands::bills_expected_stop,
+            // contracts
+            features::contracts::commands::contracts_view,
+            features::contracts::commands::contracts_status,
+            features::contracts::commands::contracts_of_document,
+            features::contracts::commands::contracts_new_form,
+            features::contracts::commands::contracts_save,
+            features::contracts::commands::contracts_end,
+            features::contracts::commands::contracts_delete,
+            features::contracts::commands::contracts_attach,
+            features::contracts::commands::contracts_extract_terms,
+            features::contracts::commands::contracts_accept_price,
+            features::contracts::commands::contracts_accept_terms,
+            // cases
+            features::cases::commands::cases_view,
+            features::cases::commands::cases_of_document,
+            features::cases::commands::cases_document_candidates,
+            features::cases::commands::cases_review,
+            features::cases::commands::cases_create,
+            features::cases::commands::cases_create_from_links,
+            features::cases::commands::cases_add_document,
+            features::cases::commands::cases_remove_document,
+            features::cases::commands::cases_set_status,
+            features::cases::commands::cases_add_note,
+            features::cases::commands::cases_add_follow_up,
+            features::cases::commands::cases_complete_follow_up,
+            features::cases::commands::cases_snooze_follow_up,
+            features::cases::commands::cases_delete,
+            features::cases::commands::cases_file_letter,
+            // features::health (archive health, catalog snapshots)
+            features::health::commands::health_state,
+            features::health::commands::health_check_now,
+            features::health::commands::health_set_schedule,
+            features::health::commands::health_compare_snapshot,
+            features::health::commands::health_restore_snapshot,
+            // emergency folder
+            features::emergency::commands::emergency_state,
+            features::emergency::commands::emergency_edit,
+            features::emergency::commands::emergency_mark_refreshed,
+            features::emergency::commands::emergency_save_overview,
+            features::emergency::commands::emergency_export_zip,
+            features::emergency::commands::emergency_membership,
+            features::emergency::commands::emergency_document_candidates,
+            // email import
+            features::inbox::commands::inbox_import_emails,
+            // smart split
+            features::split::commands::split_propose,
+            features::split::commands::split_apply,
+            features::split::commands::split_inbox_candidates,
+            // plain-word search
+            features::plain_search::commands::plain_search_translate,
         ])
         .events(collect_events![
             events::SessionStateEvent,
@@ -231,8 +304,10 @@ mod tests {
             return;
         }
         let current = std::fs::read_to_string(BINDINGS).unwrap_or_default();
+        // Whitespace is ignored: an IDE that reformats the file on commit (import spacing) does not make it stale.
+        let without_whitespace = |text: &str| text.split_whitespace().collect::<String>();
         assert!(
-            current == generated,
+            without_whitespace(&current) == without_whitespace(&generated),
             "{BINDINGS} is stale: run `UPDATE_BINDINGS=1 cargo test -p ragin-dms-desktop export_bindings`"
         );
     }

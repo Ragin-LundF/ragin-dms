@@ -1,5 +1,6 @@
 mod catalog_details_format;
 mod catalog_fixtures;
+mod catalog_organize_format;
 mod catalog_round_trip;
 mod file_catalog_repository;
 

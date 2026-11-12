@@ -45,6 +45,8 @@ pub struct FolderState {
     pub external: HashMap<ExternalFile, String>,
     /// Creation days the test set; files without one have none, like on file systems without them.
     pub creation_days: HashMap<RelativePath, NaiveDate>,
+    /// Files a sync client keeps only in the cloud: `read_local_facts` does not read them.
+    pub placeholders: HashSet<(LibraryFolderId, RelativePath)>,
 }
 
 impl FolderState {
@@ -303,6 +305,13 @@ impl DocumentStorage for FakeFolders {
         self.check_reachable(folder)?;
         let content = self.state.lock().content(&folder.id, path).ok_or_else(|| failure(StorageFailure::NotFound))?;
         Ok(Self::facts_of(&content))
+    }
+
+    fn read_local_facts(&self, folder: &LibraryFolder, path: &RelativePath) -> StorageResult<Option<FileFacts>> {
+        if self.state.lock().placeholders.contains(&(folder.id.clone(), path.clone())) {
+            return Ok(None);
+        }
+        self.read_facts(folder, path).map(Some)
     }
 
     fn same_content(&self, folder: &LibraryFolder, first: &RelativePath, second: &RelativePath) -> StorageResult<bool> {

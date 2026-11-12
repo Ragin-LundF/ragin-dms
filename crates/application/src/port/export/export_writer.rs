@@ -20,4 +20,25 @@ pub trait ExportWriter: Send + Sync {
     /// # Errors
     /// Fails when the file cannot be written.
     fn write_text(&self, directory: &str, name: &str, text: &str) -> StorageResult<String>;
+
+    /// Writes `content` as a file named `name` into `directory` (a free name is chosen) and returns its location.
+    ///
+    /// # Errors
+    /// Fails when the file cannot be written.
+    fn write_file(&self, directory: &str, name: &str, content: &[u8]) -> StorageResult<String>;
+
+    /// Writes `bundle` and the `extra` files (name, content) into the ZIP file of `target`, every entry encrypted
+    /// with AES-256 under `password`, and returns where it was written. The password is neither kept nor logged.
+    /// The bundle's index is left out.
+    ///
+    /// # Errors
+    /// Fails when a file cannot be read, written or verified.
+    fn write_encrypted_zip(
+        &self,
+        source: &LibraryFolder,
+        bundle: &ExportBundle,
+        extra: &[(String, Vec<u8>)],
+        target: &ExportTarget,
+        password: &str,
+    ) -> StorageResult<String>;
 }

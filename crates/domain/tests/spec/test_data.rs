@@ -83,3 +83,29 @@ impl Applied for Result<CatalogUpdate, DomainError> {
 fn java_hash_code(text: &str) -> i32 {
     text.encode_utf16().fold(0i32, |hash, unit| hash.wrapping_mul(31).wrapping_add(i32::from(unit)))
 }
+
+pub fn decimal(text: &str) -> dms_domain::field::Decimal {
+    dms_domain::field::Decimal::parse(text).expect("valid decimal")
+}
+
+pub fn euro() -> dms_domain::field::CurrencyCode {
+    dms_domain::field::CurrencyCode::new("EUR").expect("valid currency")
+}
+
+pub fn euros(amount: &str) -> dms_domain::money::Money {
+    dms_domain::money::Money { amount: decimal(amount), currency: euro() }
+}
+
+pub fn contract(id: &str, name: &str) -> dms_domain::contract::Contract {
+    dms_domain::contract::Contract::new(
+        dms_domain::contract::ContractId::new(id).expect("valid id"),
+        name,
+        dms_domain::contract::ContractKind::Utility,
+    )
+    .expect("valid contract")
+}
+
+pub fn case(id: &str, title: &str) -> dms_domain::cases::Case {
+    dms_domain::cases::Case::new(dms_domain::cases::CaseId::new(id).expect("valid id"), title, date(2026, 1, 5))
+        .expect("valid case")
+}

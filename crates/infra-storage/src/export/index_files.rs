@@ -4,7 +4,7 @@
 
 use std::fmt::Write as _;
 
-use dms_application::port::export::{ExportBundle, IndexRow};
+use dms_application::port::export::{ExportBundle, IndexRow, MissingItem};
 use dms_domain::text;
 
 const SEPARATOR: &str = ";";
@@ -14,6 +14,19 @@ const FIXED_COLUMNS: [&str; 6] = ["Path", "Title", "Date", "Correspondent", "Cat
 pub fn csv(bundle: &ExportBundle, rows: &[IndexRow]) -> Vec<u8> {
     let mut lines = vec![header(bundle)];
     lines.extend(rows.iter().map(values_of));
+    csv_of(lines)
+}
+
+/// The "Missing items" sheet of a tax export, in the same CSV dialect as the index.
+pub fn missing_items_csv(items: &[MissingItem]) -> Vec<u8> {
+    let mut lines = vec![["Area", "Item", "From", "State", "Note"].map(str::to_owned).to_vec()];
+    lines.extend(items.iter().map(|item| {
+        vec![item.area.clone(), item.label.clone(), item.from.clone(), item.state.clone(), item.note.clone()]
+    }));
+    csv_of(lines)
+}
+
+fn csv_of(lines: Vec<Vec<String>>) -> Vec<u8> {
     let mut text = String::new();
     for line in lines {
         let fields: Vec<String> = line.iter().map(|value| csv_field(value)).collect();

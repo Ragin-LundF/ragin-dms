@@ -1,13 +1,16 @@
 //! The facet filters as tokens of the search field, a saved view's query as tokens that stay, and the tokens the
 //! typed text suggests (Kotlin `FilterTokens`). Tokens and facet chips render the same filters.
 
+use dms_domain::bill::BillStatus;
 use std::collections::HashSet;
 
 use chrono::{Datelike, SecondsFormat};
 use dms_domain::catalog::Catalog;
 use dms_domain::document::{Document, DocumentKind};
+use dms_domain::field::FieldValues;
 use dms_domain::iso_date;
-use dms_domain::query::{DateRange, DocumentQuery};
+use dms_domain::query::{DateRange, DocumentQuery, FieldComparison, FieldCondition};
+use dms_domain::tax::TaxFilter;
 use dms_domain::taxonomy::{CategoryId, TagName};
 use dms_domain::text;
 
@@ -17,6 +20,7 @@ const MIN_TAG_LETTERS: usize = 2;
 const MIN_CORRESPONDENT_LETTERS: usize = 3;
 const MAX_SUGGESTIONS: usize = 3;
 const CATEGORY_SEPARATOR: &str = " › ";
+const DATE_KEY: &str = "date";
 
 /// One condition in the search field, `key: value`; one of a saved view's own conditions has no filter and stays.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -32,23 +36,28 @@ impl FilterToken {
     }
 }
 
-pub fn facet_of(filter: &FacetFilter) -> Facet {
+/// The facet chip of `filter`; dates and field conditions have none and stand only in the search field.
+pub fn facet_of(filter: &FacetFilter) -> Option<Facet> {
     match filter {
-        FacetFilter::Category(_) => Facet::Category,
-        FacetFilter::Tag(_) => Facet::Tag,
-        FacetFilter::Year(_) => Facet::Year,
-        FacetFilter::Correspondent(_) => Facet::Correspondent,
-        FacetFilter::Type(_) => Facet::Type,
-        FacetFilter::Folder(_) => Facet::Folder,
+        FacetFilter::Category(_) => Some(Facet::Category),
+        FacetFilter::Tag(_) => Some(Facet::Tag),
+        FacetFilter::Year(_) => Some(Facet::Year),
+        FacetFilter::Correspondent(_) => Some(Facet::Correspondent),
+        FacetFilter::Type(_) => Some(Facet::Type),
+        FacetFilter::Payment(_) => Some(Facet::Payment),
+        FacetFilter::Folder(_) => Some(Facet::Folder),
+        FacetFilter::Tax(_) => Some(Facet::Tax),
+        FacetFilter::Dates(_) | FacetFilter::Field(_) => None,
     }
 }
 
 pub fn token_of(filter: &FacetFilter, catalog: &Catalog) -> FilterToken {
-    FilterToken {
-        key: facet_of(filter).key().to_owned(),
-        value: value_of(filter, catalog),
-        filter: Some(filter.clone()),
-    }
+    let key = match (facet_of(filter), filter) {
+        (Some(facet), _) => facet.key().to_owned(),
+        (None, FacetFilter::Field(condition)) => field_label(condition, catalog),
+        (None, _) => DATE_KEY.to_owned(),
+    };
+    FilterToken { key, value: value_of(filter, catalog), filter: Some(filter.clone()) }
 }
 
 /// What a facet chip shows while `filter` is active, such as `Home › Energy` or `PDF`.
@@ -60,7 +69,41 @@ pub fn value_of(filter: &FacetFilter, catalog: &Catalog) -> String {
         FacetFilter::Year(year) => year.label(),
         FacetFilter::Correspondent(name) => name.clone(),
         FacetFilter::Type(kind) => kind_label(*kind).to_owned(),
+        FacetFilter::Payment(status) => payment_label(*status).to_owned(),
         FacetFilter::Folder(path) => path.value().to_owned(),
+        FacetFilter::Tax(tax) => tax.label(),
+        FacetFilter::Dates(range) => date_range_label(*range),
+        FacetFilter::Field(condition) => condition_label(condition),
+    }
+}
+
+/// The name of a bill's payment state in the library.
+pub fn payment_label(status: BillStatus) -> &'static str {
+    match status {
+        BillStatus::Open => "Open",
+        BillStatus::Overdue => "Overdue",
+        BillStatus::Paid => "Paid",
+    }
+}
+
+fn field_label(condition: &FieldCondition, catalog: &Catalog) -> String {
+    catalog
+        .settings()
+        .field(&condition.key)
+        .map_or_else(|| condition.key.value().to_owned(), |definition| definition.label.clone())
+}
+
+/// A field condition as people write it: `> 50 EUR`, `contains rent`, `set`.
+fn condition_label(condition: &FieldCondition) -> String {
+    let value = condition.value.as_ref().map(FieldValues::format).unwrap_or_default();
+    match condition.comparison {
+        FieldComparison::Present => "set".to_owned(),
+        FieldComparison::Absent => "not set".to_owned(),
+        FieldComparison::Equals => format!("= {value}"),
+        FieldComparison::Contains => format!("contains {value}"),
+        FieldComparison::LessThan => format!("< {value}"),
+        FieldComparison::GreaterThan => format!("> {value}"),
+        FieldComparison::WithinDays => format!("within {value} days"),
     }
 }
 
@@ -114,6 +157,7 @@ pub fn saved_tokens(query: &DocumentQuery, catalog: &Catalog) -> Vec<FilterToken
         query.added_since.map(|since| {
             FilterToken::fixed("added", format!("since {}", since.to_rfc3339_opts(SecondsFormat::AutoSi, true)))
         }),
+        query.tax.as_ref().map(tax_token),
     ]
     .into_iter()
     .flatten()
@@ -128,6 +172,19 @@ pub fn saved_tokens(query: &DocumentQuery, catalog: &Catalog) -> Vec<FilterToken
         FilterToken::fixed("field", label)
     }));
     tokens
+}
+
+/// A saved view's tax filter: `2025 · Donations`, and the fallback tag where it has one.
+fn tax_token(tax: &TaxFilter) -> FilterToken {
+    let parts: Vec<String> = [
+        tax.year.map(|year| year.to_string()),
+        tax.area.map(|area| area.label().to_owned()),
+        tax.tag_fallback.as_ref().map(|tag| format!("or tagged {}", tag.value())),
+    ]
+    .into_iter()
+    .flatten()
+    .collect();
+    FilterToken::fixed("tax", parts.join(" · "))
 }
 
 /// The tokens the typed text suggests: a known tag, a four-digit year or a correspondent of `documents`, at most
@@ -190,12 +247,16 @@ fn date_token(range: DateRange) -> FilterToken {
     if let Some(year) = year_of(range) {
         return FilterToken::fixed("year", year.label());
     }
+    FilterToken::fixed(DATE_KEY, date_range_label(range))
+}
+
+fn date_range_label(range: DateRange) -> String {
     let end = |date: Option<chrono::NaiveDate>| date.map_or_else(|| "…".to_owned(), iso_date);
-    FilterToken::fixed("date", format!("{} – {}", end(range.from), end(range.to)))
+    format!("{} – {}", end(range.from), end(range.to))
 }
 
 /// The year filter `range` stands for, if it covers exactly one year or ends with one.
-fn year_of(range: DateRange) -> Option<YearFilter> {
+pub fn year_of(range: DateRange) -> Option<YearFilter> {
     let to = range.to?;
     if to.month() != 12 || to.day() != 31 {
         return None;

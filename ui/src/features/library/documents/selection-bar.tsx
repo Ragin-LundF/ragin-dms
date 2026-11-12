@@ -5,14 +5,17 @@ import CLOSE from "@material-design-icons/svg/round/close.svg?raw";
 import DELETE from "@material-design-icons/svg/round/delete.svg?raw";
 import MOVE from "@material-design-icons/svg/round/drive_file_move.svg?raw";
 import OFFER from "@material-design-icons/svg/round/local_offer.svg?raw";
-import { Icon, IconButton, Menu, MenuDivider, MenuItem, ReasonTooltip, useMenuAnchor } from "../../../shared/components";
-import { bulk } from "../state/actions";
-import type { LibraryState } from "../state/queries";
-import { selection } from "../state/selection";
+import RECEIPT from "@material-design-icons/svg/round/receipt_long.svg?raw";
+import {useState} from "react";
+import {TaxAssignDialog} from "../../tax";
+import {Icon, IconButton, Menu, MenuDivider, MenuItem, ReasonTooltip, useMenuAnchor} from "../../../shared/components";
+import {bulk, chosenIds} from "../state/actions";
+import type {LibraryState} from "../state/queries";
+import {selection} from "../state/selection";
 
 /**
- * The floating bar while documents are ticked (Kotlin `SelectionBar`): "N selected · Category · Tag · Move · Tag with
- * AI · Trash… · ×". The library's actions wait for a busy library, "Tag with AI" for a busy AI.
+ * The floating bar while documents are ticked (Kotlin `SelectionBar`): "N selected · Category · Tag · Move · Tax year ·
+ * Tag with AI · Trash… · ×". The library's actions wait for a busy library, "Tag with AI" for a busy AI.
  */
 export function SelectionBar({ state, count, busyReason, aiBusyReason, aiEnabled }: {
   state: LibraryState;
@@ -24,6 +27,7 @@ export function SelectionBar({ state, count, busyReason, aiBusyReason, aiEnabled
   const categories = useMenuAnchor();
   const tags = useMenuAnchor();
   const tagOptions = state.facets.find((entry) => entry.facet === "tag")?.options ?? [];
+  const [taxIds, setTaxIds] = useState<string[] | null>(null);
   return (
     <div className="lib-bulk">
       <span className="nowrap" style={{ fontWeight: 600, paddingRight: 8 }}>{count} selected</span>
@@ -48,6 +52,8 @@ export function SelectionBar({ state, count, busyReason, aiBusyReason, aiEnabled
         </Menu>
       )}
       <BarButton label="Move" icon={MOVE} disabledReason={busyReason} onClick={bulk.move} />
+      <BarButton label="Tax year" icon={RECEIPT} disabledReason={busyReason} onClick={() => setTaxIds(chosenIds())} />
+      {taxIds && <TaxAssignDialog documentIds={taxIds} onClose={() => setTaxIds(null)} />}
       {aiEnabled && <BarButton label="Tag with AI" icon={AUTO} disabledReason={aiBusyReason} ai onClick={bulk.tagWithAi} />}
       <BarButton label="Trash…" icon={DELETE} disabledReason={busyReason} onClick={() => void bulk.trash()} />
       <IconButton icon={CLOSE} label="Clear the selection" onClick={selection.clear} />

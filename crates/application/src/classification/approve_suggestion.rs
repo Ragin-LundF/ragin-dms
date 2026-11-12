@@ -17,7 +17,8 @@ use crate::port::system::{Clock, IdGenerator};
 
 /// Applies the approved parts of a suggestion: renames the file in every folder if a new name was approved and
 /// files it into the approved target folder, in one move, then writes metadata, category and tags to the catalog
-/// in one change and records that the AI classification was confirmed.
+/// in one change and records that the AI classification was confirmed. Standard fields the approved values need
+/// (such as "IBAN") are defined on first use.
 pub struct ApproveSuggestion {
     store: Arc<CatalogStore>,
     tasks: Arc<dyn TaskStore>,
@@ -133,7 +134,7 @@ impl ApproveSuggestion {
             correspondent: approval.correspondent.clone().or_else(|| document.metadata.correspondent.clone()),
         };
         let record = ClassificationRecord {
-            source: if suggestion.by_rules() { ClassificationSource::Rule } else { ClassificationSource::Ai },
+            source: if suggestion.by_ai() { ClassificationSource::Ai } else { ClassificationSource::Rule },
             model: Some(suggestion.model.clone()),
             confirmed_at: self.clock.now(),
         };
@@ -145,8 +146,16 @@ impl ApproveSuggestion {
         let current = applied!(with_category(catalog, document_id, approval.category.as_ref(), new_category_ids)?);
         let current = applied!(current.update_metadata(document_id, metadata)?);
         let current = applied!(current.set_tags(document_id, &tags));
-        let current =
-            if approval.fields.is_empty() { current } else { applied!(current.set_fields(document_id, fields)?) };
+        let current = if approval.fields.is_empty() {
+            current
+        } else {
+            let current = applied!(current.define_standard_fields(approval.fields.keys()));
+            applied!(current.set_fields(document_id, fields)?)
+        };
+        let current = match &approval.tax {
+            Some(tax) => applied!(current.set_tax(document_id, Some(tax.clone()))?),
+            None => current,
+        };
         current.record_classification(document_id, record)
     }
 }

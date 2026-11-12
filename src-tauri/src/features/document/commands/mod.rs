@@ -5,4 +5,4 @@ pub mod assistant;
 pub mod details;
 pub mod quick_look;
 pub mod review;
-mod wiring;
+pub(crate) mod wiring;

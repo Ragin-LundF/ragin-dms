@@ -1,5 +1,7 @@
 //! Reading a document for the AI and for search.
 
+mod e_invoice_content;
+mod eml_mail_converter;
 pub(crate) mod image_content;
 mod office_content;
 
@@ -7,9 +9,12 @@ use std::sync::Arc;
 
 use dms_application::port::ai::{DocumentContent, DocumentContentReader};
 use dms_application::port::state::AiSettings;
+use dms_domain::bill::EInvoice;
 use dms_domain::document::{Document, DocumentKind};
 use dms_domain::library::LibraryFolder;
 use dms_domain::text;
+
+pub use eml_mail_converter::EmlMailConverter;
 
 use super::{LibraryLocations, convert};
 use crate::PdfEngine;
@@ -63,4 +68,14 @@ impl DocumentContentReader for FileContentReader {
         };
         (!text.is_empty()).then_some(text)
     }
+
+    fn read_e_invoice(&self, folder: &LibraryFolder, document: &Document) -> Option<EInvoice> {
+        if document.kind() != DocumentKind::Pdf {
+            return None;
+        }
+        e_invoice_content::read(self.engine, &self.locations.existing(folder, &document.path)?)
+    }
 }
+
+#[cfg(test)]
+pub(crate) use e_invoice_content::parse as parse_e_invoice;

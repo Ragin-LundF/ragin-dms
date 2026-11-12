@@ -3,6 +3,7 @@ import type {
     AttentionSeverity,
     ChartPointDto,
     DashboardAction,
+    DashboardAction_Serialize,
     DashboardButtonDto_Serialize as Button,
     DashboardViewDto_Serialize,
     DuplicateCopyDto_Serialize,
@@ -25,7 +26,7 @@ const DAY = 86_400_000;
 
 type MockTask = { group: TaskGroupKind; row: TaskRowDto_Serialize };
 
-function button(label: string, action: DashboardAction, more: Partial<Button> = {}): Button {
+function button(label: string, action: DashboardAction_Serialize, more: Partial<Button> = {}): Button {
   return { label, icon: null, style: "outlined", disabledReason: null, lane: null, action, confirm: null, ...more };
 }
 
@@ -179,6 +180,82 @@ function initialTasks(): MockTask[] {
         dismiss("restructure:Finance:42"),
       ], []),
     },
+    ...featureTasks(),
+  ];
+}
+
+/** One row per 2.1 feature task, with the buttons Rust gives them. */
+function featureTasks(): MockTask[] {
+  const followUp = "follow-up:case-tax:f-1:2026-11-10";
+  const waiting = "case-waiting:case-objection:2026-10-18";
+  const proposal = "contract-proposal:mobile north";
+  const damaged = `damaged:d-003:${SYNC}`;
+  return [
+    {
+      group: "bills",
+      row: row("bill:bill-dentist:2026-11-08", "Overdue since 2026-11-08: Dentist invoice", "212.75 EUR to Example Dental Practice", [
+        button("Mark as paid", { kind: "markBillPaid", documentId: "bill-dentist" }, { icon: "check", style: "tonal" }),
+        button("QR code", { kind: "showPaymentCode", documentId: "bill-dentist" }, { icon: "qr_code_2" }),
+      ], []),
+    },
+    {
+      group: "expectedDocuments",
+      row: row("expected:employer ltd:salary:2026-10-03", "Salary from Employer Ltd expected around 2026-10-03", "Arrived every month since 2024; nothing new so far", [
+        button("Requested", { kind: "expectedRequested", taskKey: "expected:employer ltd:salary:2026-10-03" }, { icon: "schedule_send", style: "tonal" }),
+        button("Ignore once", { kind: "dismiss", taskKey: "expected:employer ltd:salary:2026-10-03" }),
+        button("Draft request", { kind: "draftRequest", recipient: "Employer Ltd", documentIds: [], subjectFacts: ["Salary expected around 2026-10-03, not received"] }, { icon: "edit_note", style: "text" }),
+      ], []),
+    },
+    {
+      group: "contracts",
+      row: row("contract-cancel:k-internet:2026-11-30", "Cancel Internet 250 by 2026-11-30", "Cancel by then, or the contract renews", [
+        button("Open", { kind: "openContract", contractId: "k-internet", draftLetter: false }, { icon: "arrow_forward", style: "tonal" }),
+        button("Draft cancellation letter", { kind: "openContract", contractId: "k-internet", draftLetter: true }, { icon: "edit_note" }),
+        dismiss("contract-cancel:k-internet:2026-11-30"),
+      ], []),
+    },
+    {
+      group: "contracts",
+      row: row(proposal, "Contract with Mobile North?", "Sends bills regularly", [
+        button("Create contract", { kind: "createContract", correspondent: "Mobile North", documentIds: ["d-001"] }, { icon: "add", style: "tonal" }),
+        button("Dismiss", { kind: "dismissContractProposal", taskKey: proposal }, { style: "text" }),
+      ], []),
+    },
+    {
+      group: "cases",
+      row: row(followUp, "Due 2026-11-10: Tax office asks for receipts", "Send the plumber invoices", [
+        button("Open case", { kind: "openCase", caseId: "case-tax" }, { icon: "arrow_forward", style: "tonal" }),
+        button("Done", { kind: "completeFollowUp", taskKey: followUp }, { icon: "check" }),
+        button("Snooze 7 days", { kind: "snoozeFollowUp", taskKey: followUp }, { style: "text" }),
+      ], []),
+    },
+    {
+      group: "cases",
+      row: row(waiting, "No answer yet: Objection to the service charges", "Waiting for an answer since 2026-10-18", [
+        button("Open case", { kind: "openCase", caseId: "case-objection" }, { icon: "arrow_forward", style: "tonal" }),
+        button("Draft reminder", { kind: "draftReminder", caseId: "case-objection", documentIds: [], recipient: "Sample Housing" }, { icon: "edit_note" }),
+        button("Mark as done", { kind: "closeCase", taskKey: waiting }, { icon: "check" }),
+        dismiss(waiting),
+      ], []),
+    },
+    {
+      group: "archiveHealth",
+      row: row(damaged, "Damaged copy in Cloud: Finance/Bank statement 2026-01.pdf", "Documents has an intact copy", [
+        button("Repair from Documents…", { kind: "repairCopy", taskKey: damaged }, {
+          icon: "healing",
+          style: "tonal",
+          confirm: ask("Repair from Documents", "The damaged copy goes to the trash of Cloud and the intact copy of Documents takes its place. The intact copy is compared with the catalog once more right before.", ["Cloud: Finance/Bank statement 2026-01.pdf"], "Repair"),
+        }),
+        dismiss(damaged),
+      ], []),
+    },
+    {
+      group: "emergencyFolder",
+      row: row("emergency-refresh:2026-11-01", "Emergency folder: refresh due on 2026-11-01", "Check that its documents and contacts are current", [
+        button("Open", { kind: "openScreen", screen: "emergency" }, { icon: "arrow_forward", style: "tonal" }),
+        dismiss("emergency-refresh:2026-11-01"),
+      ], []),
+    },
   ];
 }
 
@@ -217,6 +294,12 @@ const GROUPS: { kind: TaskGroupKind; label: string; icon: string; severity: Atte
   { kind: "catalogMerge", label: "Catalog merge", icon: "merge_type", severity: "soon" },
   { kind: "failedOperations", label: "Failed operations", icon: "sync_problem", severity: "soon" },
   { kind: "restructure", label: "Folder structure", icon: "account_tree", severity: "info" },
+  { kind: "bills", label: "Bills overdue", icon: "payments", severity: "passed" },
+  { kind: "expectedDocuments", label: "Expected but missing", icon: "event_busy", severity: "soon" },
+  { kind: "contracts", label: "Contracts", icon: "autorenew", severity: "soon" },
+  { kind: "cases", label: "Cases", icon: "forum", severity: "soon" },
+  { kind: "archiveHealth", label: "Archive health", icon: "health_and_safety", severity: "soon" },
+  { kind: "emergencyFolder", label: "Emergency folder", icon: "emergency", severity: "info" },
 ];
 const SEVERITY_LABEL: Record<AttentionSeverity, string> = { passed: "Date passed", soon: "Decide soon", info: "To do" };
 const SEVERITY_ORDER: AttentionSeverity[] = ["passed", "soon", "info"];
@@ -410,6 +493,11 @@ const LABELS: Partial<Record<DashboardAction["kind"], string>> = {
   restoreAll: "Restoring files",
   renameAll: "Renaming files to match",
   removeAllDuplicates: "Removing duplicates",
+  dismissContractProposal: "Dismissing the contract proposal",
+  repairCopy: "Repairing the copy",
+  completeFollowUp: "Completing the follow-up",
+  snoozeFollowUp: "Snoozing the follow-up",
+  closeCase: "Closing the case",
 };
 
 const BULK_GROUP: Partial<Record<DashboardAction["kind"], TaskGroupKind>> = {

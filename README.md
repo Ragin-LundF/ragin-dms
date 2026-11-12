@@ -18,7 +18,7 @@ To save you the typing, ragin-dms can suggest titles, categories, tags, dates an
 **your own local AI**, such as LM Studio or Ollama. Your documents are read on your machine and are
 never sent to a cloud service. Every suggestion waits for your approval before anything changes.
 
-Runs on macOS, Windows and Linux. Built with Rust and [Tauri](https://tauri.app); PDFs are read, rendered and
+Runs on macOS (Apple Silicon), Windows and Linux. Built with Rust and [Tauri](https://tauri.app); PDFs are read, rendered and
 written with the bundled [PDFium](https://pdfium.googlesource.com/pdfium/) library. Optional: install
 [OCRmyPDF](https://ocrmypdf.readthedocs.io) for precise OCR of scans.
 
@@ -81,6 +81,28 @@ written with the bundled [PDFium](https://pdfium.googlesource.com/pdfium/) libra
 * Full-text search over the text of every document, including scans the AI has transcribed. The text
   is kept in the hidden `.dms-text/` folder of the library, together with the saved thumbnails.
 
+### Organize
+
+* **To pay**: every unpaid bill by due date, with a payment QR code (GiroCode) and "Mark as paid".
+  E-invoices (ZUGFeRD, Factur-X, XRechnung) inside PDFs are read exactly, also without AI.
+* **Expected documents**: regular documents (salary slips, yearly statements) are learned, and a late one
+  shows on the dashboard.
+* **Contracts**: contracts and subscriptions with their price per month and year, price history and the
+  last day to cancel, reminded 30 days ahead.
+* **Tax years**: a checklist per year of what the tax return needs, with amounts per tax area and an export
+  for the tax adviser.
+* **Cases**: letters about one matter kept together, with follow-ups on the dashboard.
+* **Letters**: cancellations, reminders and requests drafted from your documents (by the AI or from a
+  template) and saved as PDF.
+* **Emergency folder**: the documents, contracts and contacts others would need, as a printable overview
+  and an encrypted ZIP.
+* **Archive health**: every copy is checked against its checksum on a schedule, and damaged copies are
+  repaired from an intact folder. The catalog is kept as dated snapshots that can be restored.
+* **Email import**: `.eml` files become a PDF of the mail plus their attachments, linked. To import a mail
+  from Apple Mail, drag it to the Finder (or into the inbox folder of your library) first, then drop the
+  file onto Ragin-DMS or let the inbox pick it up; dragging a mail straight from Apple Mail onto the app is
+  not supported.
+
 ### Local AI
 
 * Works with any OpenAI-compatible server that needs no API key, such as LM Studio (the default, at
@@ -96,6 +118,8 @@ written with the bundled [PDFium](https://pdfium.googlesource.com/pdfium/) libra
   or create a new one. Renaming to the suggested file name is opt-in.
 * **Classify with AI** and **Tag with AI** process all new or untagged documents in the background.
 * Ask questions about a document in a chat, or let the AI summarize it.
+* **Split stack**: the AI proposes where each document of a scanned pile starts; you check the cuts.
+* **Search in plain words**: a sentence becomes ordinary library filters; unknown names are reported.
 
 ## Modules
 
@@ -124,7 +148,7 @@ files as in version 1.x.
 
 Requires:
 
-* Rust stable (1.90 or newer) via [rustup](https://rustup.rs).
+* Rust stable (1.91 or newer) via [rustup](https://rustup.rs).
 * Node.js LTS with npm.
 * The platform build tools for Tauri (Xcode command line tools, WebView2 and MSVC, or `webkit2gtk-4.1`); see
   the [Tauri prerequisites](https://tauri.app/start/prerequisites/).

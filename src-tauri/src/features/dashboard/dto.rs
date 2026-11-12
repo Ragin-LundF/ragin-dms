@@ -123,6 +123,25 @@ pub enum TaskGroupKind {
     CatalogMerge,
     FailedOperations,
     Restructure,
+    Bills,
+    ExpectedDocuments,
+    Contracts,
+    Cases,
+    ArchiveHealth,
+    EmergencyFolder,
+}
+
+/// A screen of the "Organize" group (and Settings for the archive health) a task row opens; the names match the
+/// window's screens.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub enum DashboardScreenDto {
+    Bills,
+    Contracts,
+    Tax,
+    Cases,
+    Emergency,
+    Settings,
 }
 
 /// The open tasks of one group; `bulk_actions` answer all of them at once.
@@ -205,7 +224,7 @@ pub enum MoveChoice {
 }
 
 /// What a dashboard button does. The window handles the kinds that only navigate or open something (`review`,
-/// `open`, `openDocument`, `openInbox`, `restructure`, `retry`, `findScans`, `exportCalendar`,
+/// `open`, `openDocument`, `openInbox`, `openScreen`, `createContract`, `openContract`, `restructure`, `retry`, `findScans`, `exportCalendar`,
 /// `makeScansSearchable` through the pdf area's `make_all_searchable`); every other kind
 /// goes to `run_dashboard_action`, which finds the task by its key in the current dashboard.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
@@ -225,6 +244,9 @@ pub enum DashboardAction {
         document_id: String,
     },
     OpenInbox,
+    OpenScreen {
+        screen: DashboardScreenDto,
+    },
     Restructure {
         folder: String,
     },
@@ -291,12 +313,79 @@ pub enum DashboardAction {
     AcceptRule {
         task_key: String,
     },
+    /// The window opens the contract editor filled with these.
+    #[serde(rename_all = "camelCase")]
+    CreateContract {
+        correspondent: String,
+        document_ids: Vec<String>,
+    },
+    #[serde(rename_all = "camelCase")]
+    DismissContractProposal {
+        task_key: String,
+    },
+    /// The window shows the contract on the contracts screen, with `draft_letter` its cancellation letter.
+    #[serde(rename_all = "camelCase")]
+    OpenContract {
+        contract_id: String,
+        draft_letter: bool,
+    },
+    /// The cases screen with this case selected; the window handles it.
+    #[serde(rename_all = "camelCase")]
+    OpenCase {
+        case_id: String,
+    },
+    /// The reminder letter of a case; the window opens the letter dialog.
+    #[serde(rename_all = "camelCase")]
+    DraftReminder {
+        case_id: String,
+        document_ids: Vec<String>,
+        recipient: Option<String>,
+    },
+    #[serde(rename_all = "camelCase")]
+    CompleteFollowUp {
+        task_key: String,
+    },
+    #[serde(rename_all = "camelCase")]
+    SnoozeFollowUp {
+        task_key: String,
+    },
+    #[serde(rename_all = "camelCase")]
+    CloseCase {
+        task_key: String,
+    },
+    /// Repairs the damaged copy of a `DamagedCopy` task from its intact source.
+    #[serde(rename_all = "camelCase")]
+    RepairCopy {
+        task_key: String,
+    },
     AnalyzeInbox,
     MakeScansSearchable,
     AdoptAll,
     RestoreAll,
     RenameAll,
     RemoveAllDuplicates,
+    #[serde(rename_all = "camelCase")]
+    MarkBillPaid {
+        document_id: String,
+    },
+    #[serde(rename_all = "camelCase")]
+    ShowPaymentCode {
+        document_id: String,
+    },
+    #[serde(rename_all = "camelCase")]
+    ExpectedRequested {
+        task_key: String,
+    },
+    #[serde(rename_all = "camelCase")]
+    StopExpecting {
+        task_key: String,
+    },
+    #[serde(rename_all = "camelCase")]
+    DraftRequest {
+        recipient: String,
+        document_ids: Vec<String>,
+        subject_facts: Vec<String>,
+    },
 }
 
 /// A recently added document; `subtitle` is "{parent folder or "Top level"} · {category}", `added` the relative

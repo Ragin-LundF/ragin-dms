@@ -4,12 +4,13 @@ use dms_domain::field::FieldKey;
 use dms_domain::iso_date;
 use dms_domain::library::RelativePath;
 use dms_domain::query::{DateRange, DocumentQuery, FieldCondition, SavedSearch, SavedSearchId, TagFilter};
+use dms_domain::tax::TaxFilter;
 use dms_domain::taxonomy::{CategoryId, TagName};
 use indexmap::{IndexMap, IndexSet};
 
 use crate::catalog::dto::settings::{FieldConditionDto, QueryDto, SavedSearchDto};
 use crate::catalog::mapper::field_mapper;
-use crate::enum_names::{self, FIELD_COMPARISONS};
+use crate::enum_names::{self, FIELD_COMPARISONS, TAX_AREAS};
 use crate::instant;
 use crate::yaml::YamlError;
 
@@ -54,6 +55,17 @@ pub fn query_to_dto(query: &DocumentQuery) -> QueryDto {
             .collect(),
         added_since: query.added_since.map(instant::format),
         content_text: query.content_text.clone(),
+        tax_year: query.tax.as_ref().and_then(|tax| tax.year),
+        tax_area: query
+            .tax
+            .as_ref()
+            .and_then(|tax| tax.area)
+            .map(|area| enum_names::name_of(TAX_AREAS, area).to_owned()),
+        tax_tag_fallback: query
+            .tax
+            .as_ref()
+            .and_then(|tax| tax.tag_fallback.as_ref())
+            .map(|tag| tag.value().to_owned()),
         unknown: IndexMap::new(),
     }
 }
@@ -86,7 +98,20 @@ pub fn query_to_domain(query: &QueryDto) -> Result<DocumentQuery, YamlError> {
             .collect::<Result<_, YamlError>>()?,
         added_since: query.added_since.as_deref().map(instant::parse).transpose()?,
         content_text: query.content_text.clone(),
+        tax: tax_of(query)?,
     })
+}
+
+/// The tax filter; `None` when the query sets none of its keys.
+fn tax_of(query: &QueryDto) -> Result<Option<TaxFilter>, YamlError> {
+    if query.tax_year.is_none() && query.tax_area.is_none() && query.tax_tag_fallback.is_none() {
+        return Ok(None);
+    }
+    Ok(Some(TaxFilter {
+        year: query.tax_year,
+        area: query.tax_area.as_deref().map(|area| enum_names::parse(TAX_AREAS, area)).transpose()?,
+        tag_fallback: query.tax_tag_fallback.as_deref().map(TagName::of).transpose()?,
+    }))
 }
 
 pub fn sorted_tags(tags: &IndexSet<TagName>) -> Vec<String> {

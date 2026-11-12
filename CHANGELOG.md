@@ -2,6 +2,136 @@
 
 All notable changes to ragin-dms are listed here.
 
+## 2.1.0
+
+A new "Organize" group in the navigation: To pay, Contracts, Tax years, Cases and Emergency folder. Everything
+there works without AI; with AI switched on, it only adds suggestions you review. Nothing changes in your library
+until you click. Looking at a new tax year shows a preview; it is saved only when you start the checklist.
+
+### Bills to pay
+
+- New "To pay" screen: every unpaid bill by due date, with totals for open, overdue and paid this month. Mark
+  bills as paid, undo, and settle older bills in one step.
+- A payment QR code (GiroCode) for each bill, read by any banking app.
+- E-invoices (ZUGFeRD, Factur-X, XRechnung) inside PDFs are read exactly, also without AI. Their values are
+  marked "E-invoice" in the review.
+- The AI also reads the IBAN and payment reference of a bill. An invalid IBAN is refused in the review.
+- An overdue bill appears once on the dashboard, with "Mark as paid" and "QR code". A paid bill no longer
+  reminds you of its due date.
+- New library filter "Payment": open, overdue or paid bills.
+
+### Expected documents
+
+- The app learns when senders send regular documents and tells you when one is late, for example "Arrived
+  every January since 2021". Answer with Requested (asks again in 14 days), Ignore once, Stop expecting, or
+  Draft request.
+
+### Contracts and subscriptions
+
+- New "Contracts" screen: every contract and subscription with its monthly and yearly price, the total per
+  month and year, and how much more you pay than a year ago.
+- The app proposes contracts from your documents (a cancel-by date, insurance or contract categories, regular
+  bills); create one in a click or dismiss the proposal for good.
+- Enter the term, renewal and notice period, and the app works out the last day to cancel and reminds you
+  30 days ahead on the dashboard.
+- Draft a cancellation letter right from the contract.
+- With AI switched on, the app reads prices and terms from price change letters; you accept each price on its
+  own, and increases are marked in the price history.
+- Quick look shows the contract a document belongs to, or adds it to one.
+
+### Tax years
+
+- A new screen lists what the tax return of a year needs, built from a standard list, last year's tax
+  documents and senders that send every year. Each item shows whether it was found, is still expected or is
+  missing. Mark an item as "I have it", request it with a letter, or mark it as not needed this year.
+- Amounts are added up per tax area.
+- "Send to tax adviser" exports the year as a ZIP grouped by tax area, with a page and a spreadsheet of what is
+  still missing.
+- Documents can be assigned to a tax year and area in the quick look and for many at once from the selection
+  bar. The library has a new "Tax year / area" filter, and the ready-made "Tax" smart folder now uses the tax
+  year (tagged documents still count).
+- With AI on, suggestions for tax documents also propose the tax year, the area and the labour share of
+  craftsmen's bills.
+
+### Cases with follow-ups
+
+- Keep the letters back and forth about one matter together in a case, with its status, the next step, notes
+  and follow-ups. A follow-up shows on the dashboard on its day and can be marked as done or snoozed for
+  7 days. A case that has waited three weeks without an answer appears on the dashboard too, with a button to
+  draft a reminder.
+- When a letter asks you to do something, the AI proposes it as a follow-up with the requested date, along
+  with matching documents from your library. A new letter from someone you have an open case with can be added
+  to that case right in the review.
+- Any document can join a case from its quick look.
+
+### Letters
+
+- Write letters from your documents: a cancellation, objection, reminder, request or reply is drafted for you
+  (by your AI when it is switched on, otherwise from a ready-made template). You edit it and save it as a PDF
+  into the folder of your choice. The letter is filed with its subject, recipient and today's date, put into
+  the category "Letter" if you have one, and linked to the documents it refers to. A letter can start a case
+  or go into one, with a follow-up after a number of days.
+- Your name and address for letters are set once in Settings ("Your details").
+- Text PDFs, such as letters, keep umlauts and the euro sign and can be searched.
+
+### Emergency folder
+
+- Collect the documents, contracts, contacts and notes a partner or relative would need. Switch each one on
+  or off, print an overview or save it into the library, and create an encrypted ZIP (AES-256) with a password
+  for a trusted person. Open it with 7-Zip, Keka or The Unarchiver; the Finder's Archive Utility cannot open
+  encrypted ZIPs of this kind.
+- The app reminds you two weeks before the yearly refresh and marks documents that changed since then.
+
+### Archive health
+
+- Ragin-DMS reads every file in every library folder again and compares it with its stored checksum. It runs
+  weekly by default (or monthly, or off) in the background when the library opens, and you can also start it
+  with "Check now" or from the menu. A check that started on its own steps aside whenever you change something in
+  the library and continues afterwards where it stopped.
+- A damaged copy is repaired from an intact one in another folder; the damaged file goes to the trash. Files
+  your cloud service keeps only online are skipped, never downloaded.
+- The catalog is now kept as a dated snapshot after every change on this device (the last 20, one per day for
+  a month, one per week for a year). You can compare a snapshot with today's catalog and restore it; your files
+  stay untouched.
+
+### Email import
+
+- Import `.eml` files from the inbox ("Import email") or by dropping them onto the window. Each mail becomes a
+  PDF with sender, date and text, and its attachments become documents of their own, linked to the mail.
+- Optionally the inbox converts emails on its own, and the original email file can be kept.
+- Mails dragged straight out of Apple Mail cannot be received; drag them to the Finder or the inbox folder
+  first.
+
+### AI
+
+- Split scanned stacks: the AI proposes where each document in a scanned pile starts. Check the cuts on a page
+  strip, click between two pages to add or remove one, then split. Every part waits for your review with the
+  AI's title, category and sender as a suggestion. Available in quick look and the command palette, and in the
+  inbox for scans with 3 or more pages once you switch that on in Settings › Inbox.
+- Search in plain words: type a sentence such as "Stadtwerke bills 2025 over 50 euros" and choose "Turn into
+  filters" (⌘/Ctrl+Enter). The AI turns it into ordinary filters, marked in violet, that you can see and
+  remove. Names your library doesn't know are reported, never guessed.
+- Both are hidden while "Use AI" is off.
+
+### Catalog
+
+- Contracts, cases, tax years, your details and the emergency folder are stored in the catalog file as new,
+  optional entries. A catalog without them is written exactly as before, and version 2.0 and 1.3 keep the new
+  entries when they save the catalog.
+- When two copies of the catalog disagree about a contract, case, tax year, your details or the emergency
+  folder, the newer one is kept and the difference is listed under "Review catalog merge", as for documents.
+
+### Good to know
+
+- The open tasks and settings of this device keep a few new entries (snoozed expected documents, the
+  e-invoice, tax and follow-up parts of a suggestion, the archive check schedule). Version 2.0 can still read
+  these files, but if 2.0 saves them on the same device, the new entries are lost: snoozes come back and those
+  suggestion parts are gone. Your library and its catalog are not affected.
+- When the AI drafts a letter, it gets the documents' text but not your name or address; the app adds those to
+  the letter itself.
+- The encrypted emergency ZIP hides the content of the files, not their names: whoever has the ZIP can see the
+  file names without the password.
+
 ## 2.0.0
 
 ### Rewritten in Rust and Tauri

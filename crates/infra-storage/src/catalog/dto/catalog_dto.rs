@@ -1,14 +1,19 @@
 use indexmap::IndexMap;
 
+use crate::catalog::dto::case::CaseDto;
+use crate::catalog::dto::contract::ContractDto;
+use crate::catalog::dto::organize::{EmergencyFolderDto, ExpectationDto, OwnerDto};
 use crate::catalog::dto::rule::RuleDto;
 use crate::catalog::dto::settings::{CorrespondentDto, FieldDefinitionDto, LayoutDto, SavedSearchDto};
+use crate::catalog::dto::tax::TaxYearDto;
 use crate::catalog::dto::{CategoryDto, DocumentDto, LinkDto};
 use crate::yaml::{Fields, MapWriter, Node, YamlError};
 
-use super::{extensible, owned_texts, read_list, texts_node};
+use super::{extensible, owned, owned_texts, read_list, texts_node};
 
 /// The catalog file `dms-catalog.yaml`. Everything after `documents` was added in 1.1 as optional fields, so
-/// older versions keep it as unknown fields and older files still load. `NON_EMPTY`.
+/// older versions keep it as unknown fields and older files still load; the same holds for the parts after `links`,
+/// added in 2.1. `NON_EMPTY`.
 #[derive(Debug, Clone, PartialEq)]
 pub struct CatalogDto {
     pub format_version: i32,
@@ -23,12 +28,20 @@ pub struct CatalogDto {
     pub rules: Vec<RuleDto>,
     pub correspondents: Vec<CorrespondentDto>,
     pub layout: Option<LayoutDto>,
+    pub owner: Option<OwnerDto>,
+    pub bills_tracked_since: Option<String>,
+    pub dismissed_contract_proposals: Vec<String>,
+    pub expectations: Vec<ExpectationDto>,
+    pub emergency_folder: Option<EmergencyFolderDto>,
+    pub contracts: Vec<ContractDto>,
+    pub cases: Vec<CaseDto>,
+    pub tax_years: Vec<TaxYearDto>,
     pub unknown: IndexMap<String, Node>,
 }
 
 extensible!(CatalogDto);
 
-const KNOWN: [&str; 12] = [
+const KNOWN: [&str; 20] = [
     "formatVersion",
     "libraryId",
     "revision",
@@ -41,6 +54,14 @@ const KNOWN: [&str; 12] = [
     "tags",
     "documents",
     "links",
+    "owner",
+    "billsTrackedSince",
+    "dismissedContractProposals",
+    "expectations",
+    "emergencyFolder",
+    "contracts",
+    "cases",
+    "taxYears",
 ];
 
 impl CatalogDto {
@@ -60,6 +81,14 @@ impl CatalogDto {
             rules: read_list(fields, "rules", RuleDto::read)?,
             correspondents: read_list(fields, "correspondents", CorrespondentDto::read)?,
             layout: fields.get("layout").map(LayoutDto::read).transpose()?,
+            owner: fields.get("owner").map(OwnerDto::read).transpose()?,
+            bills_tracked_since: owned(fields.opt_text("billsTrackedSince")?),
+            dismissed_contract_proposals: owned_texts(fields, "dismissedContractProposals")?,
+            expectations: read_list(fields, "expectations", ExpectationDto::read)?,
+            emergency_folder: fields.get("emergencyFolder").map(EmergencyFolderDto::read).transpose()?,
+            contracts: read_list(fields, "contracts", ContractDto::read)?,
+            cases: read_list(fields, "cases", CaseDto::read)?,
+            tax_years: read_list(fields, "taxYears", TaxYearDto::read)?,
             unknown: fields.unknown(&KNOWN),
         })
     }
@@ -78,6 +107,14 @@ impl CatalogDto {
             .non_empty_list("tags", texts_node(&self.tags))
             .non_empty_list("documents", self.documents.iter().map(DocumentDto::write).collect())
             .non_empty_list("links", self.links.iter().map(LinkDto::write).collect())
+            .opt_node("owner", self.owner.as_ref().map(OwnerDto::write))
+            .non_empty_text("billsTrackedSince", self.bills_tracked_since.as_deref())
+            .non_empty_list("dismissedContractProposals", texts_node(&self.dismissed_contract_proposals))
+            .non_empty_list("expectations", self.expectations.iter().map(ExpectationDto::write).collect())
+            .opt_node("emergencyFolder", self.emergency_folder.as_ref().map(EmergencyFolderDto::write))
+            .non_empty_list("contracts", self.contracts.iter().map(ContractDto::write).collect())
+            .non_empty_list("cases", self.cases.iter().map(CaseDto::write).collect())
+            .non_empty_list("taxYears", self.tax_years.iter().map(TaxYearDto::write).collect())
             .unknown(&self.unknown)
             .build()
     }

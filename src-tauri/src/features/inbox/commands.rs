@@ -2,6 +2,7 @@
 #![allow(clippy::needless_pass_by_value)] // Tauri hands command arguments over by value
 
 use dms_application::common::OperationOutcome;
+use dms_application::mail::EmailSource;
 use dms_domain::catalog::Catalog;
 use dms_domain::document::DocumentId;
 use dms_domain::library::RelativePath;
@@ -89,4 +90,18 @@ fn name_of(catalog: &Catalog, id: &DocumentId) -> String {
 
 fn parse_document_id(value: String) -> Result<DocumentId, IpcError> {
     DocumentId::new(value).map_err(|error| IpcError::invalid(error.to_string()))
+}
+
+/// "Import email": turns the inbox's `.eml` documents into a PDF of the mail plus its attachments, linked; the mail
+/// file goes to the trash unless the inbox keeps the originals.
+#[tauri::command]
+#[specta::specta]
+pub fn inbox_import_emails(ctx: AppState<'_>, document_ids: Vec<String>) -> Result<(), IpcError> {
+    let ids = document_ids.into_iter().map(parse_document_id).collect::<Result<Vec<_>, _>>()?;
+    let sources: Vec<EmailSource> = ids.into_iter().map(EmailSource::Document).collect();
+    perform(&ctx, &format!("Importing {} email(s)", sources.len()), Lane::Library, move |app, _| {
+        app.import_emails(services(app)?, &sources);
+        app.analyze_inbox_if_automatic();
+        Ok(())
+    })
 }

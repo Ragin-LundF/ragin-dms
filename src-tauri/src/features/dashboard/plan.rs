@@ -4,6 +4,7 @@
 
 use dms_application::library::Dashboard;
 use dms_application::resolution::{DuplicatePreference, MoveDecision};
+use dms_domain::cases::{CaseId, CaseStatus, FollowUpId};
 use dms_domain::catalog::Catalog;
 use dms_domain::change::{DetectedChange, MissingFile, MovedFile, NewFile};
 use dms_domain::document::{Document, DocumentId};
@@ -16,6 +17,9 @@ use super::view::context::TaskContext;
 use super::view::groups;
 use crate::dto::IpcError;
 use crate::session::Lane;
+
+/// How far "Snooze 7 days" moves a follow-up.
+const SNOOZE_DAYS: u16 = 7;
 
 /// One call of a use case, with the domain values it takes. Each variant names its use case.
 #[derive(Debug, Clone, PartialEq)]
@@ -48,6 +52,16 @@ pub enum Call {
     SettleRetention(Vec<DocumentId>),
     /// `services.organize.accept_rule_proposal.run(&proposal)`
     AcceptRuleProposal(RuleProposal),
+    /// `services.organize.dismiss_contract_proposal.run(&correspondent)`
+    DismissContractProposal(String),
+    /// `services.cases.complete_follow_up.run(&case_id, &follow_up_id)`
+    CompleteFollowUp { case_id: CaseId, follow_up_id: FollowUpId },
+    /// `services.cases.snooze_follow_up.run(&case_id, &follow_up_id, days)`
+    SnoozeFollowUp { case_id: CaseId, follow_up_id: FollowUpId, days: u16 },
+    /// `services.cases.set_case_status.run(&case_id, status)`
+    SetCaseStatus { case_id: CaseId, status: CaseStatus },
+    /// `services.sync.repair_copy.run(&document_id, &folder_id, &source_folder_id, true)`
+    RepairCopy { document_id: DocumentId, folder_id: LibraryFolderId, source_folder_id: LibraryFolderId },
 }
 
 /// One item of a run over many: its name in progress and log, the call, and the change it resolves.
@@ -112,7 +126,45 @@ pub fn plan(action: &DashboardAction, dashboard: &Dashboard, catalog: &Catalog) 
         | DashboardAction::RestoreAll
         | DashboardAction::RenameAll
         | DashboardAction::RemoveAllDuplicates => plan_bulk(action, dashboard, &context),
+        DashboardAction::CompleteFollowUp { .. }
+        | DashboardAction::SnoozeFollowUp { .. }
+        | DashboardAction::CloseCase { .. } => plan_case(action, dashboard),
+        DashboardAction::DismissContractProposal { .. } | DashboardAction::RepairCopy { .. } => {
+            plan_feature(action, dashboard, &context)
+        }
         _ => plan_resolution(action, dashboard, &context),
+    }
+}
+
+/// Completing or snoozing a follow-up, closing a case.
+fn plan_case(action: &DashboardAction, dashboard: &Dashboard) -> Result<ActionPlan, IpcError> {
+    let find = |key: &str| task(dashboard, key);
+    match action {
+        DashboardAction::CompleteFollowUp { task_key } => {
+            let OpenTask::FollowUpDue { case_id, follow_up_id, .. } = find(task_key)? else { return Err(wrong_task()) };
+            let call = Call::CompleteFollowUp { case_id: case_id.clone(), follow_up_id: follow_up_id.clone() };
+            Ok(ActionPlan::one("Completing the follow-up".to_owned(), call, None, None))
+        }
+        DashboardAction::SnoozeFollowUp { task_key } => {
+            let OpenTask::FollowUpDue { case_id, follow_up_id, .. } = find(task_key)? else { return Err(wrong_task()) };
+            let call = Call::SnoozeFollowUp {
+                case_id: case_id.clone(),
+                follow_up_id: follow_up_id.clone(),
+                days: SNOOZE_DAYS,
+            };
+            Ok(ActionPlan::one(
+                "Snoozing the follow-up".to_owned(),
+                call,
+                Some(format!("Snoozed for {SNOOZE_DAYS} days")),
+                None,
+            ))
+        }
+        DashboardAction::CloseCase { task_key } => {
+            let OpenTask::CaseWaitingTooLong { case_id, .. } = find(task_key)? else { return Err(wrong_task()) };
+            let call = Call::SetCaseStatus { case_id: case_id.clone(), status: CaseStatus::Done };
+            Ok(ActionPlan::one("Closing the case".to_owned(), call, Some("Marked the case as done".to_owned()), None))
+        }
+        _ => Err(IpcError::invalid("The window handles this action itself")),
     }
 }
 
@@ -247,6 +299,43 @@ fn plan_resolution(
                 format!("Adding the rule for {}", proposal.correspondent),
                 Call::AcceptRuleProposal(proposal.clone()),
                 Some(format!("Documents of {} now get the rule's values proposed", proposal.correspondent)),
+                None,
+            ))
+        }
+        _ => Err(IpcError::invalid("The window handles this action itself")),
+    }
+}
+
+/// Answering a task of a 2.1 feature: a contract proposal, a damaged copy.
+fn plan_feature(
+    action: &DashboardAction,
+    dashboard: &Dashboard,
+    context: &TaskContext<'_>,
+) -> Result<ActionPlan, IpcError> {
+    let find = |key: &str| task(dashboard, key);
+    match action {
+        DashboardAction::DismissContractProposal { task_key } => {
+            let OpenTask::ReviewContractProposal(proposal) = find(task_key)? else { return Err(wrong_task()) };
+            Ok(ActionPlan::one(
+                "Dismissing the contract proposal".to_owned(),
+                Call::DismissContractProposal(proposal.correspondent.clone()),
+                Some(format!("No contract is proposed for {} again", proposal.correspondent)),
+                None,
+            ))
+        }
+        DashboardAction::RepairCopy { task_key } => {
+            let OpenTask::DamagedCopy { document_id, folder_id, source_folder_id } = find(task_key)? else {
+                return Err(wrong_task());
+            };
+            let (path, folder) = (context.document_path(document_id), context.folder_name(folder_id));
+            Ok(ActionPlan::one(
+                format!("Repairing {path}"),
+                Call::RepairCopy {
+                    document_id: document_id.clone(),
+                    folder_id: folder_id.clone(),
+                    source_folder_id: source_folder_id.clone(),
+                },
+                Some(format!("Repaired the copy of {path} in {folder}")),
                 None,
             ))
         }

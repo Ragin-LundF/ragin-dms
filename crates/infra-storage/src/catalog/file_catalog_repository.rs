@@ -68,7 +68,7 @@ impl CatalogRepository for FileCatalogRepository {
     }
 }
 
-fn read_catalog(file: &Path) -> StorageResult<Catalog> {
+pub(crate) fn read_catalog(file: &Path) -> StorageResult<Catalog> {
     Ok(catalog_mapper::to_domain(&read_dto(file)?)?)
 }
 

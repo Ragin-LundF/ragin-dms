@@ -1,0 +1,1 @@
+Transcribe all text you can read on this scanned page, top to bottom, line by line. Keep umlauts, ß, numbers and dates exactly. Never correct or guess. Answer only with the text; answer nothing if the page is empty.

@@ -1,11 +1,13 @@
 use indexmap::IndexMap;
 
+use crate::catalog::dto::tax::TaxAssignmentDto;
 use crate::catalog::dto::{ClassificationDto, FieldValueDto, RetentionDto};
 use crate::yaml::{Fields, MapWriter, Node, YamlError};
 
 use super::{extensible, owned, owned_texts, texts_node};
 
-/// One document. Dates are ISO-8601 strings, so the file reads the same on every device. `NON_EMPTY`.
+/// One document. Dates are ISO-8601 strings, so the file reads the same on every device. `tax` was added in 2.1.
+/// `NON_EMPTY`.
 #[derive(Debug, Clone, PartialEq)]
 pub struct DocumentDto {
     pub id: String,
@@ -22,12 +24,13 @@ pub struct DocumentDto {
     pub fields: IndexMap<String, FieldValueDto>,
     pub note: Option<String>,
     pub retention: Option<RetentionDto>,
+    pub tax: Option<TaxAssignmentDto>,
     pub unknown: IndexMap<String, Node>,
 }
 
 extensible!(DocumentDto);
 
-const KNOWN: [&str; 14] = [
+const KNOWN: [&str; 15] = [
     "id",
     "path",
     "contentHash",
@@ -42,6 +45,7 @@ const KNOWN: [&str; 14] = [
     "note",
     "retention",
     "classification",
+    "tax",
 ];
 
 impl DocumentDto {
@@ -62,6 +66,7 @@ impl DocumentDto {
             fields: read_field_values(fields, "fields")?,
             note: owned(fields.opt_text("note")?),
             retention: fields.get("retention").map(RetentionDto::read).transpose()?,
+            tax: fields.get("tax").map(TaxAssignmentDto::read).transpose()?,
             unknown: fields.unknown(&KNOWN),
         })
     }
@@ -81,6 +86,7 @@ impl DocumentDto {
             .non_empty_map("fields", write_field_values(&self.fields))
             .non_empty_text("note", self.note.as_deref())
             .opt_node("retention", self.retention.as_ref().map(RetentionDto::write))
+            .opt_node("tax", self.tax.as_ref().map(TaxAssignmentDto::write))
             .opt_node("classification", self.classification.as_ref().map(ClassificationDto::write))
             .unknown(&self.unknown)
             .build()

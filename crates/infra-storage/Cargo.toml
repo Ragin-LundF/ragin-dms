@@ -13,8 +13,8 @@ indexmap.workspace = true
 uuid.workspace = true
 unicode-normalization.workspace = true
 saphyr-parser = "0.3"
-sha2 = "0.10"
-zip = { version = "4", default-features = false, features = ["deflate"] }
+sha2 = "0.11"
+zip = { version = "9.5", default-features = false, features = ["deflate", "aes-crypto"] }
 notify = "8.2"
 trash = "5.3"
 

@@ -5,8 +5,12 @@ use dms_application::port::state::AiSettings;
 use crate::assistant::{OpenAiAssistant, OpenAiLibraryAssistant};
 use crate::classify::OpenAiCompatibleClient;
 use crate::client::{ANTHROPIC_KEY_VARIABLE, ChatTransport};
+use crate::contract::OpenAiContractTermsReader;
 use crate::embedding::OpenAiEmbeddings;
+use crate::letter::OpenAiLetterWriter;
+use crate::query::OpenAiQueryTranslator;
 use crate::rebuild::AiPageLayoutReader;
+use crate::split::OpenAiSplitProposer;
 
 /// The AI settings of this device, read for every request, so a change in Settings applies to the next one.
 pub type SettingsSource = Arc<dyn Fn() -> AiSettings + Send + Sync>;
@@ -21,6 +25,10 @@ pub struct AiAdapters {
     pub library_assistant: OpenAiLibraryAssistant,
     pub embeddings: OpenAiEmbeddings,
     pub layout_reader: AiPageLayoutReader,
+    pub letter_writer: OpenAiLetterWriter,
+    pub contract_terms_reader: OpenAiContractTermsReader,
+    pub split_proposer: OpenAiSplitProposer,
+    pub query_translator: OpenAiQueryTranslator,
 }
 
 impl AiAdapters {
@@ -42,6 +50,10 @@ impl AiAdapters {
             assistant: OpenAiAssistant::new(Arc::clone(&transport)),
             library_assistant: OpenAiLibraryAssistant::new(Arc::clone(&transport)),
             embeddings: OpenAiEmbeddings::new(Arc::clone(&transport)),
+            letter_writer: OpenAiLetterWriter::new(Arc::clone(&transport)),
+            contract_terms_reader: OpenAiContractTermsReader::new(Arc::clone(&transport)),
+            split_proposer: OpenAiSplitProposer::new(Arc::clone(&transport)),
+            query_translator: OpenAiQueryTranslator::new(Arc::clone(&transport)),
             layout_reader: AiPageLayoutReader::new(transport),
         }
     }

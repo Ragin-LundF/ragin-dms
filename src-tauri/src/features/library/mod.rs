@@ -7,4 +7,4 @@ pub mod model;
 pub mod view;
 
 #[cfg(test)]
-mod test_catalog;
+pub mod test_catalog;

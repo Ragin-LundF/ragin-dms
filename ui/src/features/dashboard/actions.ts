@@ -1,12 +1,12 @@
 import {useQuery} from "@tanstack/react-query";
 import {
-    commands,
-    type DashboardAction,
-    type DashboardButtonDto_Serialize,
-    type DashboardViewDto_Serialize,
-    IpcFailure,
-    type TaskGroupKind,
-    unwrap,
+  commands,
+  type DashboardAction,
+  type DashboardButtonDto_Serialize,
+  type DashboardViewDto_Serialize,
+  IpcFailure,
+  type TaskGroupKind,
+  unwrap,
 } from "../../ipc";
 import {busyIn, LIBRARY_QUERY, reportError, type SessionState, sessionStore} from "../../session/session";
 import {operations} from "../../session/operations";
@@ -14,9 +14,12 @@ import {dialogs, waitFor} from "../../shared/components";
 import {chooseFolder} from "../../shared/platform";
 import {createStore, useStore} from "../../shared/store";
 import {goTo} from "../../shell/screens";
+import {markPaid, openPaymentCode, openRequestLetter} from "../bills";
+import {createContract, openContract} from "../contracts";
 import {openReview} from "../document";
 import {openDocument} from "../library/navigation";
 import {openRestructure} from "../restructure/navigation";
+import {draftCaseLetter, openCase} from "../cases";
 
 export type DashboardView = DashboardViewDto_Serialize;
 export type DashboardButton = DashboardButtonDto_Serialize;
@@ -63,6 +66,12 @@ export async function runAction(action: DashboardAction): Promise<void> {
       return openDocument(action.documentId);
     case "openInbox":
       return goTo("inbox");
+    case "openScreen":
+      return goTo(action.screen);
+    case "createContract":
+      return createContract(action.correspondent, action.documentIds);
+    case "openContract":
+      return openContract(action.contractId, action.draftLetter);
     case "restructure":
       return openRestructure(action.folder);
     case "retry":
@@ -73,6 +82,20 @@ export async function runAction(action: DashboardAction): Promise<void> {
       return exportCalendar();
     case "makeScansSearchable":
       return makeScansSearchable();
+    case "markBillPaid":
+      return markPaid(action.documentId);
+    case "showPaymentCode":
+      return openPaymentCode(action.documentId);
+    case "expectedRequested":
+      return unwrap(commands.billsExpectedRequested(action.taskKey)).then(() => undefined, reportUnlessBusy);
+    case "stopExpecting":
+      return unwrap(commands.billsExpectedStop(action.taskKey)).then(() => undefined, reportUnlessBusy);
+    case "draftRequest":
+      return openRequestLetter(action.recipient, action.documentIds, action.subjectFacts);
+    case "openCase":
+      return openCase(action.caseId);
+    case "draftReminder":
+      return draftCaseLetter({ caseId: action.caseId, documentIds: action.documentIds, recipient: action.recipient ?? null });
     default:
       return unwrap(commands.runDashboardAction(action)).then(() => undefined, reportUnlessBusy);
   }

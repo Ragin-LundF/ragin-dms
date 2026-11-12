@@ -11,6 +11,8 @@ use dms_domain::{iso_date, text};
 use crate::export::ExportOptions;
 use crate::port::export::{ExportBundle, ExportEntry, IndexRow};
 
+const NOT_ASSIGNED: &str = "Not assigned";
+
 /// Lays out an export: the path of every file in the bundle and the index. Pure. Names stay unique the way
 /// case-insensitive file systems compare them; a clash gets a ` (2)` suffix.
 pub struct ExportPlanner;
@@ -26,7 +28,9 @@ impl ExportPlanner {
         let placed: Vec<(&Document, String)> = sorted
             .into_iter()
             .map(|document| {
-                let folder = if options.flatten {
+                let folder = if let Some(year) = options.tax_year {
+                    tax_folder_of(document, year)
+                } else if options.flatten {
                     RelativePath::root()
                 } else {
                     document.path.parent().unwrap_or_else(RelativePath::root)
@@ -48,8 +52,16 @@ impl ExportPlanner {
                 .index
                 .then(|| placed.iter().map(|(document, target)| row_of(document, target, catalog, zone)).collect()),
             field_labels: definitions.iter().map(|definition| definition.label.clone()).collect(),
+            files: Vec::new(),
+            missing_items: None,
         }
     }
+}
+
+/// The folder of the document's tax area in `year`; documents assigned to no or another year go to "Not assigned".
+fn tax_folder_of(document: &Document, year: i32) -> RelativePath {
+    let label = document.tax.as_ref().filter(|tax| tax.year == year).map_or(NOT_ASSIGNED, |tax| tax.area.label());
+    RelativePath::of(label).expect("invariant: area labels are valid folder names")
 }
 
 fn name_of(document: &Document, options: ExportOptions) -> String {

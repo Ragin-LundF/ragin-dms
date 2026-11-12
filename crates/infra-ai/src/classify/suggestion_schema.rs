@@ -1,7 +1,19 @@
 use serde_json::{Map, Value, json};
 
-const NULLABLE_TEXT: [&str; 8] =
-    ["title", "category", "documentDate", "correspondent", "fileName", "transcription", "targetFolder", "targetReason"];
+const NULLABLE_TEXT: [&str; 12] = [
+    "title",
+    "category",
+    "documentDate",
+    "correspondent",
+    "fileName",
+    "transcription",
+    "targetFolder",
+    "targetReason",
+    "taxArea",
+    "deductible",
+    "iban",
+    "paymentReference",
+];
 
 /// The JSON schema of the answer, sent as `response_format`, so the server constrains the model to valid JSON.
 /// Strict mode needs every property listed as required; "not known" is `null`.
@@ -26,7 +38,26 @@ pub(crate) fn suggestion_schema() -> Value {
         }),
     );
     properties.insert("targetFolderIsNew".into(), json!({"type": ["boolean", "null"]}));
-    let required: Vec<&str> =
-        NULLABLE_TEXT.into_iter().chain(["tags", "confidence", "targetFolderIsNew", "fields", "pages"]).collect();
+    properties.insert("taxYear".into(), json!({"type": ["integer", "null"]}));
+    properties.insert(
+        "requestedActions".into(),
+        json!({
+            "type": "array",
+            "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                    "text": {"type": "string"},
+                    "dueDate": {"type": ["string", "null"]},
+                    "references": {"type": "array", "items": {"type": "string"}},
+                },
+                "required": ["text", "dueDate", "references"],
+            },
+        }),
+    );
+    let required: Vec<&str> = NULLABLE_TEXT
+        .into_iter()
+        .chain(["tags", "confidence", "targetFolderIsNew", "fields", "pages", "taxYear", "requestedActions"])
+        .collect();
     json!({"type": "object", "additionalProperties": false, "properties": properties, "required": required})
 }

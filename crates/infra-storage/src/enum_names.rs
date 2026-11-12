@@ -1,11 +1,18 @@
 //! The Kotlin enum constant names the files store, per Rust enum.
 
 use dms_application::port::state::{ActivityKind, AiProvider};
+use dms_domain::cases::{CaseStatus, EntryDirection};
+use dms_domain::contract::{ContractKind, NoticeUnit};
 use dms_domain::document::ClassificationSource;
+use dms_domain::emergency::EmergencyGroup;
+use dms_domain::expectation::ExpectationMode;
 use dms_domain::field::{FieldRole, FieldType};
+use dms_domain::health::HealthSchedule;
 use dms_domain::library::FolderRole;
+use dms_domain::money::BillingPeriod;
 use dms_domain::query::FieldComparison;
 use dms_domain::rule::RuleOrigin;
+use dms_domain::tax::{TaxArea, TaxItemState};
 
 use crate::yaml::YamlError;
 
@@ -45,6 +52,10 @@ pub const FOLDER_ROLES: &Names<FolderRole> = &[(FolderRole::Primary, "PRIMARY"),
 
 pub const AI_PROVIDERS: &Names<AiProvider> = &[(AiProvider::Local, "LOCAL"), (AiProvider::Anthropic, "ANTHROPIC")];
 
+/// 2.1 names, camelCase like the other 2.1 enums.
+pub const HEALTH_SCHEDULES: &Names<HealthSchedule> =
+    &[(HealthSchedule::Off, "off"), (HealthSchedule::Weekly, "weekly"), (HealthSchedule::Monthly, "monthly")];
+
 pub const ACTIVITY_KINDS: &Names<ActivityKind> = &[
     (ActivityKind::DocumentAdded, "DOCUMENT_ADDED"),
     (ActivityKind::DocumentMoved, "DOCUMENT_MOVED"),
@@ -62,6 +73,65 @@ pub const ACTIVITY_KINDS: &Names<ActivityKind> = &[
     (ActivityKind::Exported, "EXPORTED"),
     (ActivityKind::PdfEdited, "PDF_EDITED"),
 ];
+
+// The enums added in 2.1 are written in camelCase, like the rest of the new keys.
+
+pub const CONTRACT_KINDS: &Names<ContractKind> = &[
+    (ContractKind::Utility, "utility"),
+    (ContractKind::Telecom, "telecom"),
+    (ContractKind::Insurance, "insurance"),
+    (ContractKind::Subscription, "subscription"),
+    (ContractKind::Membership, "membership"),
+    (ContractKind::Loan, "loan"),
+    (ContractKind::Other, "other"),
+];
+
+pub const BILLING_PERIODS: &Names<BillingPeriod> = &[
+    (BillingPeriod::Monthly, "monthly"),
+    (BillingPeriod::Quarterly, "quarterly"),
+    (BillingPeriod::HalfYearly, "halfYearly"),
+    (BillingPeriod::Yearly, "yearly"),
+];
+
+pub const NOTICE_UNITS: &Names<NoticeUnit> =
+    &[(NoticeUnit::Days, "days"), (NoticeUnit::Weeks, "weeks"), (NoticeUnit::Months, "months")];
+
+pub const TAX_AREAS: &Names<TaxArea> = &[
+    (TaxArea::Income, "income"),
+    (TaxArea::PensionInsurance, "pensionInsurance"),
+    (TaxArea::HouseholdServices, "householdServices"),
+    (TaxArea::Donations, "donations"),
+    (TaxArea::HealthCosts, "healthCosts"),
+    (TaxArea::WorkExpenses, "workExpenses"),
+    (TaxArea::CapitalIncome, "capitalIncome"),
+    (TaxArea::Rental, "rental"),
+    (TaxArea::Other, "other"),
+];
+
+pub const TAX_ITEM_STATES: &Names<TaxItemState> = &[
+    (TaxItemState::Found, "found"),
+    (TaxItemState::Expected, "expected"),
+    (TaxItemState::Missing, "missing"),
+    (TaxItemState::NotNeeded, "notNeeded"),
+];
+
+pub const CASE_STATUSES: &Names<CaseStatus> =
+    &[(CaseStatus::Open, "open"), (CaseStatus::Waiting, "waiting"), (CaseStatus::Done, "done")];
+
+pub const ENTRY_DIRECTIONS: &Names<EntryDirection> =
+    &[(EntryDirection::Received, "received"), (EntryDirection::Sent, "sent")];
+
+pub const EMERGENCY_GROUPS: &Names<EmergencyGroup> = &[
+    (EmergencyGroup::Contacts, "contacts"),
+    (EmergencyGroup::Insurance, "insurance"),
+    (EmergencyGroup::Accounts, "accounts"),
+    (EmergencyGroup::Contracts, "contracts"),
+    (EmergencyGroup::Personal, "personal"),
+    (EmergencyGroup::Other, "other"),
+];
+
+pub const EXPECTATION_MODES: &Names<ExpectationMode> =
+    &[(ExpectationMode::Off, "off"), (ExpectationMode::Keep, "keep")];
 
 /// `name` of the Kotlin enum constant.
 pub fn name_of<T: PartialEq + Copy>(names: &Names<T>, value: T) -> &'static str {

@@ -3,9 +3,11 @@
 
 use chrono::{DateTime, Datelike, NaiveDate, TimeDelta, TimeZone, Utc};
 use chrono_tz::Tz;
+use dms_domain::bill::BillStatus;
 use dms_domain::document::DocumentKind;
 use dms_domain::library::RelativePath;
-use dms_domain::query::SavedSearchId;
+use dms_domain::query::{DateRange, FieldCondition, SavedSearchId};
+use dms_domain::tax::TaxArea;
 use dms_domain::taxonomy::{CategoryId, TagName};
 
 /// A view of the sidebar (Kotlin `LibrarySelection` as the library stores it): "All documents" is the root folder.
@@ -30,8 +32,32 @@ pub enum FacetFilter {
     /// The documents from this correspondent, ignoring case.
     Correspondent(String),
     Type(DocumentKind),
+    /// The bills that are open, overdue or paid.
+    Payment(BillStatus),
     /// The folder with everything below it.
     Folder(RelativePath),
+    /// The documents assigned to a tax year, or to one area of it.
+    Tax(TaxFacet),
+    /// Document dates in this range, as "Turn into filters" makes it from a sentence.
+    Dates(DateRange),
+    /// A condition on a custom field, as "Turn into filters" makes it from a sentence.
+    Field(FieldCondition),
+}
+
+/// A tax year, or one of its areas.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct TaxFacet {
+    pub year: i32,
+    pub area: Option<TaxArea>,
+}
+
+impl TaxFacet {
+    pub fn label(self) -> String {
+        match self.area {
+            Some(area) => format!("{} · {}", self.year, area.label()),
+            None => self.year.to_string(),
+        }
+    }
 }
 
 /// Documents of one `year`, or of that year and every earlier one (Kotlin `YearFilterModel`).
@@ -54,11 +80,22 @@ pub enum Facet {
     Year,
     Correspondent,
     Type,
+    Payment,
     Folder,
+    Tax,
 }
 
 impl Facet {
-    pub const ALL: [Facet; 6] = [Self::Category, Self::Tag, Self::Year, Self::Correspondent, Self::Type, Self::Folder];
+    pub const ALL: [Facet; 8] = [
+        Self::Category,
+        Self::Tag,
+        Self::Year,
+        Self::Correspondent,
+        Self::Type,
+        Self::Payment,
+        Self::Folder,
+        Self::Tax,
+    ];
 
     /// The start of the filter's token in the search field, as in `from: Sample Utility`.
     pub fn key(self) -> &'static str {
@@ -68,7 +105,9 @@ impl Facet {
             Self::Year => "year",
             Self::Correspondent => "from",
             Self::Type => "type",
+            Self::Payment => "payment",
             Self::Folder => "folder",
+            Self::Tax => "tax",
         }
     }
 }

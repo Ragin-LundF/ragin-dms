@@ -4,7 +4,7 @@ use std::hash::Hash;
 use indexmap::{IndexMap, IndexSet};
 
 use crate::DomainError;
-use crate::catalog::{Catalog, CatalogMergeConflict, CatalogMergeResult};
+use crate::catalog::{Catalog, CatalogMergeConflict, CatalogMergeResult, CatalogRecords};
 use crate::document::{Document, DocumentId};
 use crate::error::require;
 use crate::library::RelativePath;
@@ -12,6 +12,7 @@ use crate::link::DocumentLink;
 use crate::rule::Correspondent;
 use crate::settings::CatalogSettings;
 use crate::taxonomy::{Category, CategoryId};
+use crate::text;
 
 /// Merges two copies of the same catalog, for example the copies of two library folders, or a conflict copy a
 /// sync client created when two devices saved at the same time.
@@ -22,7 +23,11 @@ use crate::taxonomy::{Category, CategoryId};
 /// and the decision is reported as a conflict.
 ///
 /// Links are merged as a union of pairs. Field definitions, saved searches and rules are merged per id like
-/// categories; correspondents are a union by name; the newer copy's layout wins.
+/// categories; correspondents are a union by name; the newer copy's layout wins. Contracts, cases and tax years are
+/// merged per id (tax years per year) and the owner and the emergency folder as a whole, the newer copy's version
+/// winning with a reported conflict, or the older's where the newer has none. Bills are tracked since the earlier
+/// of both days; dismissed contract proposals are a union, expectations a union by sender and category with the
+/// newer copy winning.
 pub struct CatalogMerger;
 
 impl CatalogMerger {
@@ -39,7 +44,8 @@ impl CatalogMerger {
         let settings = merge_settings(newer.settings(), older.settings(), &mut conflicts);
         let tags = newer.tags().iter().chain(older.tags()).cloned().collect();
         let links = merge_links(newer.links(), older.links(), &documents);
-        let merged = newer.with_parts(documents, categories, tags, links, settings);
+        let records = merge_records(newer.records(), older.records(), &mut conflicts);
+        let merged = newer.with_parts(documents, categories, tags, links, settings, records);
         if &merged == newer {
             return Ok(CatalogMergeResult { catalog: newer.clone(), conflicts });
         }
@@ -142,7 +148,92 @@ fn merge_settings(
         rules,
         correspondents: merge_correspondents(&newer.correspondents, &older.correspondents),
         layout: newer.layout.clone(),
+        owner: newer_or_older(newer.owner.as_ref(), older.owner.as_ref(), conflicts, |kept, discarded| {
+            CatalogMergeConflict::OwnerDiffers { kept, discarded }
+        }),
+        bills_tracked_since: match (newer.bills_tracked_since, older.bills_tracked_since) {
+            (Some(first), Some(second)) => Some(first.min(second)),
+            (first, second) => first.or(second),
+        },
+        dismissed_contract_proposals: union_by_key(
+            &newer.dismissed_contract_proposals,
+            &older.dismissed_contract_proposals,
+            |name| text::lowercase(text::trim(name)),
+        ),
+        expectations: union_by_key(
+            &newer.expectations,
+            &older.expectations,
+            crate::expectation::ExpectationOverride::key,
+        ),
+        emergency_folder: newer_or_older(
+            newer.emergency_folder.as_ref(),
+            older.emergency_folder.as_ref(),
+            conflicts,
+            |kept, discarded| CatalogMergeConflict::EmergencyFolderDiffers { kept, discarded },
+        ),
     }
+}
+
+/// Contracts, cases and tax years per id: the newer copy's entries, then the older copy's it lacks.
+fn merge_records(
+    newer: &CatalogRecords,
+    older: &CatalogRecords,
+    conflicts: &mut Vec<CatalogMergeConflict>,
+) -> CatalogRecords {
+    CatalogRecords {
+        contracts: union_reported(&newer.contracts, &older.contracts, conflicts, |kept, discarded| {
+            CatalogMergeConflict::ContractDiffers { kept, discarded }
+        }),
+        cases: union_reported(&newer.cases, &older.cases, conflicts, |kept, discarded| {
+            CatalogMergeConflict::CaseDiffers { kept, discarded }
+        }),
+        tax_years: union_reported(&newer.tax_years, &older.tax_years, conflicts, |kept, discarded| {
+            CatalogMergeConflict::TaxYearDiffers { kept, discarded }
+        }),
+    }
+}
+
+/// The newer copy's entries, then the older copy's it lacks; an entry both hold differently is reported.
+fn union_reported<K: Clone + Eq + Hash, V: Clone + PartialEq>(
+    newer: &IndexMap<K, V>,
+    older: &IndexMap<K, V>,
+    conflicts: &mut Vec<CatalogMergeConflict>,
+    conflict: impl Fn(V, V) -> CatalogMergeConflict,
+) -> IndexMap<K, V> {
+    let mut merged = newer.clone();
+    for (key, value) in older {
+        match newer.get(key) {
+            Some(kept) if kept != value => conflicts.push(conflict(kept.clone(), value.clone())),
+            Some(_) => {}
+            None => {
+                merged.insert(key.clone(), value.clone());
+            }
+        }
+    }
+    merged
+}
+
+/// The newer copy's value, or the older's where the newer has none; two different values are reported.
+fn newer_or_older<V: Clone + PartialEq>(
+    newer: Option<&V>,
+    older: Option<&V>,
+    conflicts: &mut Vec<CatalogMergeConflict>,
+    conflict: impl Fn(V, V) -> CatalogMergeConflict,
+) -> Option<V> {
+    match (newer, older) {
+        (Some(kept), Some(discarded)) if kept != discarded => {
+            conflicts.push(conflict(kept.clone(), discarded.clone()));
+            Some(kept.clone())
+        }
+        (Some(kept), _) => Some(kept.clone()),
+        (None, other) => other.cloned(),
+    }
+}
+
+/// The newer copy's entries, then the older copy's whose key the newer lacks; no conflicts.
+fn union_by_key<K: Eq + Hash, V: Clone>(newer: &[V], older: &[V], key: impl Fn(&V) -> K) -> Vec<V> {
+    let known: HashSet<K> = newer.iter().map(&key).collect();
+    newer.iter().chain(older.iter().filter(|entry| !known.contains(&key(entry)))).cloned().collect()
 }
 
 /// The newer copy's entries in their order, then the older copy's entries it lacks; clashes reported.

@@ -40,6 +40,7 @@ impl TestLibrary {
             self.journal.clone(),
             self.activity_log.clone(),
             self.clock.clone(),
+            self.health.clone(),
         )
     }
 

@@ -30,3 +30,12 @@
 .settings-field-error .field > label { color: var(--error); }
 /* The field line keeps the two spaces before its brackets, as Compose shows them. */
 .settings-keep-spaces { white-space: pre-wrap; }
+
+.health-layout { display: flex; gap: var(--space-xl); align-items: flex-start; }
+.health-summary { width: 240px; flex: none; align-items: center; text-align: center; }
+.health-ring { width: 120px; height: 120px; }
+.health-ring-count { font-size: 20px; font-weight: 600; fill: var(--on-surface); }
+.health-ring-label { font-size: 10px; fill: var(--on-surface-variant); }
+.health-folder-row, .health-finding, .health-snapshot { display: flex; align-items: center; gap: var(--space-m); padding: var(--space-s) 0; border-bottom: var(--hairline) solid var(--outline-variant); }
+.health-folder-row:last-child, .health-finding:last-child, .health-snapshot:last-child { border-bottom: 0; }
+.health-pill { padding: 2px var(--space-s); border-radius: 99px; font-size: 11px; font-weight: 600; color: var(--on-surface); }

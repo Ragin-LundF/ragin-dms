@@ -49,6 +49,9 @@
   /* Everything the AI does, and the logo; nothing else uses it, so it reads as "AI". */
   --ai-gradient: linear-gradient(135deg, #4338ca, #7c3aed, #db2777);
   --on-ai-gradient: #ffffff;
+  /* Filter chips the AI made from a sentence: a light violet that says "AI" without the full gradient. */
+  --ai-chip: #f5f3ff;
+  --ai-chip-border: #c4b5fd;
 
   /* Chart series: a colour-blind-safe order, used in this order, never cycled. */
   --chart-1: #2a78d6;
@@ -149,6 +152,8 @@
     --chart-2: #d95926;
     --chart-3: #199e70;
     --chart-4: #c98500;
+    --ai-chip: #2e2547;
+    --ai-chip-border: #6d5bb8;
   }
 }
 

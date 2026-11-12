@@ -2,4 +2,4 @@
 
 pub mod model;
 
-pub use model::{CatalogSettings, InboxSettings, LibraryLayout};
+pub use model::{CatalogSettings, InboxSettings, LibraryLayout, OwnerDetails};

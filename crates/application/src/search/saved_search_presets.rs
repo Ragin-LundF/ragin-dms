@@ -1,17 +1,16 @@
 use chrono::{Datelike, NaiveDate};
 use dms_domain::field::{Decimal, FieldPresets, FieldValue};
-use dms_domain::query::{
-    DateRange, DocumentQuery, FieldComparison, FieldCondition, SavedSearch, SavedSearchId, TagFilter,
-};
+use dms_domain::query::{DocumentQuery, FieldComparison, FieldCondition, SavedSearch, SavedSearchId};
+use dms_domain::tax::TaxFilter;
 use dms_domain::taxonomy::TagName;
-use indexmap::IndexSet;
 
 use crate::port::system::IdGenerator;
 
 const DUE_DAYS: &str = "30";
 
 /// The smart folders a library starts with: "Untagged", "Uncategorized", the tax documents of the current year,
-/// and what is due in the next 30 days.
+/// and what is due in the next 30 days. The tax documents are the ones assigned to the year, and those without a
+/// tax assignment that carry the tax tag and are dated in the year.
 pub struct SavedSearchPresets;
 
 impl SavedSearchPresets {
@@ -27,8 +26,7 @@ impl SavedSearchPresets {
             (
                 format!("Tax {}", today.year()),
                 DocumentQuery {
-                    tags: TagFilter { all: IndexSet::from([tax_tag.clone()]), ..TagFilter::default() },
-                    dates: Some(DateRange::year(today.year()).expect("invariant: a calendar year")),
+                    tax: Some(TaxFilter { year: Some(today.year()), area: None, tag_fallback: Some(tax_tag.clone()) }),
                     ..DocumentQuery::default()
                 },
             ),

@@ -7,6 +7,7 @@ use dms_domain::library::{LibraryFolderId, LibraryFolders};
 use indexmap::IndexSet;
 
 use crate::common::{LibrarySnapshot, OperationOutcome};
+use crate::health::CatalogSnapshotKeeper;
 use crate::port::state::SettingsRepository;
 use crate::port::storage::{CatalogLoad, CatalogRepository, StorageFailure};
 use crate::sync::{Replication, Replicator};
@@ -19,10 +20,13 @@ use crate::sync::{Replication, Replicator};
 /// When another device saved a newer catalog into the primary in the meantime, the primary refuses the save. The
 /// store then merges that catalog into its own, publishes the merge, applies the edit once more on top and saves
 /// again.
+///
+/// After every successful save it keeps a snapshot of the catalog in the app data directory.
 pub struct CatalogStore {
     settings: Arc<dyn SettingsRepository>,
     catalogs: Arc<dyn CatalogRepository>,
     replicator: Arc<Replicator>,
+    snapshots: Arc<CatalogSnapshotKeeper>,
     commit_lock: Mutex<()>,
     state: Mutex<State>,
 }
@@ -39,8 +43,16 @@ impl CatalogStore {
         settings: Arc<dyn SettingsRepository>,
         catalogs: Arc<dyn CatalogRepository>,
         replicator: Arc<Replicator>,
+        snapshots: Arc<CatalogSnapshotKeeper>,
     ) -> Self {
-        Self { settings, catalogs, replicator, commit_lock: Mutex::new(()), state: Mutex::new(State::default()) }
+        Self {
+            settings,
+            catalogs,
+            replicator,
+            snapshots,
+            commit_lock: Mutex::new(()),
+            state: Mutex::new(State::default()),
+        }
     }
 
     /// The catalog of the open library, or `None` while none is open.
@@ -123,6 +135,7 @@ impl CatalogStore {
             Replication::PrimaryFailed(error) => OperationOutcome::StorageFailed(error),
             Replication::Done { pending_folders, .. } => {
                 set_catalog(&mut self.state(), catalog.clone());
+                self.snapshots.keep(&catalog);
                 OperationOutcome::Done { catalog, pending_folders }
             }
         }

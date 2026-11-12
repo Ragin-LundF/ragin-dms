@@ -2,13 +2,19 @@ import {useEffect} from "react";
 import {useQuery} from "@tanstack/react-query";
 import {commands} from "../ipc";
 import {AskScreen} from "../features/ask";
+import {BillsDialogs, BillsScreen} from "../features/bills";
+import {CaseDialogs, CasesScreen} from "../features/cases";
+import {ContractsScreen} from "../features/contracts";
 import {DashboardScreen, TasksScreen} from "../features/dashboard";
 import {DocumentDialogs} from "../features/document";
+import {EmergencyScreen} from "../features/emergency";
 import {InboxScreen} from "../features/inbox";
 import {LibraryScreen} from "../features/library";
 import {PdfDialogs} from "../features/pdf";
 import {RestructureScreen} from "../features/restructure";
+import {SplitDialog} from "../features/split";
 import {SettingsScreen} from "../features/settings";
+import {TaxScreen} from "../features/tax";
 import {operations} from "../session/operations";
 import {LIBRARY_QUERY, type SessionState, useSession} from "../session/session";
 import {DialogHost, Spinner} from "../shared/components";
@@ -35,7 +41,7 @@ export function AppShell() {
       <NavigationSidebar
         screen={nav.screen}
         hidden={state.aiEnabled ? [] : ["ask"]}
-        counts={counts.data ?? { inbox: 0, tasks: 0 }}
+        counts={counts.data ?? { inbox: 0, tasks: 0, toPay: 0, cases: 0 }}
         // The library needs the width for its own sidebar, so the navigation is a rail there.
         collapsed={nav.collapsed || nav.screen === "library"}
         onToggleCollapsed={() => navigation.set((current) => ({ ...current, collapsed: !current.collapsed }))}
@@ -76,6 +82,9 @@ function OpenLibraryContent({ screen }: { screen: Screen }) {
       <CommandPalette />
       <DocumentDialogs />
       <PdfDialogs />
+      <BillsDialogs />
+      <CaseDialogs />
+      <SplitDialog />
       <ScreenToolbar screen={screen} />
       <div className="screen-body">
         {screen === "dashboard" && <DashboardScreen />}
@@ -83,6 +92,11 @@ function OpenLibraryContent({ screen }: { screen: Screen }) {
         {screen === "tasks" && <TasksScreen />}
         {screen === "library" && <LibraryScreen />}
         {screen === "ask" && <AskScreen />}
+        {screen === "bills" && <BillsScreen />}
+        {screen === "contracts" && <ContractsScreen />}
+        {screen === "tax" && <TaxScreen />}
+        {screen === "cases" && <CasesScreen />}
+        {screen === "emergency" && <EmergencyScreen />}
         {screen === "restructure" && <RestructureScreen />}
         {screen === "settings" && <SettingsScreen />}
       </div>

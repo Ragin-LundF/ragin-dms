@@ -10,4 +10,4 @@ pub use catalog_merge_conflict::CatalogMergeConflict;
 pub use catalog_merger::CatalogMerger;
 pub use catalog_rejection::CatalogRejection;
 pub use catalog_update::CatalogUpdate;
-pub use model::{Catalog, CatalogMergeResult, CatalogRevision, LibraryId};
+pub use model::{Catalog, CatalogMergeResult, CatalogRecords, CatalogRevision, LibraryId};

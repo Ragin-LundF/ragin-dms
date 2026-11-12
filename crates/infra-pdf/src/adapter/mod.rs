@@ -11,7 +11,7 @@ mod pdfium_rebuilder;
 
 use std::path::PathBuf;
 
-pub use content::{FileContentReader, SettingsSource};
+pub use content::{EmlMailConverter, FileContentReader, SettingsSource};
 pub use file_previewer::FilePreviewer;
 pub use locations::LibraryLocations;
 pub use ocr_tool::OcrMyPdfTool;
@@ -21,13 +21,15 @@ pub use pdfium_rebuilder::PdfiumRebuilder;
 use crate::{OcrMyPdf, PdfEngine};
 
 /// The PDF adapters for one device: the editor, the installed OCR program, if any, the rebuild, whose results wait
-/// in `rebuild_directory` in the app's own data, the thumbnails and the document reader for the AI and search.
+/// in `rebuild_directory` in the app's own data, the thumbnails, the document reader for the AI and search, and the
+/// email reader.
 pub struct PdfAdapters {
     pub editor: PdfiumEditor,
     pub ocr: OcrMyPdfTool,
     pub rebuilder: PdfiumRebuilder,
     pub previewer: FilePreviewer,
     pub reader: FileContentReader,
+    pub mail: EmlMailConverter,
 }
 
 impl PdfAdapters {
@@ -40,6 +42,7 @@ impl PdfAdapters {
             rebuilder: PdfiumRebuilder::new(engine, rebuild_directory),
             previewer: FilePreviewer::new(engine),
             reader: FileContentReader::new(engine, settings),
+            mail: EmlMailConverter::default(),
         }
     }
 }

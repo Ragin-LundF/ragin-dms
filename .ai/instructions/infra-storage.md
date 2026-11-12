@@ -16,7 +16,8 @@ This crate handles the user's real documents. A bug here loses data that may exi
 | `text` | `FileTextStore` for `.dms-text/<xx>/<documentId>.txt`. |
 | `sidecar` | `sidecar_paths`, the one rule for where a per-document file lives (see below); `FilePreviewStore` (saved thumbnails); `FileSidecarLayout` (moves the flat 1.x layout into subfolders, the `.layout` marker). |
 | `state` | Local state in the app data directory: `FileOperationJournal`, `FileTaskStore`, `FileActivityLog`, `FileSettingsRepository`, with their mappers. DTOs in `state::dto`. |
-| `export` | `FileExportWriter` (copies an export bundle into a folder or a zip outside the library) and `index_files` (the CSV and HTML index). |
+| `export` | `FileExportWriter` (copies an export bundle into a folder or a zip outside the library, optionally AES-256 encrypted, and reads every entry back to compare it, with the password for an encrypted ZIP) and `index_files` (the CSV and HTML index, and `missing_items_csv` for the missing items of a tax export; the PDF of that list comes from `PdfEditor::text_document_bytes`). |
+| `health` | The archive check state of this device in the app data directory: `FileHealthStore` (`health.yaml`, the last check's report) and `FileCatalogSnapshots` (`snapshots/<library-id>/<UTC timestamp>-r<revision>.yaml`). |
 | `index` | `FileVectorIndex`: the embedding vectors per document for Ask (`.dms-index/<xx>/<documentId>.vec`, Java `DataOutput` format). |
 | `plan` | `FilePlanStore`: the restructure records in `.dms-plans/`, replicated, so a restructure can be reversed. |
 | `watch` | `FileSystemFolderWatcher` (`notify`): tells the app that a library folder changed on disk, so it can scan. |
@@ -52,7 +53,10 @@ The app runs on macOS, Windows and Linux, and one library is often spread over f
 - Unknown fields are preserved, not dropped, and keep their order, so a newer version of the tool does not lose data when an older one saves on another device.
 - The catalog stores **relative NFC paths only**. Folder locations are per-device settings and never go into the catalog.
 - Never trust the catalog over the disk: the scanner compares both and reports differences; it does not "fix" either side.
+- Keys new in 2.1, all omitted when empty, so a 2.0 catalog is written byte-identical: in the root `owner`, `billsTrackedSince`, `dismissedContractProposals`, `expectations`, `emergencyFolder`, `contracts`, `cases`, `taxYears`; per document `tax`; in the inbox settings `proposeSplits`, `convertEmails`, `keepEmailOriginals`; per saved search `taxYear`, `taxArea`, `taxTagFallback`. The fixture `tests/fixtures/catalog/catalog-2.1.yaml` holds them all.
 - The same compatibility rule applies to every other file this crate writes (settings, tasks, activity, journal, scan cache, plans, `.vec`, export index): version 1.x and 2.x share their format. Deliberate 2.0 exception: the per-document files moved into subfolders (see below).
+- 2.1 additions to the local state: `tasks.yaml` keys `fields`, `eInvoice`, `tax`, `requestedActions` (per suggestion) and `snoozed`; whether version 1.3 keeps them when it saves is unverified (they are per device, so a loss costs only suggestions and snoozes). `settings.yaml` writes `healthCheck` only when it is not `Weekly`, the default.
+- `health.yaml` and `snapshots/` are new in 2.1 and the app's own files, not the user's: the retention rule (`SnapshotRetention`) deletes snapshots beyond the newest 20, the newest per day of the last 30 days and the newest per ISO week of the last year.
 
 ## Library folders and synchronization
 
@@ -74,6 +78,7 @@ One folder is the **primary**, any number are **sync folders**. All are equal in
 - A library folder is just a path, but any sync client may manage it. Files can then be **placeholders** that are not stored locally, and reading one triggers a download. Scans compare path, size and modification time first and hash only new or changed files. The DMS never calls a cloud vendor's API.
   - macOS: placeholders may be dataless files or `.<name>.icloud` stubs; treat stubs as "present, not downloaded" under their real name.
   - Windows: placeholders carry the `RECALL_ON_DATA_ACCESS` / `OFFLINE` attributes; do not read them during a scan.
+  - `DocumentStorage::read_local_facts` (the archive check) returns `None` for a placeholder or an `.icloud` stub instead of reading it, so a check never triggers a download.
 - Sync clients create **conflict copies** (`dms-catalog 2.yaml`, `dms-catalog (conflicted copy).yaml`, …). Detect conflict copies of the catalog, merge them, and report them — never ignore them.
 - Ignore: `.DS_Store`, `._*`, `Icon\r`, `Thumbs.db`, `desktop.ini`, `.dms-tmp-*`, `.dms-trash/`, `dms-catalog*.yaml` in the folder root, and `.dms-text/`, `.dms-index/` and `.dms-plans/` at any depth together with everything below them (a scan never descends into them). The list lives in `IgnoredEntries` only.
 

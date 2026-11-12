@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use dms_application::common::{ActivityRecorder, DocumentDates, OperationOutcome, SiblingNames};
 use dms_application::document::{AddDocumentsOutcome, AddedFile};
+use dms_application::health::CatalogSnapshotKeeper;
 use dms_application::library::{CatalogStore, OpenLibraryOutcome};
 use dms_application::port::storage::ExternalFile;
 use dms_application::search::ContentMatcher;
@@ -14,6 +15,7 @@ use crate::support::fake::ai::{
     FakeAssistant, FakeClassifier, FakeContentReader, FakeEmbeddings, FakeLibraryAssistant,
 };
 use crate::support::fake::export::FakeExportWriter;
+use crate::support::fake::health::{InMemoryHealthStore, InMemorySnapshots};
 use crate::support::fake::index::InMemoryVectorIndex;
 use crate::support::fake::sidecar::{FakeSidecarLayout, InMemoryPreviewStore};
 use crate::support::fake::state::{InMemoryActivityLog, InMemorySettings, InMemoryTaskStore};
@@ -48,6 +50,8 @@ pub struct TestLibrary {
     pub embeddings: Arc<FakeEmbeddings>,
     pub library_assistant: Arc<FakeLibraryAssistant>,
     pub exports: Arc<FakeExportWriter>,
+    pub health: Arc<InMemoryHealthStore>,
+    pub snapshots: Arc<InMemorySnapshots>,
 
     pub replicator: Arc<Replicator>,
     pub store: Arc<CatalogStore>,
@@ -89,7 +93,9 @@ impl TestLibrary {
             clock.clone(),
             ids.clone(),
         ));
-        let store = Arc::new(CatalogStore::new(settings.clone(), folders.clone(), replicator.clone()));
+        let snapshots = Arc::new(InMemorySnapshots::default());
+        let keeper = Arc::new(CatalogSnapshotKeeper::new(snapshots.clone(), clock.clone()));
+        let store = Arc::new(CatalogStore::new(settings.clone(), folders.clone(), replicator.clone(), keeper));
         Self {
             activity: Arc::new(ActivityRecorder::new(activity_log.clone(), clock.clone())),
             names: Arc::new(SiblingNames::new(folders.clone())),
@@ -112,6 +118,8 @@ impl TestLibrary {
             embeddings: Arc::new(FakeEmbeddings::default()),
             library_assistant: Arc::new(FakeLibraryAssistant::default()),
             exports: Arc::new(FakeExportWriter::default()),
+            health: Arc::new(InMemoryHealthStore::default()),
+            snapshots,
             replicator,
             store,
             clock,

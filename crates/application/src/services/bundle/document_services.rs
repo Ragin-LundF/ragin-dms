@@ -7,8 +7,10 @@ use crate::document::{
     TrashNewFile,
 };
 use crate::folder::{CreateFolder, MoveFolder, ReadFolderEntries, ReadFolders, TrashFolder};
+use crate::letter::{DraftLetter, SaveLetter};
 
-/// Use cases that change documents, folders, their categorization and details, and the library settings.
+/// Use cases that change documents, folders, their categorization and details, and the library settings, and the
+/// letters drafted and saved from documents.
 pub struct DocumentServices {
     pub add_documents: Arc<AddDocuments>,
     pub adopt_new_file: Arc<AdoptNewFile>,
@@ -26,4 +28,6 @@ pub struct DocumentServices {
     pub change_settings: Arc<ChangeSettings>,
     pub edit_document_details: Arc<EditDocumentDetails>,
     pub settle_retention: Arc<SettleRetention>,
+    pub draft_letter: Arc<DraftLetter>,
+    pub save_letter: Arc<SaveLetter>,
 }

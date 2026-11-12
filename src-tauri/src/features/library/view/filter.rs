@@ -3,9 +3,11 @@
 
 use std::collections::HashSet;
 
+use dms_domain::bill::BillStatus;
 use dms_domain::catalog::Catalog;
 use dms_domain::document::{Document, DocumentId};
 use dms_domain::query::{DateRange, DocumentQuery, QueryContext};
+use dms_domain::tax::TaxFilter;
 use dms_domain::text;
 
 use crate::features::library::model::{FacetFilter, Moment, View, YearFilter};
@@ -38,11 +40,16 @@ pub fn documents<'a>(
         FacetFilter::Type(kind) => Some(*kind),
         _ => None,
     });
+    let payment = filters.iter().find_map(|filter| match filter {
+        FacetFilter::Payment(status) => Some(*status),
+        _ => None,
+    });
     let typed = DocumentQuery { text: Some(text::lowercase(text::trim(query))), ..DocumentQuery::default() };
     let contains = |ids: Option<&HashSet<DocumentId>>, id: &DocumentId| ids.is_some_and(|ids| ids.contains(id));
     let shown = catalog.documents().values().filter(|document| {
         selected.matches(document, &context)
             && kind.is_none_or(|kind| document.kind() == kind)
+            && payment.is_none_or(|status| BillStatus::of(document, catalog.settings(), moment.today()) == Some(status))
             && (*view != View::NeedsReview || contains(matches.review, &document.id))
             && matches.query.is_none_or(|ids| ids.contains(&document.id))
             && (typed.matches(document, &context) || contains(matches.text, &document.id))
@@ -83,7 +90,7 @@ pub fn title_of(view: &View, catalog: &Catalog) -> String {
 
 /// The view with its filters as one query, shared by the library, saved views and exports. `None` where the view
 /// shows no documents: a saved view the catalog no longer has, the inbox while it is off, and the folder view,
-/// which lists its documents itself. The type filter and "Needs review" cannot be part of a query; [`documents`]
+/// which lists its documents itself. The type and payment filters and "Needs review" cannot be part of a query; [`documents`]
 /// applies them on top.
 pub fn query_of(view: &View, filters: &[FacetFilter], moment: &Moment, catalog: &Catalog) -> Option<DocumentQuery> {
     let base = base_query_of(view, moment, catalog)?;
@@ -118,8 +125,13 @@ fn narrowed_by(mut query: DocumentQuery, filter: &FacetFilter) -> DocumentQuery 
         }
         FacetFilter::Year(year) => query.dates = Some(dates_of(*year)),
         FacetFilter::Correspondent(name) => query.correspondent = Some(name.clone()),
-        FacetFilter::Type(_) => {}
+        FacetFilter::Type(_) | FacetFilter::Payment(_) => {}
         FacetFilter::Folder(path) => query.folder = Some(path.clone()),
+        FacetFilter::Tax(tax) => {
+            query.tax = Some(TaxFilter { year: Some(tax.year), area: tax.area, tag_fallback: None });
+        }
+        FacetFilter::Dates(range) => query.dates = Some(*range),
+        FacetFilter::Field(condition) => query.fields.push(condition.clone()),
     }
     query
 }
@@ -271,6 +283,30 @@ mod tests {
             FacetFilter::Year(YearFilter { year: 2017, and_earlier: true }),
         ];
         assert_eq!(paths(&documents(&catalog, &all(), &filters, "", &moment(), &Matches::default())), ["a.pdf"]);
+    }
+
+    #[test]
+    fn the_tax_facet_narrows_to_the_year_or_one_of_its_areas() {
+        use crate::features::library::model::TaxFacet;
+        use dms_domain::tax::TaxArea;
+        let catalog = TestCatalog::new()
+            .document("a.pdf", |document| {
+                document.tax(2025, TaxArea::Donations, None);
+            })
+            .document("b.pdf", |document| {
+                document.tax(2025, TaxArea::Income, None);
+            })
+            .document("c.pdf", |document| {
+                document.tags(&["Tax"]).dated(date(2025, 1, 1));
+            })
+            .build();
+        let shown = |area| {
+            let filters = [FacetFilter::Tax(TaxFacet { year: 2025, area })];
+            paths(&documents(&catalog, &all(), &filters, "", &moment(), &Matches::default()))
+        };
+
+        assert_eq!(shown(None), ["a.pdf", "b.pdf"]);
+        assert_eq!(shown(Some(TaxArea::Income)), ["b.pdf"]);
     }
 
     #[test]

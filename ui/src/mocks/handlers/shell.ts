@@ -71,5 +71,5 @@ export const shellHandlers: Record<string, Handler> = {
   merge_all_folders: () => mockOperation("Merging all folders", "library", 6, "Merged all folders: 0 file(s) copied or moved"),
   retry_failed_operations: () => mockOperation("Retrying failed operations", "library", 2, "Retried: 0 done, 0 no longer needed, 0 still pending"),
   detect_document_dates: () => mockOperation("Detecting document dates", "library", 3, "Found a date for 4 documents"),
-  navigation_counts: () => ({ inbox: 3, tasks: 7 }),
+  navigation_counts: () => ({ inbox: 3, tasks: 7, toPay: 1, cases: 2 }),
 };

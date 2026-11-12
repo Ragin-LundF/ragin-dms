@@ -38,6 +38,7 @@ pub fn present_library_settings(catalog: &Catalog) -> LibrarySettingsDto {
         default_currency: layout.default_currency.as_ref().map(|code| code.value().to_owned()).unwrap_or_default(),
         embed_metadata: layout.embed_metadata,
         rules: settings.rules.iter().map(|rule| rule_row(rule, catalog)).collect(),
+        owner: super::owner::owner_dto(settings.owner.as_ref()),
     }
 }
 
@@ -48,6 +49,9 @@ fn inbox_dto(inbox: &InboxSettings) -> InboxSettingsDto {
         ai_analysis: inbox.ai_analysis,
         ai_target_folder: inbox.ai_target_folder,
         auto_analyze: inbox.auto_analyze,
+        convert_emails: inbox.convert_emails,
+        keep_email_originals: inbox.keep_email_originals,
+        propose_splits: inbox.propose_splits,
     }
 }
 
@@ -221,6 +225,7 @@ pub fn plan_change(change: LibrarySettingsChangeDto, current: &CatalogSettings) 
             let id = MatchingRuleId::new(rule_id).map_err(invalid)?;
             plan("Rule".to_owned(), "Removed the rule".to_owned(), Box::new(move |settings| settings.without_rule(&id)))
         }
+        LibrarySettingsChangeDto::SaveOwner { owner } => Ok(super::owner::plan_owner(&owner)),
     }
 }
 
@@ -274,6 +279,9 @@ pub fn inbox_settings_of(draft: &InboxSettingsDto) -> Option<InboxSettings> {
         ai_analysis: draft.ai_analysis,
         ai_target_folder: draft.ai_target_folder,
         auto_analyze: draft.auto_analyze,
+        convert_emails: draft.convert_emails,
+        keep_email_originals: draft.keep_email_originals,
+        propose_splits: draft.propose_splits,
     })
 }
 
@@ -434,9 +442,14 @@ mod tests {
             ai_analysis: true,
             ai_target_folder: false,
             auto_analyze: false,
+            convert_emails: true,
+            keep_email_originals: false,
+            propose_splits: true,
         };
         let inbox = inbox_settings_of(&draft).expect("valid");
         assert_eq!(inbox.path.value(), "Mail/Inbox");
+        assert!(inbox.convert_emails && !inbox.keep_email_originals);
+        assert!(inbox.propose_splits);
         assert_eq!(inbox_saved_message(&inbox), "The inbox is Mail/Inbox in every library folder");
     }
 }

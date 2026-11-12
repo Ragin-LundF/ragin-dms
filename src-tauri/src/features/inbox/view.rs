@@ -107,6 +107,7 @@ fn row(
         suggestion_note,
         analyzable: document.kind().readable_by_ai(),
         prefill: prefill.filter(|folder| !folder.is_empty()),
+        email: dms_application::mail::is_mail_file(document.path.file_name()),
     }
 }
 
@@ -195,6 +196,9 @@ mod tests {
             target_reason: None,
             fields: Default::default(),
             rule_notes: Default::default(),
+            tax: None,
+            e_invoice: Vec::new(),
+            requested_actions: Vec::new(),
         }
     }
 

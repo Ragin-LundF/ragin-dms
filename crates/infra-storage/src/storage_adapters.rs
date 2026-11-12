@@ -4,6 +4,7 @@ use std::sync::Arc;
 use crate::catalog::FileCatalogRepository;
 use crate::export::FileExportWriter;
 use crate::fs::FileSystemDocumentStorage;
+use crate::health::{FileCatalogSnapshots, FileHealthStore};
 use crate::index::FileVectorIndex;
 use crate::plan::FilePlanStore;
 use crate::platform::{PlatformTrash, SystemTrash};
@@ -30,6 +31,8 @@ pub struct StorageAdapters {
     pub tasks: Arc<FileTaskStore>,
     pub activity: Arc<FileActivityLog>,
     pub settings: Arc<FileSettingsRepository>,
+    pub health: Arc<FileHealthStore>,
+    pub snapshots: Arc<FileCatalogSnapshots>,
 }
 
 impl StorageAdapters {
@@ -56,6 +59,8 @@ impl StorageAdapters {
             tasks: Arc::new(FileTaskStore::new(app_data_directory.join("tasks.yaml"))),
             activity: Arc::new(FileActivityLog::new(app_data_directory.join("activity.yaml"))),
             settings: Arc::new(FileSettingsRepository::new(app_data_directory.join("settings.yaml"))),
+            health: Arc::new(FileHealthStore::new(app_data_directory.join("health.yaml"))),
+            snapshots: Arc::new(FileCatalogSnapshots::new(app_data_directory.join("snapshots"))),
         }
     }
 }

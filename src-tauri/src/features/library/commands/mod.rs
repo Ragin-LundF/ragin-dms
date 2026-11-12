@@ -3,7 +3,7 @@
 pub mod bulk;
 pub mod export;
 pub mod folders;
-mod operation;
+pub mod operation;
 pub mod saved_views;
 pub mod taxonomy;
 pub mod view;

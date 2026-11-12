@@ -14,10 +14,16 @@ export function runMenuAction(id: string) {
     mergeAll: operations.mergeAllFolders,
     retryFailed: operations.retryFailedOperations,
     detectDates: operations.detectDocumentDates,
+    checkArchive: operations.checkArchive,
     goTo: () => setPaletteOpen(true),
     openDashboard: () => goTo("dashboard"),
     openTasks: () => goTo("tasks"),
     openLibrary: () => goTo("library"),
+    openBills: () => goTo("bills"),
+    openContracts: () => goTo("contracts"),
+    openTax: () => goTo("tax"),
+    openCases: () => goTo("cases"),
+    openEmergency: () => goTo("emergency"),
     openSettings: () => goTo("settings"),
     showLog: () => setLogVisible(!navigation.get().logVisible),
     toggleSidebar: () => library?.toggleSidebar(),
@@ -34,7 +40,7 @@ export function runMenuAction(id: string) {
 
 /** Without Tauri (mock mode in a browser) there is no native menu; the same shortcuts are taken from the keyboard. */
 const SHORTCUTS: Record<string, string> = {
-  r: "scan", S: "syncAll", M: "mergeAll", k: "goTo", "1": "openDashboard", "2": "openTasks", "3": "openLibrary", ",": "openSettings", l: "showLog", "\\": "toggleSidebar",
+  r: "scan", S: "syncAll", M: "mergeAll", k: "goTo", "1": "openDashboard", "2": "openTasks", "3": "openLibrary", "4": "openBills", "5": "openContracts", "6": "openTax", "7": "openCases", "8": "openEmergency", ",": "openSettings", l: "showLog", "\\": "toggleSidebar",
 };
 
 /** Follows the menu bar and keeps its check marks and enabled entries in step with the window. */

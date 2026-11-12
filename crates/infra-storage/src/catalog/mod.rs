@@ -9,3 +9,4 @@ pub mod mapper;
 pub use catalog_files::CatalogFiles;
 pub use catalog_migrations::CatalogMigrations;
 pub use file_catalog_repository::FileCatalogRepository;
+pub(crate) use file_catalog_repository::read_catalog;

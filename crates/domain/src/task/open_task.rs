@@ -1,14 +1,18 @@
 use chrono::NaiveDate;
 
+use crate::cases::{CaseId, FollowUpId};
 use crate::catalog::CatalogMergeConflict;
 use crate::change::{ContentConflict, DetectedChange, MissingFile, ModifiedFile, MovedFile, NewFile};
 use crate::classification::ClassificationSuggestion;
+use crate::contract::{ContractId, ContractProposal};
 use crate::dates;
 use crate::document::{ContentHash, DocumentId};
+use crate::expectation::ExpectedDocument;
 use crate::field::FieldKey;
 use crate::library::{LibraryFolderId, RelativePath};
 use crate::rule::RuleProposal;
 use crate::task::TaskKey;
+use crate::text;
 
 /// Something on the dashboard that waits for the user's decision. Nothing changes the library until the user
 /// acts on a task.
@@ -44,6 +48,24 @@ pub enum OpenTask {
     RestructureSuggested { folder: RelativePath, file_count: usize },
     /// Accept or reject a rule learned from the documents the user approved.
     ReviewLearnedRule(RuleProposal),
+    /// An unpaid bill whose due date passed.
+    BillOverdue { document_id: DocumentId, due: NaiveDate },
+    /// A sender's regular document did not arrive in time.
+    ExpectedDocumentMissing(ExpectedDocument),
+    /// Record a correspondent's documents as a contract, or dismiss the proposal.
+    ReviewContractProposal(ContractProposal),
+    /// A contract must be cancelled by `date` or it renews.
+    ContractCancelBy { contract_id: ContractId, date: NaiveDate },
+    /// A follow-up of a case is due on `date`.
+    FollowUpDue { case_id: CaseId, follow_up_id: FollowUpId, date: NaiveDate },
+    /// A case has been waiting for an answer since `since`, longer than its reminder allows.
+    CaseWaitingTooLong { case_id: CaseId, since: NaiveDate },
+    /// The copy of a document in `folder_id` is damaged; `source_folder_id` holds an intact copy.
+    DamagedCopy { document_id: DocumentId, folder_id: LibraryFolderId, source_folder_id: LibraryFolderId },
+    /// A PDF that opens in no folder.
+    UnreadableDocument { document_id: DocumentId },
+    /// The emergency folder is due for its refresh on `due`.
+    EmergencyFolderRefresh { due: NaiveDate },
 }
 
 impl OpenTask {
@@ -77,6 +99,26 @@ impl OpenTask {
             Self::RetentionDue { document_id, date } => format!("retention:{document_id}:{}", dates::iso(*date)),
             Self::RestructureSuggested { folder, file_count } => format!("restructure:{folder}:{file_count}"),
             Self::ReviewLearnedRule(proposal) => format!("rule:{}", proposal.signature()),
+            Self::BillOverdue { document_id, due } => format!("bill:{document_id}:{}", dates::iso(*due)),
+            Self::ExpectedDocumentMissing(expected) => format!(
+                "expected:{}:{}:{}",
+                text::lowercase(&expected.correspondent),
+                expected.category_id.as_ref().map_or("-", |id| id.value()),
+                dates::iso(expected.expected_on)
+            ),
+            Self::ReviewContractProposal(proposal) => {
+                format!("contract-proposal:{}", text::lowercase(&proposal.correspondent))
+            }
+            Self::ContractCancelBy { contract_id, date } => {
+                format!("contract-cancel:{contract_id}:{}", dates::iso(*date))
+            }
+            Self::FollowUpDue { case_id, follow_up_id, date } => {
+                format!("follow-up:{case_id}:{follow_up_id}:{}", dates::iso(*date))
+            }
+            Self::CaseWaitingTooLong { case_id, since } => format!("case-waiting:{case_id}:{}", dates::iso(*since)),
+            Self::DamagedCopy { document_id, folder_id, .. } => format!("damaged:{document_id}:{folder_id}"),
+            Self::UnreadableDocument { document_id } => format!("unreadable:{document_id}"),
+            Self::EmergencyFolderRefresh { due } => format!("emergency-refresh:{}", dates::iso(*due)),
         })
     }
 }
@@ -89,5 +131,10 @@ fn merge_subject(conflict: &CatalogMergeConflict) -> String {
         CatalogMergeConflict::FieldDefinitionDiffers { kept, .. } => format!("field:{}", kept.key),
         CatalogMergeConflict::SavedSearchDiffers { kept, .. } => format!("search:{}", kept.id),
         CatalogMergeConflict::RuleDiffers { kept, .. } => format!("rule:{}", kept.id),
+        CatalogMergeConflict::ContractDiffers { kept, .. } => format!("contract:{}", kept.id),
+        CatalogMergeConflict::CaseDiffers { kept, .. } => format!("case:{}", kept.id),
+        CatalogMergeConflict::TaxYearDiffers { kept, .. } => format!("tax-year:{}", kept.year),
+        CatalogMergeConflict::OwnerDiffers { .. } => "owner".to_owned(),
+        CatalogMergeConflict::EmergencyFolderDiffers { .. } => "emergency-folder".to_owned(),
     }
 }

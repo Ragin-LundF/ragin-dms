@@ -2,20 +2,32 @@ use std::sync::Arc;
 
 use crate::ask::{AskLibrary, DocumentTexts, IndexLibrary, RelatedDocuments, VectorSearch};
 use crate::assistant::{AskAboutDocument, DocumentReading, SuggestTags, SummarizeDocument, TagAllUntagged};
+use crate::bill::{MarkBillPaid, MarkBillUnpaid, SettleOlderBills, SuggestFromEInvoice};
+use crate::cases::CaseServices;
 use crate::catalog::{ChangeSettings, EditCatalog};
 use crate::classification::{ApproveSuggestion, ClassifyAllNew, ListAiModels, RejectSuggestion, SuggestClassification};
 use crate::common::{ActivityRecorder, DocumentDates, DocumentFiling, SiblingNames};
+use crate::contract::{
+    AttachDocumentsToContract, DeleteContract, DismissContractProposal, EndContract, ExtractContractTerms, SaveContract,
+};
 use crate::deadline::SettleRetention;
 use crate::document::{
     AddDocuments, AdoptNewFile, EditDocumentDetails, MoveDocument, RestoreDocument, TrashDocument, TrashDuplicateFile,
     TrashNewFile,
 };
+use crate::emergency::{
+    CreateEmergencyOverview, EditEmergencyFolder, ExportEmergencyFolder, MarkEmergencyFolderRefreshed,
+};
+use crate::expectation::SnoozeExpectedDocument;
 use crate::export::ExportDocuments;
 use crate::folder::{CreateFolder, MoveFolder, ReadFolderEntries, ReadFolders, TrashFolder};
+use crate::health::{CatalogSnapshotKeeper, CompareCatalogSnapshot, RepairCopy, RestoreCatalogSnapshot, VerifyLibrary};
 use crate::inbox::{CollectInbox, ConfigureInbox, FileInboxDocument};
+use crate::letter::{DraftLetter, SaveLetter};
 use crate::library::{
     AddScannedFiles, BuildDashboard, CatalogStore, ConfigureLibrary, DetectDocumentDates, OpenLibrary, ScanLibrary,
 };
+use crate::mail::ImportEmails;
 use crate::pdf::rebuild::{KeepRebuild, RebuildAvailability, RebuildPdf};
 use crate::pdf::{
     EditPages, EmbedPdfMetadata, MakeAllSearchable, MakeSearchable, MergeDocuments, PdfVersions, ScansWithoutText,
@@ -27,12 +39,14 @@ use crate::restructure::{
     ApplyRestructurePlan, ListRestructureHistory, PlanRestructure, RemoveEmptyFolders, ReverseRestructure,
 };
 use crate::rule::AcceptRuleProposal;
-use crate::search::{ContentMatcher, FindDocuments, SearchContents};
+use crate::search::{ContentMatcher, FindDocuments, SearchContents, TranslateQuery};
 use crate::services::{
     AiServices, AppPorts, AskServices, DocumentServices, LibraryServices, OrganizeServices, PdfServices, SyncServices,
 };
 use crate::sidecar::MigrateSidecarLayout;
+use crate::split::{ApplySplit, ProposeSplit};
 use crate::sync::{MergeAllFolders, Replicator, RetryFailedOperations, SyncFromPrimary};
+use crate::tax::{AssignTax, OpenTaxYear, UpdateTaxItem};
 
 /// Every use case the UI calls, wired once from the adapters. Stateful parts (the catalog store, the content
 /// matcher, the caches of thumbnails, vector search, document texts, the document assistant and the scan-text
@@ -45,6 +59,7 @@ pub struct AppServices {
     pub organize: OrganizeServices,
     pub pdf: PdfServices,
     pub ask: AskServices,
+    pub cases: CaseServices,
 }
 
 /// The parts several bundles share, as in Kotlin's `AppContainer`.
@@ -75,6 +90,7 @@ impl AppServices {
             organize: core.organize_services(),
             pdf: core.pdf_services(),
             ask: core.ask_services(),
+            cases: CaseServices::new(&core.store, &core.ports.clock, &core.ports.ids),
         }
     }
 }
@@ -92,7 +108,8 @@ impl Core {
             p.clock.clone(),
             p.ids.clone(),
         ));
-        let store = Arc::new(CatalogStore::new(p.settings.clone(), p.catalogs.clone(), replicator.clone()));
+        let keeper = Arc::new(CatalogSnapshotKeeper::new(p.snapshots.clone(), p.clock.clone()));
+        let store = Arc::new(CatalogStore::new(p.settings.clone(), p.catalogs.clone(), replicator.clone(), keeper));
         let activity = Arc::new(ActivityRecorder::new(p.activity.clone(), p.clock.clone()));
         let names = Arc::new(SiblingNames::new(p.storage.clone()));
         let dates = Arc::new(DocumentDates::new(p.storage.clone()));
@@ -170,6 +187,7 @@ impl Core {
                 p.journal.clone(),
                 p.activity.clone(),
                 p.clock.clone(),
+                p.health.clone(),
             )),
             search_contents: Arc::new(SearchContents::new(self.store.clone(), self.matcher.clone())),
             find_documents: Arc::new(FindDocuments::new(self.store.clone(), self.matcher.clone())),
@@ -227,6 +245,22 @@ impl Core {
             change_settings: self.change_settings.clone(),
             edit_document_details: Arc::new(EditDocumentDetails::new(store.clone(), activity.clone())),
             settle_retention: Arc::new(SettleRetention::new(store.clone(), activity.clone(), p.clock.clone())),
+            draft_letter: Arc::new(DraftLetter::new(
+                store.clone(),
+                p.reader.clone(),
+                p.texts.clone(),
+                p.settings.clone(),
+                p.letter_writer.clone(),
+            )),
+            save_letter: Arc::new(SaveLetter::new(
+                store.clone(),
+                p.pdf_editor.clone(),
+                self.replicator.clone(),
+                self.names.clone(),
+                activity.clone(),
+                p.clock.clone(),
+                p.ids.clone(),
+            )),
         }
     }
 
@@ -279,6 +313,28 @@ impl Core {
                 p.tasks.clone(),
                 activity.clone(),
             )),
+            verify_library: Arc::new(VerifyLibrary::new(
+                store.clone(),
+                p.storage.clone(),
+                p.pdf_editor.clone(),
+                p.health.clone(),
+                p.clock.clone(),
+            )),
+            repair_copy: Arc::new(RepairCopy::new(
+                store.clone(),
+                p.storage.clone(),
+                replicator.clone(),
+                p.health.clone(),
+                activity.clone(),
+            )),
+            compare_catalog_snapshot: Arc::new(CompareCatalogSnapshot::new(store.clone(), p.snapshots.clone())),
+            restore_catalog_snapshot: Arc::new(RestoreCatalogSnapshot::new(
+                store.clone(),
+                p.snapshots.clone(),
+                activity.clone(),
+            )),
+            health: p.health.clone(),
+            snapshots: p.snapshots.clone(),
         }
     }
 
@@ -312,6 +368,11 @@ impl Core {
             tag_all_untagged: Arc::new(TagAllUntagged::new(self.store.clone(), p.tasks.clone(), suggest_tags.clone())),
             suggest_tags,
             ask_about_document: Arc::new(AskAboutDocument::new(self.store.clone(), reading, p.assistant.clone())),
+            translate_query: Arc::new(TranslateQuery::new(
+                self.store.clone(),
+                p.query_translator.clone(),
+                p.clock.clone(),
+            )),
         }
     }
 
@@ -351,11 +412,89 @@ impl Core {
                 store.clone(),
                 self.matcher.clone(),
                 p.exports.clone(),
+                p.pdf_editor.clone(),
                 activity.clone(),
                 p.clock.clone(),
             )),
             export_writer: p.exports.clone(),
+            open_tax_year: Arc::new(OpenTaxYear::new(store.clone(), p.clock.clone(), p.ids.clone())),
+            update_tax_item: Arc::new(UpdateTaxItem::new(
+                store.clone(),
+                activity.clone(),
+                p.clock.clone(),
+                p.ids.clone(),
+            )),
+            assign_tax: Arc::new(AssignTax::new(store.clone(), activity.clone(), p.clock.clone(), p.ids.clone())),
+            mark_bill_paid: Arc::new(MarkBillPaid::new(store.clone(), activity.clone())),
+            mark_bill_unpaid: Arc::new(MarkBillUnpaid::new(store.clone(), activity.clone())),
+            settle_older_bills: Arc::new(SettleOlderBills::new(store.clone(), activity.clone())),
+            suggest_from_e_invoice: Arc::new(SuggestFromEInvoice::new(
+                store.clone(),
+                p.reader.clone(),
+                p.tasks.clone(),
+            )),
+            snooze_expected_document: Arc::new(SnoozeExpectedDocument::new(p.tasks.clone(), p.clock.clone())),
+            save_contract: Arc::new(SaveContract::new(store.clone(), activity.clone(), p.clock.clone(), p.ids.clone())),
+            end_contract: Arc::new(EndContract::new(store.clone(), activity.clone())),
+            delete_contract: Arc::new(DeleteContract::new(store.clone(), activity.clone())),
+            attach_documents_to_contract: Arc::new(AttachDocumentsToContract::new(store.clone(), activity.clone())),
+            dismiss_contract_proposal: Arc::new(DismissContractProposal::new(self.change_settings.clone())),
+            extract_contract_terms: Arc::new(ExtractContractTerms::new(
+                store.clone(),
+                p.reader.clone(),
+                p.texts.clone(),
+                p.settings.clone(),
+                p.contract_terms_reader.clone(),
+            )),
+            import_emails: self.import_emails(),
+            edit_emergency_folder: Arc::new(EditEmergencyFolder::new(
+                store.clone(),
+                self.change_settings.clone(),
+                p.ids.clone(),
+            )),
+            mark_emergency_folder_refreshed: Arc::new(MarkEmergencyFolderRefreshed::new(
+                store.clone(),
+                self.change_settings.clone(),
+                p.clock.clone(),
+            )),
+            create_emergency_overview: self.create_emergency_overview(),
+            export_emergency_folder: Arc::new(ExportEmergencyFolder::new(
+                store.clone(),
+                p.pdf_editor.clone(),
+                p.exports.clone(),
+                activity.clone(),
+                p.clock.clone(),
+            )),
         }
+    }
+
+    fn import_emails(&self) -> Arc<ImportEmails> {
+        let p = &self.ports;
+        Arc::new(ImportEmails::new(
+            self.store.clone(),
+            p.mail.clone(),
+            p.pdf_editor.clone(),
+            self.replicator.clone(),
+            self.names.clone(),
+            self.trash_document.clone(),
+            self.activity.clone(),
+            p.clock.clone(),
+            p.ids.clone(),
+        ))
+    }
+
+    fn create_emergency_overview(&self) -> Arc<CreateEmergencyOverview> {
+        let p = &self.ports;
+        Arc::new(CreateEmergencyOverview::new(
+            self.store.clone(),
+            p.pdf_editor.clone(),
+            p.exports.clone(),
+            self.replicator.clone(),
+            self.names.clone(),
+            self.activity.clone(),
+            p.clock.clone(),
+            p.ids.clone(),
+        ))
     }
 
     fn pdf_services(&self) -> PdfServices {
@@ -378,6 +517,16 @@ impl Core {
             versions.clone(),
             activity.clone(),
         ));
+        let split_document = Arc::new(SplitDocument::new(
+            store.clone(),
+            p.pdf_editor.clone(),
+            self.replicator.clone(),
+            self.names.clone(),
+            self.trash_document.clone(),
+            activity.clone(),
+            p.clock.clone(),
+            p.ids.clone(),
+        ));
         PdfServices {
             edit_pages: Arc::new(EditPages::new(
                 store.clone(),
@@ -385,16 +534,19 @@ impl Core {
                 versions.clone(),
                 activity.clone(),
             )),
-            split_document: Arc::new(SplitDocument::new(
+            propose_split: Arc::new(ProposeSplit::new(
                 store.clone(),
                 p.pdf_editor.clone(),
-                self.replicator.clone(),
-                self.names.clone(),
-                self.trash_document.clone(),
-                activity.clone(),
-                p.clock.clone(),
-                p.ids.clone(),
+                p.texts.clone(),
+                p.split_proposer.clone(),
             )),
+            apply_split: Arc::new(ApplySplit::new(
+                store.clone(),
+                p.pdf_editor.clone(),
+                split_document.clone(),
+                p.tasks.clone(),
+            )),
+            split_document,
             merge_documents: Arc::new(MergeDocuments::new(
                 store.clone(),
                 p.pdf_editor.clone(),
